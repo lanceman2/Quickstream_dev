@@ -1,0 +1,12 @@
+digraph {
+    label="FastStream States";
+    constructing -> paused;
+    paused -> starting;
+    starting -> running;
+    running -> "shutting down";
+    "shutting down" -> stopping;
+    stopping -> paused;
+    stopping -> exiting;
+    paused -> exiting;
+    exiting -> exit;
+}
