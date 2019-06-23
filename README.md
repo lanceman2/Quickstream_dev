@@ -45,10 +45,10 @@ necessarily concern themselves with their neighboring filters; the filters
 just read input from input channels and write output to output channels,
 not necessarily knowing what is writing to them of what is reading from
 them; at least that is the mode of operation at this protocol (faststream
-API) level.  The user may added more structure to that if they need to.
+API) level.  The user may add more structure to that if they need to.
 It's like the other UNIX abstractions like sockets, in that the type of
 data is of no concern in this faststream API.  When compared to sockets
-clearly we are adding connectivity and flow management, and taking them
+clearly we are adding connectivity and flow management, and taking control
 from the user, with the added benefit of speed and a reduced user
 interface.
 
@@ -56,29 +56,34 @@ interface.
 ## Taxonomy
 
 ### Stream
-The directed graph that data flows in.  The run state of a stream graph is
-either one of four states, running, paused (not running), starting, or
-stopping.  The filters know then they are in a given state by what stream
-filter function is being called.  Where a stream is in a running state
-there are two additional modes, running normal and running with sources
-stopped, or shutdown.  In normal running the sources are feeding the
-stream and in when running with sources stopped the sources are no longer
-feeding the stream and we are waiting for all the flows in the stream to
-finish processing the data remaining in the stream.  Kind of shutting off
-the water main and waiting for all the water to drain from the pipes.
-After the normal running and shutdown, the stream will go into the stopped
-state, calling the filters stop functions.  From there the stream state
-may go to start (restart in this case) or a pre-exiting state where filter
-destructors may be called (if they exist).
+The directed graph that data flows in.  
 
 A stream state diagram looks like so:
+![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
 
-<pre>
 
-construction -> starting -> normal running -> shutdown running -> stopping
+#### Stream states
 
-</pre>
+There is only one thread running except in the running and shutting down
+state.  The shutting down state is no different than the running state
+except that sources are no longer being feed.
 
+- paused: filters constructors are called and connections between filters
+  may be edited, and the topology of the streams may be changed when it is
+  in the paused state.  There is only one thread running in the paused
+  state.
+- starting: the filters start functions are called.  There is only one
+  thread running.
+- running: the filters feed each other and the number of threads and
+  processes running depends on the thread and process partitioning scheme
+  that is being used.
+- shutting down: stream sources are no longer being feed, and all other
+  non-source filters are running until all input the data drys up.
+- stopping: the filters stop functions are being called. There is only one
+  thread running.
+- exiting: filters destructors are being called.  There is only one thread
+  running.
+- exit: no processes are running.
 
 ### Filter
 A module reads input and writes outputs in the stream.  The number of
