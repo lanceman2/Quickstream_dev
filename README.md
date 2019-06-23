@@ -26,9 +26,9 @@ circular buffer in order to guarantee consistent lock-less operation.
 faststream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
 pattern more so than a particular software development frame-work; as
-such, it may be used as a bases to build a frame-work to write programs to
+such, it may be used as a basis to build a frame-work to write programs to
 process audio, video, software defined radio (SDR), or any kind of digit
-flow graphs.
+flow pipe-line.
 
 Interfaces in faststream are minimalistic.  To make a filter you do not
 necessarily need to consider data flow connection types.  Connection types
@@ -43,52 +43,58 @@ to do a particular task.
 The intent is to construct a flow stream of filters.  The filters do not
 necessarily concern themselves with their neighboring filters; the filters
 just read input from input channels and write output to output channels,
-not necessarily knowing what is writing to them of what is reading from
-them; at least that is the mode of operation at this protocol (faststream
-API) level.  The user may add more structure to that if they need to.
-It's like the other UNIX abstractions like sockets, in that the type of
-data is of no concern in this faststream API.  When compared to sockets
-clearly we are adding connectivity and flow management, and taking control
-from the user, with the added benefit of speed and a reduced user
-interface.
-
+not necessarily knowing what is writing to them or what is reading from
+them; at least that is the mode of operation at this protocol
+(faststream API) level.  The user may add more structure to that if they
+need to.  It's like the other UNIX abstractions like sockets, in that the
+type of data is of no concern in this faststream API.
 
 ## Taxonomy
 
 ### Stream
 The directed graph that data flows in.  
 
-A stream state diagram looks like so:
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
+A stream state diagram (not to be confused with a stream flow directed
+graph) looks like so:
+![image of stream state](../faststream.doc/master/fastStream_states.png)
 
 
 #### Stream states
 
-There is only one thread running except in the running and shutting down
-state.  The shutting down state is no different than the running state
+There is only one thread running except in the running and flushing
+state.  The flushing state is no different than the running state
 except that sources are no longer being feed.
 
-- paused: filters constructors are called and connections between filters
+- paused: any faststream must begin in a paused state.  filters
+  constructors and destructors are called and connections between filters
   may be edited, and the topology of the streams may be changed when it is
   in the paused state.  There is only one thread running in the paused
-  state.
-- starting: the filters start functions are called.  There is only one
-  thread running.
+  state.  The paused state is the stream configuring state.  The thread
+  and process repartitioning can only happen in the paused state.
+- starting: the filters start functions are called. filters will see how
+  many input and output channels they will have just before they start
+  running.  There is only one thread running.  No data is flowing in the
+  stream when it is in the starting state.
 - running: the filters feed each other and the number of threads and
   processes running depends on the thread and process partitioning scheme
   that is being used.
-- shutting down: stream sources are no longer being feed, and all other
+- flushing: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
 - stopping: the filters stop functions are being called. There is only one
-  thread running.
-- exiting: filters destructors are being called.  There is only one thread
-  running.
+  thread running.  No data is flowing in the stream when it is in the
+  stopping state.
 - exit: no processes are running.
+
+The stream may cycle through the running state loop any number of times,
+depending on your use, or it may not go through the running state at all,
+and go from paused to exit.
 
 ### Filter
 A module reads input and writes outputs in the stream.  The number of
 input channels and the number of output channels may be from zero to any
-integer.
+integer.  filters do not know if they are running as a single thread by
+themselves or they are sharing their thread execution with other filters.
+From the faststream user filters just provide executable object code.
 
 ### Controller
 Or filter controller: That which changes the behavior of a filter
