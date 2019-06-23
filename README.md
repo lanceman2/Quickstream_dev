@@ -1,6 +1,36 @@
 # faststream
 data flows between modules in a directed graph
 
+## Building and Installing from GitHub Repository Source
+
+Run:
+
+```./bootstrap```
+
+From the top source directory run
+
+```./configure --prefix=PREFIX```
+
+where ``PREFIX`` is the top installation directory.
+Then run
+
+```make download```
+
+to download additional files to the source directory.
+Then run
+
+```make```
+
+to generate (compile) files in the source directory.
+Then run
+
+```make install```
+
+to install files into the prefix directory you defined.
+
+
+## Description
+
 It's like UNIX streams but much faster.  Modules in the stream, or
 pipe-line, may be separate processes, or threads in the same process.  The
 stream can be a general directed graph.
@@ -47,47 +77,49 @@ not necessarily knowing what is writing to them or what is reading from
 them; at least that is the mode of operation at this protocol
 (faststream API) level.  The user may add more structure to that if they
 need to.  It's like the other UNIX abstractions like sockets, in that the
-type of data is of no concern in this faststream API.
+type of data is of no concern in this faststream APIs.
+
 
 ## Taxonomy
 
 ### Stream
 The directed graph that data flows in.  
 
+#### Stream states
+
 A stream state diagram (not to be confused with a stream flow directed
 graph) looks like so:
 ![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
 
 
-#### Stream states
 
-There is only one thread running except in the running and flushing
-state.  The flushing state is no different than the running state
+There is only one thread running except in the flow and flush
+state.  The flush state is no different than the flow state
 except that sources are no longer being feed.
 
-- paused: any faststream must begin in a paused state.  filters
+- **pause**: any faststream must begin in a paused state.  filters
   constructors and destructors are called and connections between filters
   may be edited, and the topology of the streams may be changed when it is
-  in the paused state.  There is only one thread running in the paused
-  state.  The paused state is the stream configuring state.  The thread
-  and process repartitioning can only happen in the paused state.
-- starting: the filters start functions are called. filters will see how
+  in the paused state.  There is only one thread running in the pause
+  state.  The pause state is the stream configuring state.  The thread
+  and process repartitioning can only happen in the pause state.
+- **start**: the filters start functions are called. filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
-  stream when it is in the starting state.
-- running: the filters feed each other and the number of threads and
+  stream when it is in the start state.
+- **flow**: the filters feed each other and the number of threads and
   processes running depends on the thread and process partitioning scheme
   that is being used.
-- flushing: stream sources are no longer being feed, and all other
+- **flush**: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
-- stopping: the filters stop functions are being called. There is only one
+- **stop**: the filters stop functions are being called. There is only one
   thread running.  No data is flowing in the stream when it is in the
-  stopping state.
-- exit: no processes are running.
+  stop state.
+- **exit**: no processes are running.
 
-The stream may cycle through the running state loop any number of times,
-depending on your use, or it may not go through the running state at all,
-and go from paused to exit.
+The stream may cycle through the flow state loop any number of times,
+depending on your use, or it may not go through the flow state at all,
+and go from pause to exit.
 
 ### Filter
 A module reads input and writes outputs in the stream.  The number of
@@ -127,6 +159,18 @@ more global sense that may not be sinks, but with respect to faststream
 they are sinks.
 
 
+## Interfaces
+faststream has two APIs (application programming interfaces) and some
+untility programs:
+
+- a filter API called **libfsf**: which is used to build a faststream filter
+  dynamic shared object filter modules.
+- a stream program API called **libfs**: which is used to build programs that run
+  a faststream with said filters.
+- the program **fsrun**: which uses *libfs* to run a faststream with said filters
+
+
+
 ## OS (operating system) Ports
 Debian 9 and maybe Ubuntu 18.04
 
@@ -135,4 +179,5 @@ Debian 9 and maybe Ubuntu 18.04
 - graphviz
 - graphviz-dev
 - imagemagick
+- make
 
