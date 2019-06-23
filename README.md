@@ -89,9 +89,8 @@ The directed graph that data flows in.
 
 A stream state diagram (not to be confused with a stream flow directed
 graph) looks like so:
+
 ![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
-
-
 
 There is only one thread running except in the flow and flush
 state.  The flush state is no different than the flow state
