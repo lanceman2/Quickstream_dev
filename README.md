@@ -56,7 +56,7 @@ The directed graph that data flows in.
 
 A stream state diagram (not to be confused with a stream flow directed
 graph) looks like so:
-![image of stream state](../faststream.doc/master/fastStream_states.png)
+![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
 
 
 #### Stream states
