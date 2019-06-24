@@ -1,0 +1,35 @@
+// Diagram of a simple faststream
+
+digraph {
+    label="A simple faststream flow graph";
+
+    subgraph cluster_0 {
+        label="filter 0\nstdin";
+        node [shape=invhouse, color=blue];
+        output0_0 [label="output 0"];
+    }
+
+    subgraph cluster_1 {
+        label="filter 1\nmung";
+        node [shape=house, color=green];
+        {rank = same; input1_0 [label="input 0"];}
+        node [shape=invhouse, color=blue];
+        {rank = same; output1_0 [label="output 0"];}
+    }
+
+    subgraph cluster_2 {
+        label="filter 2\nstdout";
+        node [shape=house, color=green];
+        input2_0 [ label="input 0"];
+    }
+
+
+    buffer_0 [shape=rect, color=red];
+    buffer_1 [shape=rect, color=red];
+
+    output1_0 -> buffer_1;
+    output0_0 -> buffer_0;
+
+    buffer_0 -> input1_0;
+    buffer_1 -> input2_0;
+}
