@@ -1,30 +1,31 @@
 # faststream
+
 data flows between modules in a directed graph
 
 ## Building and Installing from GitHub Repository Source
 
 Run:
 
-```./bootstrap```
+    ./bootstrap
 
 From the top source directory run
 
-```./configure --prefix=PREFIX```
+    ./configure --prefix=PREFIX
 
 where ``PREFIX`` is the top installation directory.
 Then run
 
-```make download```
+    make download
 
 to download additional files to the source directory.
 Then run
 
-```make```
+    make
 
 to generate (compile) files in the source directory.
 Then run
 
-```make install```
+    make install
 
 to install files into the prefix directory you defined.
 
@@ -80,7 +81,7 @@ need to.  It's like the other UNIX abstractions like sockets, in that the
 type of data is of no concern in this faststream APIs.
 
 
-## Taxonomy
+## Terminology
 
 ### Stream
 The directed graph that data flows in.  
@@ -90,7 +91,7 @@ The directed graph that data flows in.
 A stream state diagram (not to be confused with a stream flow directed
 graph) looks like so:
 
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_states.png)
+![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_states.png)
 
 There is only one thread running except in the flow and flush
 state.  The flush state is no different than the flow state
@@ -120,7 +121,9 @@ The stream may cycle through the flow state loop any number of times,
 depending on your use, or it may not go through the flow state at all,
 and go from pause to exit.
 
+
 ### Filter
+
 A module reads input and writes outputs in the stream.  The number of
 input channels and the number of output channels may be from zero to any
 integer.  filters do not know if they are running as a single thread by
@@ -128,14 +131,17 @@ themselves or they are sharing their thread execution with other filters.
 From the faststream user filters just provide executable object code.
 
 ### Controller
+
 Or filter controller: That which changes the behavior of a filter
 module.
 
 ### Monitor
+
 Or filter monitor: That which monitors a filter, without changing how it
 processes inputs and writes outputs.
 
 ### Channel
+
 Channel is a connection to a filter from another filter.  For a given
 filter running in a stream at a particular time, there are input channels
 and output channels.  For that filter running in a given cycle the input
@@ -143,6 +149,7 @@ and output channels are numbered from 0 to N-1, where N is the number of
 input or output channels.
 
 ### Source
+
 A filter with no inputs is a source filter.  It may get "input" from
 something other than the stream, like a file, or a socket, but those
 kinds of inputs are external from the faststream, that is they do get
@@ -150,6 +157,7 @@ any input from the faststream circular buffer.  So in a more global sense
 that may not be sources, but with respect to faststream they are sources.
 
 ### Sink
+
 A filter with no outputs is a sink filter.  It may write "output" to
 something other than the stream, like a file, a socket, or display device,
 but those kinds of outputs are external from the faststream, that is they
@@ -159,18 +167,18 @@ they are sinks.
 
 
 ## Interfaces
-faststream has two APIs (application programming interfaces) and some
-untility programs:
 
-- a filter API called **libfsf**: which is used to build a faststream filter
+faststream has two APIs (application programming interfaces) and some
+utility programs:
+
+- a filter API **libfsf**: which is used to build a faststream filter
   dynamic shared object filter modules.
-- a stream program API called **libfs**: which is used to build programs that run
+- a stream program API **libfs**: which is used to build programs that run
   a faststream with said filters.
 - the program **fsrun**: which uses *libfs* to run a faststream with said filters
 
-
-
 ## OS (operating system) Ports
+
 Debian 9 and maybe Ubuntu 18.04
 
 
@@ -179,4 +187,60 @@ Debian 9 and maybe Ubuntu 18.04
 - graphviz-dev
 - imagemagick
 - make
+
+## Similar Software Projects
+
+Most other stream flow like software projects have a much more particular
+scope of usage than faststream.  These software packages to simular
+things.  We study them and learn.
+
+- **GNUradio** https://www.gnuradio.org/
+- **gstreamer** https://gstreamer.freedesktop.org/
+- **RedHawk** https://geontech.com/redhawk-sdr/
+- **csdr** https://github.com/simonyiszk/csdr I like the way this uses
+  UNIX pipe-line stream to make its flow stream.
+
+### What faststream intends to do better
+
+Run faster with less system resources.  It's simpler.
+
+In principle it should be able to run fast.  We have no controlling task
+manager thread that synchronizes the running processes and/or threads.
+All filters keep processing input until they are blocked by a slower
+down-stream filter (clogged), or they are waiting for input from an
+up-stream filter (throttled).
+
+Simple filters can share the same thread, and whereby use less system
+resources, and thereby run the stream faster by avoiding thread context
+switches using less time and memory than running filters in separate
+threads (or processes).  Shared memory is clearly the fastest inter-thread
+and inter-process communication mechanism, and we use shared memory with a
+consistent lock-less circular buffer.  Memory is not required to be copied
+between filters and can be modified and passed through filters.  Then the
+stream is in the flow state there are no systems call, except those that a
+filter may introduce, and memory copies across from one filter to another
+can be completely avoided using a pass-through buffer.
+
+It's simple.  There is no learning curve.  There's just less there.  There
+is only one interface for a given functionality.
+
+The stream may repartition its process and threading scheme at launch-time
+and run-time based on stream flow measures, and so it can be adaptive and
+can be programmed to be self optimizing at run-time.  Most of the other
+stream frame-works just can't do that, they only have one thread and
+process running scheme that is hard coded, like one thread per filter, or
+one process per filter, which of a very simple filter makes no sense.
+
+You can change the filter stream topology on the fly.  Loading and
+unloading filters and reconnecting filters at run-time.
+
+In the future benchmarking will tell.  TODO: Add links here...
+
+## A Typical faststream Flow Graph
+
+We introduce terms in this figure:
+
+![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_tfg.png)
+
+
 
