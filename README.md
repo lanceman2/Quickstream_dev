@@ -4,16 +4,16 @@ data flows between modules in a directed graph
 
 ## Building and Installing from GitHub Repository Source
 
-Run:
+Change directory to the top source directory and then run:
 
     ./bootstrap
 
-From the top source directory run
+Then
 
-    ./configure --prefix=PREFIX
+    echo "PREFIX = MY_PREFIX" > config.make
 
-where ``PREFIX`` is the top installation directory.
-Then run
+where ``MY_PREFIX`` is the top installation directory, like for example
+*/usr/local/encap/faststream*.  Then run
 
     make download
 
@@ -34,7 +34,7 @@ to install files into the prefix directory you defined.
 
 It's like UNIX streams but much faster.  Modules in the stream, or
 pipe-line, may be separate processes, or threads in the same process.  The
-stream can be a general directed graph.
+stream can be a general directed graph without cycles.
 
 It's faster because the data flowing between the modules is passed through
 shared memory and not a kernel buffer, as in UNIX file streams.  In a UNIX
@@ -229,8 +229,7 @@ and run-time based on stream flow measures, and so it can be adaptive and
 can be programmed to be self optimizing at run-time.  Most of the other
 stream frame-works just can't do that, they only have one thread and
 process running scheme that is hard coded, like one thread per filter, or
-one process per filter, which for a very simple filters makes no sense,
-it's just far to heavy.
+one process per filter, which of a very simple filter makes no sense.
 
 You can change the filter stream topology on the fly.  Loading and
 unloading filters and reconnecting filters at run-time.
@@ -239,7 +238,9 @@ In the future benchmarking will tell.  TODO: Add links here...
 
 ## A Typical faststream Flow Graph
 
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_simple.png)
+We introduce terms in this figure:
 
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_complex.png)
+![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_tfg.png)
+
+
 
