@@ -116,7 +116,7 @@ extern void _assertAction(FILE *stream);
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
-            _SPEW(errno, "ASSERTION("#val") failed: ", ##__VA_ARGS__);\
+            _SPEW(errno, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
             _assertAction(SPEW_FILE);\
         }\
     }\
