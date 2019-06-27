@@ -27,7 +27,9 @@ struct Stream {
 
 struct Filter {
 
-    int id; // 
+    int id;
+
+    int numOutputs;
 
     const char *name; // unique name for a given struct Fs
 
@@ -37,7 +39,9 @@ struct Filter {
     int (* stop)(int numInChannels, int numOutChannels);
     int (* input)(void *buffer, size_t len, int inputChannelNum);
 
-    struct Filter *next; // 
+    struct Filter *next; // next loaded filter
+
+    struct Filter *outputs; // array of filters to output to
 };
 
 

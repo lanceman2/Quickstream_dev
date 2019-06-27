@@ -8,8 +8,8 @@
 
 extern struct Fs *fsCreate(void);
 extern int fsDestroy(struct Fs *fs);
-
-extern int fsLoad(struct Fs *fs, const char *fileName, const char *loadName);
+extern int fsLoad(struct Fs *fs, const char *fileName,
+        const char *loadName);
 
 
 #endif // #ifndef __FS_H__
