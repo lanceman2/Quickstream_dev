@@ -1,9 +1,12 @@
 #include <stdio.h>
 
 #include "../../../include/fsf.h"
+#include "../../../lib/debug.h"
 
 
 int constructor(void) {
+
+    DSPEW();
 
     return 0; // success
 }

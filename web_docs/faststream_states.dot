@@ -1,9 +1,0 @@
-digraph {
-    label="faststream states";
-    pause -> start;
-    pause -> exit;
-    start -> flow;
-    flow -> flush;
-    flush -> stop;
-    stop -> pause;
-}

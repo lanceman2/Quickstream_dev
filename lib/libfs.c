@@ -16,6 +16,7 @@ struct Fs {
     //
     // List of filters.
     struct Filter *filters;
+    struct Stream *streams;
 };
 
 
@@ -27,7 +28,7 @@ struct Stream {
 
 struct Filter {
 
-    int id;
+    int id; // load index.
 
     int numOutputs;
 
@@ -56,9 +57,7 @@ struct Fs *fsCreate(void) {
 int fsDestroy(struct Fs *fs) {
 
     DASSERT(fs, "");
-
     free(fs);
-
     return 0; // success
 }
 
@@ -81,6 +80,9 @@ static inline void addFilterToList(struct Fs *fs, struct Filter *f) {
 int fsLoad(struct Fs *fs, const char *fileName, const char *loadName) {
 
     DASSERT(fs, "");
+
+    struct Filter *f  = list_allocateAndAddElement(
+
     struct Filter *f = calloc(1, sizeof(*f));
     ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
 

@@ -87,11 +87,19 @@ type of data is of no concern in this faststream APIs.
 The directed graph that data flows in.  
 
 #### Stream states
+A high level view of the stream state diagram (not to be confused with a
+stream flow directed graph) looks like so:
 
-A stream state diagram (not to be confused with a stream flow directed
-graph) looks like so:
+![image of stream simple state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
 
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_states.png)
+which is what a high level user will see.  A high level user will not see
+the transition though the *pause* on the way to exit.
+
+If we wish to see more
+programming detail the stream state diagram can be explained to this:
+
+![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExplaned.png)
+
 
 There is only one thread running except in the flow and flush
 state.  The flush state is no different than the flow state
@@ -109,7 +117,9 @@ except that sources are no longer being feed.
   stream when it is in the start state.
 - **flow**: the filters feed each other and the number of threads and
   processes running depends on the thread and process partitioning scheme
-  that is being used.
+  that is being used.  A long running program that keeps busy will pend
+  most of its time in the *flow* state.
+
 - **flush**: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
 - **stop**: the filters stop functions are being called. There is only one

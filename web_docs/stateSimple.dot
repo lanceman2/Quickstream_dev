@@ -1,0 +1,6 @@
+digraph {
+    label="faststream states";
+    pause -> run;
+    run -> pause;
+    pause -> exit;
+}

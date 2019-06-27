@@ -1,0 +1,26 @@
+digraph {
+    label="faststream states expanded";
+
+    subgraph cluster_0 {
+        label="run";
+        start;
+        flow;
+        flush;
+        stop;
+    }
+
+    subgraph cluster_1 {
+        label="pause";
+        wait;
+        configure;
+    }
+
+    start -> flow;
+    flow -> flush;
+    flush -> stop;
+    stop -> wait;
+    wait -> start;
+    wait -> exit;
+    wait -> configure;
+    configure -> wait;
+}

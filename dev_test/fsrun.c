@@ -1,14 +1,13 @@
 #include <stdio.h>
 
 #include "../include/fs.h"
-#include "../include/fsf.h"
 #include "../lib/debug.h"
 
 
 
 int main(void) {
 
-    printf("hello faststream version %s\n", FS_VERSION);
+    INFO("hello faststream version %s", FS_VERSION);
 
     struct Fs *fs = fsCreate();
 
