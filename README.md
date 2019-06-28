@@ -93,24 +93,31 @@ stream flow directed graph) looks like so:
 ![image of stream simple state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
 
 which is what a high level user will see.  A high level user will not see
-the transition though the *pause* on the way to exit.
+the transition though the *pause* on the way to exit, but it is there.
 
 If we wish to see more
 programming detail the stream state diagram can be explained to this:
 
 ![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExplaned.png)
 
+A faststream filter writer will need to understand the expanded state
+diagram.  Because there can be more than one filter there must be
+intermediate transition states between a *paused* and flowing state, so
+that the filters may learn about their connectivity before flowing, and
+so that the filter may shutdown if that is needed.
 
 There is only one thread running except in the flow and flush
 state.  The flush state is no different than the flow state
 except that sources are no longer being feed.
 
-- **pause**: any faststream must begin in a paused state.  filters
+- **wait**: any faststream must begin in a *wait* state.  filters
   constructors and destructors are called and connections between filters
   may be edited, and the topology of the streams may be changed when it is
   in the paused state.  There is only one thread running in the pause
-  state.  The pause state is the stream configuring state.  The thread
-  and process repartitioning can only happen in the pause state.
+  state.
+- **configure** While in the *pause* mode the stream can be configured.
+  The thread and process repartitioning can only happen in the *configure*
+  state.
 - **start**: the filters start functions are called. filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
@@ -119,13 +126,12 @@ except that sources are no longer being feed.
   processes running depends on the thread and process partitioning scheme
   that is being used.  A long running program that keeps busy will pend
   most of its time in the *flow* state.
-
 - **flush**: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
 - **stop**: the filters stop functions are being called. There is only one
   thread running.  No data is flowing in the stream when it is in the
   stop state.
-- **exit**: no processes are running.
+- **exit**: no processes are running.  The
 
 The stream may cycle through the flow state loop any number of times,
 depending on your use, or it may not go through the flow state at all,
