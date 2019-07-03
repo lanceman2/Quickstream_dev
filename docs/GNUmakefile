@@ -7,9 +7,11 @@
 
 TARGET_DIR := ../../faststream.doc
 
+DOT := $(wildcard *.dot)
+
 BUILD :=\
- $(patsubst %.dot, $(TARGET_DIR)/%.png, $(wildcard *.dot))\
- $(patsubst %.dot, $(TARGET_DIR)/%.svg, $(wildcard *.dot))
+ $(patsubst %.dot, $(TARGET_DIR)/%.png, $(DOT))\
+ $(patsubst %.dot, $(TARGET_DIR)/%.svg, $(DOT))
 
 
 build: $(BUILD)
@@ -24,6 +26,12 @@ $(TARGET_DIR)/%.png: %.dot
 
 $(TARGET_DIR)/%.svg: %.dot
 	dot $< -T svg > $@
+
+
+show dusplay: $(DOT)
+	for f in $^ ; do display $$f & done
+
+
 
 
 

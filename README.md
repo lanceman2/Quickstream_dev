@@ -92,11 +92,12 @@ stream flow directed graph) looks like so:
 
 ![image of stream simple state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
 
-which is what a high level user will see.  A high level user will not see
+which is what a high level user will see.  It's like a very simple video
+player with the video already selected.  A high level user will not see
 the transition though the *pause* on the way to exit, but it is there.
 
-If we wish to see more
-programming detail the stream state diagram can be explained to this:
+If we wish to see more programming detail the stream state diagram can be
+explained to this:
 
 ![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExplaned.png)
 
@@ -110,14 +111,22 @@ There is only one thread running except in the flow and flush
 state.  The flush state is no different than the flow state
 except that sources are no longer being feed.
 
-- **wait**: any faststream must begin in a *wait* state.  filters
-  constructors and destructors are called and connections between filters
-  may be edited, and the topology of the streams may be changed when it is
-  in the paused state.  There is only one thread running in the pause
-  state.
-- **configure** While in the *pause* mode the stream can be configured.
-  The thread and process repartitioning can only happen in the *configure*
-  state.
+- **wait** is a true do nothing state, a process in paused waiting for
+  user input.  This state may skipped through without waiting if the
+  program running non-interactively.  This state may be is needed for
+  interactive programs.
+- **configure** While in this mode the stream can be configured.  All the
+  filter modules are loaded, filter modules *construct* functions are
+  called, and stream filter connections are figured out.  The thread and
+  process repartitioning can only happen in the *configure* state.  Filter
+  modules can also have their *destroy* functions called and they can be
+  unloaded.  Reasoning: *construct* functions may be required to be called
+  so that constraints that only known by the filter are shown to the user,
+  so that the user can construct the stream.  The alternative would be to
+  have particular filter connection constrains exposed separately from
+  outside the module dynamic share object (DSO), which would make filter
+  module management a much larger thing, like most other stream toolkits.
+  We keep it simple at the faststream programming level.
 - **start**: the filters start functions are called. filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
@@ -131,7 +140,10 @@ except that sources are no longer being feed.
 - **stop**: the filters stop functions are being called. There is only one
   thread running.  No data is flowing in the stream when it is in the
   stop state.
-- **exit**: no processes are running.  The
+- **destroy** in reverse load order, all remaining filter modules
+  *destroy* functions are called, if they exist, and then they are
+  unload.
+- **return**: no processes are running.
 
 The stream may cycle through the flow state loop any number of times,
 depending on your use, or it may not go through the flow state at all,

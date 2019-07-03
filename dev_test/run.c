@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "../include/fs.h"
+#include "../include/fsapp.h"
 #include "../lib/debug.h"
 
 
@@ -9,7 +9,7 @@ int main(void) {
 
     INFO("hello faststream version %s", FS_VERSION);
 
-    struct Fs *fs = fsCreate();
+    struct FsApp *fs = fsCreateApp();
 
     if(fsLoad(fs, "stdin", 0)) {
         fsDestroy(fs);

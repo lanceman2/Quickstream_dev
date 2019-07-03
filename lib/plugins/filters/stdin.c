@@ -1,17 +1,17 @@
 #include <stdio.h>
 
-#include "../../../include/fsf.h"
+#include "../../../include/fsfilter.h"
 #include "../../../lib/debug.h"
 
 
-int constructor(void) {
+int construct(void) {
 
     DSPEW();
 
     return 0; // success
 }
 
-int destructor(void) {
+int destroy(void) {
 
     return 0; // success
 }

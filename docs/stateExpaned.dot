@@ -1,4 +1,5 @@
 digraph {
+
     label="faststream states expanded";
 
     subgraph cluster_0 {
@@ -15,12 +16,20 @@ digraph {
         configure;
     }
 
+    subgraph cluster_2 {
+        label="exit";
+        destroy;
+        return;
+    }
+
     start -> flow;
     flow -> flush;
+    flow -> stop;
     flush -> stop;
     stop -> wait;
     wait -> start;
-    wait -> exit;
+    wait -> destroy;
+    destroy -> return;
     wait -> configure;
     configure -> wait;
 }
