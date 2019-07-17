@@ -4,18 +4,17 @@
 #include "../lib/debug.h"
 
 
-
 int main(void) {
 
     INFO("hello faststream version %s", FS_VERSION);
 
-    struct FsApp *fs = fsCreateApp();
+    struct FsApp *app = fsAppCreate();
 
-    if(fsLoad(fs, "stdin", 0)) {
-        fsDestroy(fs);
+    if(!fsAppFilterLoad(app, "stdin", 0)) {
+        fsAppDestroy(app);
         return 1;
     }
 
-    fsDestroy(fs);
+    fsAppDestroy(app);
     return 0;
 }

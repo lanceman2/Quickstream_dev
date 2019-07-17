@@ -1,43 +1,45 @@
-#ifndef __FSAPP_H__
-
-#define __FSAPP_H__
+#ifndef __fsapp_h__
+#define __fsapp_h__
 
 // Change this FS_VERSION string to make a new version.
 #define FS_VERSION "0.0.1"
 
 /** API (application programming interface) object hierarchy
  *
- * - Fs app object
+ * - Fs app
  *
- * - Fss stream
+ * - Fs stream
  *
- * - Fsf filter
+ * - Fs filter
  *
- * - Fsp process
+ * - Fs process
  *
- * - Fst thread
+ * - Fs thread
  */ 
 
 
 /** Create the highest level faststream construct
  * a faststream app. */
 extern
-struct FsApp *fsCreateApp(void);
+struct FsApp *fsAppCreate(void);
 extern
-int fsDestroy(struct Fs *fs);
+int fsAppDestroy(struct FsApp *app);
 
 /** Add a filter module to the list of filter modules to be loaded.
  *
  * \return 0 on success.
  */
 extern
-int fsLoadFilter(struct Fs *fs, const char *fileName, const char *loadName);
+struct FsFilter *fsAppFilterLoad(struct FsApp *app,
+        const char *fileName,
+        const char *loadName);
+
 extern
-int fsUnloadFilter(struct Fs *fs, const char *loadName);
+int fsFilterUnload(struct FsFilter *f, const char *loadName);
 
 
 extern
-struct FsApp fsCreateStream(struct FsApp *app)
+struct FsStream fsAppCreateStream(struct FsApp *app);
 
 
-#endif // #ifndef __FS_H__
+#endif // #ifndef __fsapp_h__

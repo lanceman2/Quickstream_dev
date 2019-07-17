@@ -1,101 +1,45 @@
 #include <stdlib.h>
+#ifndef _GNU_SOURCE
+// For the GNU version of basename() that never modifies its argument.
+#define _GNU_SOURCE
+#endif
+#include <string.h>
+
+// The public installed user interfaces:
+#include "../include/fsapp.h"
 
 
-#include "../include/fs.h"
+// Private interfaces.
+#include "../lib/fsapp.h"
 #include "../lib/debug.h"
+#include "./list.h"
 
 
-static int filterCount = 0;
 
+int fsAppDestroy(struct FsApp *app) {
 
-struct Fs {
-
-    // TODO: make this other than a simple linked list for
-    // faster search.  Functions to change:
-    // addFilterToList(), 
-    //
-    // List of filters.
-    struct Filter *filters;
-    struct Stream *streams;
-};
-
-
-struct Stream {
-
-
-};
-
-
-struct Filter {
-
-    int id; // load index.
-
-    int numOutputs;
-
-    const char *name; // unique name for a given struct Fs
-
-    int (* constructor)(void);
-    int (* destructor)(void);
-    int (* start)(int numInChannels, int numOutChannels);
-    int (* stop)(int numInChannels, int numOutChannels);
-    int (* input)(void *buffer, size_t len, int inputChannelNum);
-
-    struct Filter *next; // next loaded filter
-
-    struct Filter *outputs; // array of filters to output to
-};
-
-
-struct Fs *fsCreate(void) {
-
-    struct Fs  *fs = calloc(1, sizeof(*fs));
-    ASSERT(fs, "calloc(1,%zu) failed", sizeof(*fs));
-    return fs;
-}
-
-
-int fsDestroy(struct Fs *fs) {
-
-    DASSERT(fs, "");
-    free(fs);
+    DASSERT(app, "");
+    free(app);
     return 0; // success
 }
 
 
+struct FsFilter *fsAppFilterLoad(struct FsApp *app,
+        const char *fileName, const char *loadName) {
 
-static inline void addFilterToList(struct Fs *fs, struct Filter *f) {
+    DASSERT(app, "");
+    DASSERT(fileName, "");
+    DASSERT(strlen(fileName) > 0, "");
 
-    struct Filter *lastF = fs->filters;
-    if(!lastF) {
-        fs->filters = f;
-        return;
-    }
-    while(lastF->next) lastF = lastF->next;
-    lastF->next = f;
-    DASSERT(0 == f->next, "");
+    const char *name = loadName;
+
+    if(!name || !(*name))
+        name = loadName;
+
+    struct FsFilter *f = AllocAndAddToFilterList(app, name);
+
+    INFO("Successfully loaded module Filter %s as %s", fileName, f->name);
+
+    return f; // success
 }
-
-
-
-int fsLoad(struct Fs *fs, const char *fileName, const char *loadName) {
-
-    DASSERT(fs, "");
-
-    struct Filter *f  = list_allocateAndAddElement(
-
-    struct Filter *f = calloc(1, sizeof(*f));
-    ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
-
-    f->id = filterCount++;
-    addFilterToList(fs, f);
-
-    INFO("Loaded module Filter %d: %s", f->id, fileName);
-
-
-    return 0; // success
-}
-
-
-
-
 
