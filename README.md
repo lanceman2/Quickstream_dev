@@ -99,7 +99,7 @@ the transition though the *pause* on the way to exit, but it is there.
 If we wish to see more programming detail the stream state diagram can be
 explained to this:
 
-![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExplaned.png)
+![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExpaned.png)
 
 A faststream filter writer will need to understand the expanded state
 diagram.  Because there can be more than one filter there must be
