@@ -197,13 +197,14 @@ they are sinks.
 ## Interfaces
 
 faststream has two APIs (application programming interfaces) and some
-utility programs:
+utility programs.  The main parts are:
 
 - a filter API **libfsf**: which is used to build a faststream filter
   dynamic shared object filter modules.
 - a stream program API **libfs**: which is used to build programs that run
   a faststream with said filters.
-- the program **fsrun**: which uses *libfs* to run a faststream with said filters
+- the program **fsrun**: which uses *libfs* to run a faststream with said
+  filters.
 
 ## OS (operating system) Ports
 
@@ -211,6 +212,8 @@ Debian 9 and maybe Ubuntu 18.04
 
 
 ## Prerequisite packages
+Building and installing faststream requires the following debian package
+prerequisites:
 - graphviz
 - graphviz-dev
 - imagemagick
@@ -219,29 +222,31 @@ Debian 9 and maybe Ubuntu 18.04
 ## Similar Software Projects
 
 Most other stream flow like software projects have a much more particular
-scope of usage than faststream.  These software packages to simular
+scope of usage than faststream.  These software packages to similar
 things.  We study them and learn.
 
 - **GNUradio** https://www.gnuradio.org/
 - **gstreamer** https://gstreamer.freedesktop.org/
 - **RedHawk** https://geontech.com/redhawk-sdr/
-- **csdr** https://github.com/simonyiszk/csdr I like the way this uses
-  UNIX pipe-line stream to make its flow stream.
+- **csdr** https://github.com/simonyiszk/csdr We like straight forward way
+  csdr uses UNIX pipe-line stream to make its flow stream.
 
 ### What faststream intends to do better
 
-Run faster with less system resources.  It's simpler.
+Summary: Run faster with less system resources.  Be simple.
 
 In principle it should be able to run fast.  We have no controlling task
 manager thread that synchronizes the running processes and/or threads.
 All filters keep processing input until they are blocked by a slower
 down-stream filter (clogged), or they are waiting for input from an
-up-stream filter (throttled).
+up-stream filter (throttled).  The clogging and throttling of the stream
+flows is determined to the current inter-filter buffering parameters.
 
 Simple filters can share the same thread, and whereby use less system
 resources, and thereby run the stream faster by avoiding thread context
 switches using less time and memory than running filters in separate
-threads (or processes).  Shared memory is clearly the fastest inter-thread
+threads (or processes).  When filter gets more complex we can let the filter
+run in it's own thread (or process).  Shared memory is clearly the fastest inter-thread
 and inter-process communication mechanism, and we use shared memory with a
 consistent lock-less circular buffer.  Memory is not required to be copied
 between filters and can be modified and passed through filters.  Then the
@@ -250,7 +255,7 @@ filter may introduce, and memory copies across from one filter to another
 can be completely avoided using a pass-through buffer.
 
 It's simple.  There is no learning curve.  There's just less there.  There
-is only one interface for a given functionality.
+is only one interface for a given faststream primitive functionality.
 
 The stream may repartition its process and threading scheme at launch-time
 and run-time based on stream flow measures, and so it can be adaptive and
@@ -266,9 +271,9 @@ In the future benchmarking will tell.  TODO: Add links here...
 
 ## A Typical faststream Flow Graph
 
-We introduce terms in this figure:
+A simple faststream:
+![simple stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_simple.png)
 
-![image of stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_tfg.png)
-
-
+A more complex faststream:
+![complex stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_complex.png)
 
