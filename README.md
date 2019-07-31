@@ -272,8 +272,8 @@ In the future benchmarking will tell.  TODO: Add links here...
 ## A Typical faststream Flow Graph
 
 A simple faststream:
-![simple stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_simple.png)
+![simple stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_simple.png)
 
 A more complex faststream:
-![complex stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/fastStream_complex.png)
+![complex stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_complex.png)
 
