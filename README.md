@@ -7,8 +7,8 @@ and some utility programs.  quickstream is written in C and the libraries
 can link with C and C++ code.  quickstream is for building flow stream
 graphs that process stream data in filter module stages.  quickstream is
 use case is generic, in the way it does not care what kind of data is
-being transferred between stages.  The types of data is in the users
-domain.
+being transferred between stages.  The types of data that flows is in the
+users domain.
 
 ## Building and Installing from GitHub Repository Source
 
