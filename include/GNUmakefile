@@ -1,6 +1,6 @@
 
 INSTALL_DIR = $(PREFIX)/include
 
-INSTALLED := fsfilter.h fsapp.h
+INSTALLED := qsfilter.h qsapp.h
 
 include ../quickbuild.make

@@ -28,7 +28,7 @@ $(TARGET_DIR)/%.svg: %.dot
 	dot $< -T svg > $@
 
 
-show dusplay: $(DOT)
+show display: $(DOT)
 	for f in $^ ; do display $$f & done
 
 

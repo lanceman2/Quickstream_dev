@@ -10,13 +10,13 @@
 // we get the element typed at compile time, and do not access another
 // pointer.
 //
-// For lists in faststream, we insist that the access to the list be fast
-// when the fstream is in a "run" state, and the lists are not edited
+// For lists in quickstream, we insist that the access to the list be
+// quick when the stream is in a "run" state, and the lists are not edited
 // while it is in a "run" state.
 //
-// Arrays may be the fastest list data structure that there is, and faster
-// than a hash table, given that we do not calculate a hash function to
-// index into the table.
+// Arrays may be the quickest list data structure that there is, and
+// quicker than a hash table, given that we do not calculate a hash
+// function to index into the table.
 
 
 //
@@ -26,23 +26,23 @@
 //
 
 
-#ifndef __fsapp_h__
-#  error "fsapp.h needs to be included before this file."
+#ifndef __qsapp_h__
+#  error "qsapp.h needs to be included before this file."
 #endif
 #ifndef __debug_h__
-#  error "fsapp.h needs to be included before this file."
+#  error "qsapp.h needs to be included before this file."
 #endif
 
-static inline struct FsFilter *FindFilterName(struct FsApp *app,
+static inline struct QsFilter *FindFilterName(struct QsApp *app,
         const char *name) {
 
-    struct FsFilter *F = app->filters;
-    // TODO: This could be made faster, but the faststream is
+    struct QsFilter *F = app->filters;
+    // TODO: This could be made quicker, but the quickstream is
     // not in "run" mode now so speed it not really needed now.
     //
     for(F = app->filters; F; F = F->next) {
         if(!strcmp(F->name, name))
-            return F->name; // found
+            return F; // found
     }
 
     return 0; // not found
@@ -52,15 +52,13 @@ static inline struct FsFilter *FindFilterName(struct FsApp *app,
 
 // name must be unique for all filters in app
 //
-static inline struct FsFilter *AllocAndAddToFilterList(struct FsApp *app,
+static inline struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         const char *name) {
 
-    struct FsFilter *f = calloc(1, sizeof(*f));
+    struct QsFilter *f = calloc(1, sizeof(*f));
     ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
 
-    char *name = 
-
-    struct FsFilter *F = app->filters;
+    struct QsFilter *F = app->filters;
     if(!F) {
         app->filters = f;
         return 0;
@@ -69,12 +67,12 @@ static inline struct FsFilter *AllocAndAddToFilterList(struct FsApp *app,
     F->next = f;
     DASSERT(0 == f->next, "");
 
-    f->name = strdup(name)
+    f->name = strdup(name);
 
     /* Get a unique name for this loaded module filter. */
     //
-    // TODO: This could be made faster, but the faststream is
-    // not in "run" mode now so speed it not really needed now.
+    // TODO: This could be made quicker, but the quickstream is
+    // not in "run" mode now so speed is not really needed now.
     //
     for(F = app->filters; F; F = F->next) {
         

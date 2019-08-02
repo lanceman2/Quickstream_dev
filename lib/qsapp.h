@@ -1,26 +1,26 @@
-/* This is a private header file that is only used in the faststream
- * libfsapp.so code. */
+/* This is a private header file that is only used in the quickstream
+ * libqsapp.so code. */
 
 
-struct FsApp {
+struct QsApp {
 
     // TODO: make this other than a simple linked list for
     // faster search.  Functions to change:
     // addFilterToList(), 
     //
     // List of filters.
-    struct FsFilter *filters;
-    struct Stream *streams;
+    struct QsFilter *filters;
+    struct QsStream *streams;
 };
 
 
-struct FsStream {
+struct QsStream {
 
 
 };
 
 
-struct FsFilter {
+struct QsFilter {
 
     int numOutputs;
 
@@ -32,8 +32,8 @@ struct FsFilter {
     int (* stop)(int numInChannels, int numOutChannels);
     int (* input)(void *buffer, size_t len, int inputChannelNum);
 
-    struct FsFilter *next; // next loaded filter
+    struct QsFilter *next; // next loaded filter
 
-    struct FsFilter *outputs; // array of filters to output to this
+    struct QsFilter *outputs; // array of filters to output to this
 };
 

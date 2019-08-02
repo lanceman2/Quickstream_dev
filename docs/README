@@ -1,11 +1,11 @@
-Running make with write to ../../fastream.doc/
+Running make with write to ../../quickstream.doc/
 
 This directory contains files that generate documentation files that go
-into https://github.com/lanceman2/faststream.doc.git.  You see we do not
+into https://github.com/lanceman2/quickstream.doc.git.  You see we do not
 want to check-in generated files into
-https://github.com/lanceman2/faststream.git.  We put the generated file
-from this directory into https://github.com/lanceman2/faststream.doc.git
-and so https://github.com/lanceman2/faststream.doc.git is not used like a
-repository, but is a dumping ground so that we can document faststream on
+https://github.com/lanceman2/quickstream.git.  We put the generated file
+from this directory into https://github.com/lanceman2/quickstream.doc.git
+and so https://github.com/lanceman2/quickstream.doc.git is not used like a
+repository, but is a dumping ground so that we can document quickstream on
 the web via github.com service.
 

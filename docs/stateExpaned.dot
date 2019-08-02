@@ -1,6 +1,6 @@
 digraph {
 
-    label="faststream states expanded";
+    label="quickstream states expanded";
 
     subgraph cluster_0 {
         label="run";

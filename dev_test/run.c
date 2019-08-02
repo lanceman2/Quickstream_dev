@@ -1,20 +1,20 @@
 #include <stdio.h>
 
-#include "../include/fsapp.h"
+#include "../include/qsapp.h"
 #include "../lib/debug.h"
 
 
 int main(void) {
 
-    INFO("hello faststream version %s", FS_VERSION);
+    INFO("hello quickstream version %s", QS_VERSION);
 
-    struct FsApp *app = fsAppCreate();
+    struct QsApp *app = qsAppCreate();
 
-    if(!fsAppFilterLoad(app, "stdin", 0)) {
-        fsAppDestroy(app);
+    if(!qsAppFilterLoad(app, "stdin", 0)) {
+        qsAppDestroy(app);
         return 1;
     }
 
-    fsAppDestroy(app);
+    qsAppDestroy(app);
     return 0;
 }

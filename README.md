@@ -1,33 +1,59 @@
-# faststream
+# quickstream
 
-data flows between modules in a directed graph
+data quickly flows between modules in a directed graph
+
+quickstream is the run library, the filter library, some filter modules,
+and some utility programs.  quickstream is written in C and the libraries
+can link with C and C++ code.  quickstream is for building flow stream
+graphs that process stream data in filter module stages.  quickstream is
+use case is generic, in the way it does not care what kind of data is
+being transferred between stages.  The types of data is in the users
+domain.
 
 ## Building and Installing from GitHub Repository Source
 
 Change directory to the top source directory and then run:
 
-    ./bootstrap
+  *./bootstrap*
 
 Then
 
-    echo "PREFIX = MY_PREFIX" > config.make
+  *echo "PREFIX = MY_PREFIX" > config.make*
 
 where ``MY_PREFIX`` is the top installation directory, like for example
-*/usr/local/encap/faststream*.  Then run
+*/usr/local/encap/quickstream*.  Then run
 
-    make download
+  *make download*
 
 to download additional files to the source directory.
 Then run
 
-    make
+  *make*
 
 to generate (compile) files in the source directory.
 Then run
 
-    make install
+  *make install*
 
 to install files into the prefix directory you defined.
+
+Note the *PREFIX* will only be used in the *make install* and is not
+required to be set until *make install* runs, so alternatively you can
+skip making the *config.make* file and in place of running *make install*
+you can run *make install PREFIX=MY_PREFIX*.
+
+For debugging and development additional configuration options can be
+added to the *config.make* files as C preprocesser flags when compiling
+are for example:
+
+  - *CPPFLAGS=-DDEBUG*
+  - *CPPFLAGS="-DDEBUG -DSPEW_LEVEL_DEBUG"*
+  - *CPPFLAGS=-DSPEW_LEVEL_INFO*
+  - *CPPFLAGS="-DDEBUG -DSPEW_LEVEL_NOTICE"*
+  - *CPPFLAGS=-DSPEW_LEVEL_WARN*
+
+See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
+used.
 
 
 ## Description
@@ -54,32 +80,39 @@ contentious cases by using a lock-less circular buffer, where each
 producer and consumer module makes promises as to how they will access the
 circular buffer in order to guarantee consistent lock-less operation.
 
-faststream is minimalistic and generic.  It is software not designed for
+quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
 pattern more so than a particular software development frame-work; as
 such, it may be used as a basis to build a frame-work to write programs to
 process audio, video, software defined radio (SDR), or any kind of digit
 flow pipe-line.
 
-Interfaces in faststream are minimalistic.  To make a filter you do not
+Interfaces in quickstream are minimalistic.  To make a filter you do not
 necessarily need to consider data flow connection types.  Connection types
-are left in the faststream user domain.  In the same way that UNIX
+are left in the quickstream user domain.  In the same way that UNIX
 pipe-lines don't care what type of data is flowing in the pipe,
-faststream just provides a data streaming utility.  So if to put the wrong
+quickstream just provides a data streaming utility.  So if to put the wrong
 type of data into your pipe-line, you get what you pay for.  The API
 (application programming interface) is also minimalistic, in that you do
-not need to waste time figuring out what functions and/or classes to use
-to do a particular task.
+not need to waste time so much time figuring out what functions and/or
+classes to use to do a particular task, the choose should be obvious.
 
 The intent is to construct a flow stream of filters.  The filters do not
 necessarily concern themselves with their neighboring filters; the filters
 just read input from input channels and write output to output channels,
 not necessarily knowing what is writing to them or what is reading from
 them; at least that is the mode of operation at this protocol
-(faststream API) level.  The user may add more structure to that if they
+(quickstream API) level.  The user may add more structure to that if they
 need to.  It's like the other UNIX abstractions like sockets, in that the
-type of data is of no concern in this faststream APIs.
+type of data is of no concern in this quickstream APIs.
 
+## Prerequisite packages
+Building and installing quickstream requires the following debian package
+prerequisites:
+- build-essential
+- graphviz
+- graphviz-dev
+- imagemagick
 
 ## Terminology
 
@@ -90,7 +123,8 @@ The directed graph that data flows in.
 A high level view of the stream state diagram (not to be confused with a
 stream flow directed graph) looks like so:
 
-![image of stream simple state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
+![image of stream simple state](
+https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
 
 which is what a high level user will see.  It's like a very simple video
 player with the video already selected.  A high level user will not see
@@ -99,9 +133,10 @@ the transition though the *pause* on the way to exit, but it is there.
 If we wish to see more programming detail the stream state diagram can be
 explained to this:
 
-![image of stream expanded state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExpaned.png)
+![image of stream expanded state](
+https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExpaned.png)
 
-A faststream filter writer will need to understand the expanded state
+A quickstream filter writer will need to understand the expanded state
 diagram.  Because there can be more than one filter there must be
 intermediate transition states between a *paused* and flowing state, so
 that the filters may learn about their connectivity before flowing, and
@@ -126,7 +161,7 @@ except that sources are no longer being feed.
   have particular filter connection constrains exposed separately from
   outside the module dynamic share object (DSO), which would make filter
   module management a much larger thing, like most other stream toolkits.
-  We keep it simple at the faststream programming level.
+  We keep it simple at the quickstream programming level.
 - **start**: the filters start functions are called. filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
@@ -156,7 +191,7 @@ A module reads input and writes outputs in the stream.  The number of
 input channels and the number of output channels may be from zero to any
 integer.  filters do not know if they are running as a single thread by
 themselves or they are sharing their thread execution with other filters.
-From the faststream user filters just provide executable object code.
+From the quickstream user filters just provide executable object code.
 
 ### Controller
 
@@ -180,49 +215,40 @@ input or output channels.
 
 A filter with no inputs is a source filter.  It may get "input" from
 something other than the stream, like a file, or a socket, but those
-kinds of inputs are external from the faststream, that is they do get
-any input from the faststream circular buffer.  So in a more global sense
-that may not be sources, but with respect to faststream they are sources.
+kinds of inputs are external from the quickstream, that is they do get
+any input from the quickstream circular buffer.  So in a more global sense
+that may not be sources, but with respect to quickstream they are sources.
 
 ### Sink
 
 A filter with no outputs is a sink filter.  It may write "output" to
 something other than the stream, like a file, a socket, or display device,
-but those kinds of outputs are external from the faststream, that is they
-do not read a faststream circular buffer using the faststream API.  In a
-more global sense that may not be sinks, but with respect to faststream
+but those kinds of outputs are external from the quickstream, that is they
+do not read a quickstream circular buffer using the quickstream API.  In a
+more global sense that may not be sinks, but with respect to quickstream
 they are sinks.
 
 
 ## Interfaces
 
-faststream has two APIs (application programming interfaces) and some
+quickstream has two APIs (application programming interfaces) and some
 utility programs.  The main parts are:
 
-- a filter API **libfsf**: which is used to build a faststream filter
+- a filter API **libqsfilter**: which is used to build a quickstream filter
   dynamic shared object filter modules.
-- a stream program API **libfs**: which is used to build programs that run
-  a faststream with said filters.
-- the program **fsrun**: which uses *libfs* to run a faststream with said
+- a stream program API **libqsapp**: which is used to build programs that run
+  a quickstream with said filters.
+- the program **qsrun**: which uses *libqs* to run a quickstream with said
   filters.
 
 ## OS (operating system) Ports
 
-Debian 9 and maybe Ubuntu 18.04
-
-
-## Prerequisite packages
-Building and installing faststream requires the following debian package
-prerequisites:
-- graphviz
-- graphviz-dev
-- imagemagick
-- make
+Debian 9 and Ubuntu 18.04
 
 ## Similar Software Projects
 
 Most other stream flow like software projects have a much more particular
-scope of usage than faststream.  These software packages to similar
+scope of usage than quickstream.  These software packages to similar
 things.  We study them and learn.
 
 - **GNUradio** https://www.gnuradio.org/
@@ -231,7 +257,7 @@ things.  We study them and learn.
 - **csdr** https://github.com/simonyiszk/csdr We like straight forward way
   csdr uses UNIX pipe-line stream to make its flow stream.
 
-### What faststream intends to do better
+### What quickstream intends to do better
 
 Summary: Run faster with less system resources.  Be simple.
 
@@ -245,17 +271,18 @@ flows is determined to the current inter-filter buffering parameters.
 Simple filters can share the same thread, and whereby use less system
 resources, and thereby run the stream faster by avoiding thread context
 switches using less time and memory than running filters in separate
-threads (or processes).  When filter gets more complex we can let the filter
-run in it's own thread (or process).  Shared memory is clearly the fastest inter-thread
-and inter-process communication mechanism, and we use shared memory with a
-consistent lock-less circular buffer.  Memory is not required to be copied
-between filters and can be modified and passed through filters.  Then the
-stream is in the flow state there are no systems call, except those that a
-filter may introduce, and memory copies across from one filter to another
-can be completely avoided using a pass-through buffer.
+threads (or processes).  When filter gets more complex we can let the
+filter run in it's own thread (or process).  Shared memory is clearly the
+fastest inter-thread and inter-process communication mechanism, and we use
+shared memory with a consistent lock-less circular buffer.  Memory is not
+required to be copied between filters and can be modified and passed
+through filters.  Then the stream is in the flow state there are no
+systems call, except those that a filter may introduce, and memory copies
+across from one filter to another can be completely avoided using a
+pass-through buffer.
 
 It's simple.  There is no learning curve.  There's just less there.  There
-is only one interface for a given faststream primitive functionality.
+is only one interface for a given quickstream primitive functionality.
 
 The stream may repartition its process and threading scheme at launch-time
 and run-time based on stream flow measures, and so it can be adaptive and
@@ -269,9 +296,33 @@ unloading filters and reconnecting filters at run-time.
 
 In the future benchmarking will tell.  TODO: Add links here...
 
-## A Typical faststream Flow Graph
+## A Typical quickstream Flow Graph
 
-![simple stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_simple.png)
+![simple stream state](
+https://raw.githubusercontent.com/lanceman2/faststream.doc/master/quickstream_simple.png)
 
-![complex stream state](https://raw.githubusercontent.com/lanceman2/faststream.doc/master/faststream_complex.png)
+![complex stream state](
+https://raw.githubusercontent.com/lanceman2/faststream.doc/master/quickstream_complex.png)
+
+
+## Developer notes
+
+- quickstream code is written fairly simple C with very few dependences
+- the files in the source directly follow the directory structure of the
+  installed files.  So you don't need to wonder where source files are.
+- consequently programs can run in the source directory after running make
+  without installing them.
+- consequently also the running programs find files from a relative paths
+  between them, the same way as in the installed files as with the files
+  in the source.
+- consequently we use the compilers relative linking options to link and
+  run programs.
+- you can move the whole encapsulated installation and everything runs the
+  same.
+- environment variables allow users to tell quickstream programs where to
+  find users files that are not in the quickstream source code.
+- the installation prefix directory is not used in an quickstream code,
+  only relative paths are needed for running quickstream files to find
+  themselves.
+- C++ code can link with quickstream.
 

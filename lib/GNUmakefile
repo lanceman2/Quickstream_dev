@@ -1,8 +1,8 @@
 
 INSTALL_DIR = $(PREFIX)/lib
 
-libfsapp.so_SOURCES := libfsapp.c debug.c
-libfsfilter.so_SOURCES := libfsfilter.c
+libqsapp.so_SOURCES := libqsapp.c debug.c
+libqsfilter.so_SOURCES := libqsfilter.c
 
 
 include ../quickbuild.make

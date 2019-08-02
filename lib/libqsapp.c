@@ -6,17 +6,23 @@
 #include <string.h>
 
 // The public installed user interfaces:
-#include "../include/fsapp.h"
+#include "../include/qsapp.h"
 
 
 // Private interfaces.
-#include "../lib/fsapp.h"
+#include "../lib/qsapp.h"
 #include "../lib/debug.h"
 #include "./list.h"
 
+struct QsApp *qsAppCreate(void) {
+
+    struct QsApp *app = calloc(1, sizeof(*app));
+
+    return app;
+}
 
 
-int fsAppDestroy(struct FsApp *app) {
+int qsAppDestroy(struct QsApp *app) {
 
     DASSERT(app, "");
     free(app);
@@ -24,7 +30,7 @@ int fsAppDestroy(struct FsApp *app) {
 }
 
 
-struct FsFilter *fsAppFilterLoad(struct FsApp *app,
+struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName, const char *loadName) {
 
     DASSERT(app, "");
@@ -36,7 +42,7 @@ struct FsFilter *fsAppFilterLoad(struct FsApp *app,
     if(!name || !(*name))
         name = loadName;
 
-    struct FsFilter *f = AllocAndAddToFilterList(app, name);
+    struct QsFilter *f = AllocAndAddToFilterList(app, name);
 
     INFO("Successfully loaded module Filter %s as %s", fileName, f->name);
 

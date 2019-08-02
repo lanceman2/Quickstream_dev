@@ -1,5 +1,5 @@
 digraph {
-    label="faststream states";
+    label="quickstream states";
     pause -> run;
     run -> pause;
     pause -> exit;
