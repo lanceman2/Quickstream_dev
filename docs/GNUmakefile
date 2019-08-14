@@ -5,7 +5,7 @@
 # This make file just writes to file in TARGET_DIR.
 #
 
-TARGET_DIR := ../../faststream.doc
+TARGET_DIR := ../../quickstream.doc
 
 DOT := $(wildcard *.dot)
 

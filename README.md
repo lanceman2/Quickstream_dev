@@ -124,7 +124,7 @@ A high level view of the stream state diagram (not to be confused with a
 stream flow directed graph) looks like so:
 
 ![image of stream simple state](
-https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateSimple.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/stateSimple.png)
 
 which is what a high level user will see.  It's like a very simple video
 player with the video already selected.  A high level user will not see
@@ -134,7 +134,7 @@ If we wish to see more programming detail the stream state diagram can be
 explained to this:
 
 ![image of stream expanded state](
-https://raw.githubusercontent.com/lanceman2/faststream.doc/master/stateExpaned.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/stateExpaned.png)
 
 A quickstream filter writer will need to understand the expanded state
 diagram.  Because there can be more than one filter there must be
@@ -299,10 +299,10 @@ In the future benchmarking will tell.  TODO: Add links here...
 ## A Typical quickstream Flow Graph
 
 ![simple stream state](
-https://raw.githubusercontent.com/lanceman2/faststream.doc/master/quickstream_simple.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_simple.png)
 
 ![complex stream state](
-https://raw.githubusercontent.com/lanceman2/faststream.doc/master/quickstream_complex.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_complex.png)
 
 
 ## Developer notes
