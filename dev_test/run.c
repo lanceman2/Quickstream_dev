@@ -10,7 +10,7 @@ int main(void) {
 
     struct QsApp *app = qsAppCreate();
 
-    if(!qsAppFilterLoad(app, "stdin", 0)) {
+    if(!qsAppFilterLoad(app, "/foo/stdin.so", 0)) {
         qsAppDestroy(app);
         return 1;
     }

@@ -52,32 +52,31 @@ static inline struct QsFilter *FindFilterName(struct QsApp *app,
 
 // name must be unique for all filters in app
 //
+// TODO: this is not required to be fast; yet.
+//
 static inline struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         const char *name) {
 
+    DASSERT(app, "");
     struct QsFilter *f = calloc(1, sizeof(*f));
     ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
+    f->name = strdup(name);
+
 
     struct QsFilter *F = app->filters;
     if(!F) {
+        // This is the first filter in this app.
         app->filters = f;
-        return 0;
+        return f;
     }
     while(F->next) F = F->next;
     F->next = f;
     DASSERT(0 == f->next, "");
 
-    f->name = strdup(name);
-
-    /* Get a unique name for this loaded module filter. */
+    /* TODO: Check for unique name for this loaded module filter. */
     //
     // TODO: This could be made quicker, but the quickstream is
     // not in "run" mode now so speed is not really needed now.
-    //
-    for(F = app->filters; F; F = F->next) {
-        
-    }
-
 
     return f;
 }
