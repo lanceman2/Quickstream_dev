@@ -10,11 +10,28 @@ int main(void) {
 
     struct QsApp *app = qsAppCreate();
 
-    if(!qsAppFilterLoad(app, "/foo/stdin.so", 0)) {
+    if(!qsAppFilterLoad(app, "stdin.so", 0)) {
         qsAppDestroy(app);
         return 1;
     }
 
+    if(!qsAppFilterLoad(app, "stdin.so", 0)) {
+        qsAppDestroy(app);
+        return 1;
+    }
+
+
+    if(!qsAppFilterLoad(app, "stdout.so", "stdout")) {
+        qsAppDestroy(app);
+        return 1;
+    }
+
+
+
+
     qsAppDestroy(app);
+
+    DSPEW("SUCCESS");
+
     return 0;
 }

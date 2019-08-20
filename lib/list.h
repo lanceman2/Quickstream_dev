@@ -33,7 +33,9 @@
 #  error "qsapp.h needs to be included before this file."
 #endif
 
-static inline struct QsFilter *FindFilterName(struct QsApp *app,
+
+
+static inline struct QsFilter *FindFilterNamed(struct QsApp *app,
         const char *name) {
 
     struct QsFilter *F = app->filters;
@@ -48,6 +50,39 @@ static inline struct QsFilter *FindFilterName(struct QsApp *app,
     return 0; // not found
 }
 
+static inline void FreeFilter(struct QsFilter *f) {
+
+    DASSERT(f, "");
+    DASSERT(f->name, "");
+    DSPEW("Freeing: %s", f->name);
+    free(f->name);
+    free(f);
+}
+
+//
+// Free the filter memory and remove it from the list.
+//
+static inline void FreeFilterFromList(struct QsApp *app, struct QsFilter *f) {
+
+    DASSERT(app, "");
+    DASSERT(app->filters, "");
+
+    struct QsFilter *F = app->filters;
+    struct QsFilter *prev = 0;
+    while(F) {
+        if(F == f) {
+            if(prev)
+                prev->next = F->next;
+            else
+                app->filters = F->next;
+            FreeFilter(f);
+            break;
+        }
+        prev = F;
+        F = F->next;
+    }
+}
+
 
 
 // name must be unique for all filters in app
@@ -58,25 +93,39 @@ static inline struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         const char *name) {
 
     DASSERT(app, "");
+    DASSERT(name, "");
+    DASSERT(name[0], "");
     struct QsFilter *f = calloc(1, sizeof(*f));
     ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
-    f->name = strdup(name);
 
-
-    struct QsFilter *F = app->filters;
-    if(!F) {
-        // This is the first filter in this app.
-        app->filters = f;
-        return f;
-    }
-    while(F->next) F = F->next;
-    F->next = f;
-    DASSERT(0 == f->next, "");
-
-    /* TODO: Check for unique name for this loaded module filter. */
+    // Check for unique name for this loaded module filter.
     //
-    // TODO: This could be made quicker, but the quickstream is
-    // not in "run" mode now so speed is not really needed now.
+    if(FindFilterNamed(app, name)) {
+        uint32_t count = 2;
+        size_t sLen = strlen(name) + 7;
+        f->name = malloc(sLen);
+
+        while(count < 1000000) {
+            snprintf(f->name, sLen, "%s-%" PRIu32, name, count);
+            ++count;
+            if(!FindFilterNamed(app, f->name))
+                break;
+        }
+        // I can't imagine that there will be ~ 1000000 filters.
+        DASSERT(count < 1000000, "");
+    } else
+        f->name = strdup(name);
+
+
+    struct QsFilter *fIt = app->filters; // dummy iterator.
+    if(!fIt)
+        // This is the first filter in this app.
+        return (app->filters = f);
+
+    while(fIt->next) fIt = fIt->next;
+
+    // Put it last in the app filter list.
+    fIt->next = f;
 
     return f;
 }
