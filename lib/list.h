@@ -59,10 +59,22 @@ static inline void FreeFilter(struct QsFilter *f) {
     free(f);
 }
 
+
+struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
+    DASSERT(app, "");
+    DASSERT(handle, "");
+DSPEW();
+    for(struct QsFilter *f = app->filters; f; f = f->next)
+        if(f->dlhandle == handle)
+            return f;
+    return 0;
+}
+
+
 //
 // Free the filter memory and remove it from the list.
 //
-static inline void FreeFilterFromList(struct QsApp *app, struct QsFilter *f) {
+static inline void RemoveFilterFromList(struct QsApp *app, struct QsFilter *f) {
 
     DASSERT(app, "");
     DASSERT(app->filters, "");

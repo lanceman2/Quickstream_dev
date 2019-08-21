@@ -66,7 +66,7 @@ extern "C" {
 // or #define SPEW_LEVEL_WARN
 // or #define SPEW_LEVEL_ERROR
 /////////////////////////////////////////////////////////////////////////
-#define SPEW_LEVEL_DEBUG
+//#define SPEW_LEVEL_DEBUG
 
 
 

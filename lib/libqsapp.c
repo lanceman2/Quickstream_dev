@@ -10,6 +10,9 @@
 #include <inttypes.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
@@ -95,7 +98,6 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         ERROR("Filter name \"%s\" is in use already", _loadName);
         return 0;
     }
-
     char *path = 0;
 
     if(fileName[0] == DIR_CHAR) {
@@ -113,24 +115,98 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         }
     } else
         path = GetPluginPath("filters", fileName);
+    
+    // It should be a full path.
+    DASSERT(path[0] == '/', "");
 
-    //SPEW("Trying path: %s", path);
-
-    //void *handle = dlmopen(LM_ID_NEWLM, path,
-    void *handle = dlopen(path,
-            RTLD_NOW | RTLD_LOCAL);
+    void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
     if(!handle) {
-        ERROR("Failed to dlmopen(LM_ID_NEWLM,\"%s\",): %s",
-                path, dlerror());
+        ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
         free(path);
         return 0;
     }
 
+    if(FindFilter_viaHandle(app, handle)) {
+        //
+        // This DSO (dynamic shared object) file is already loaded.  So we
+        // must copy the DSO file to a temp file and load that.  Otherwise
+        // we will have just the one plugin loaded, but referred to by two
+        // (or more) filters, which is not what we want.  The temp file
+        // will be automatically removed when the process exits.
+        //
+
+        if(dlclose(handle)) {
+            ERROR("dlclose() of %s failed: %s", path, dlerror());
+            free(path);
+            return 0;
+        }
+
+        INFO("DSO from %s was loaded before, loading a copy", path);
+        char tmpFilename[63];
+        strcpy(tmpFilename, "/tmp/qs_XXXXXX.so");
+        int tmpFd = mkstemps(tmpFilename, 3);
+        if(tmpFd < 0) {
+            ERROR("mkstemp() failed");
+            free(path);
+            return 0;
+        }
+        DSPEW("made temporary file: %s", tmpFilename);
+        int dso = open(path, O_RDONLY);
+        if(dso < 0) {
+            ERROR("open(\"%s\", O_RDONLY) failed", path);
+            close(tmpFd);
+            free(path);
+            unlink(tmpFilename);
+            return 0;
+        }
+        const size_t len = 1024;
+        uint8_t buf[len];
+        ssize_t rr = read(dso, buf, len);
+        while(rr > 0) {
+            ssize_t wr;
+            size_t bw = 0;
+            while(rr > 0) {
+                wr = write(tmpFd, &buf[bw], rr);
+                if(wr < 1) {
+                    ERROR("Failed to write to %s", tmpFilename);
+                    close(tmpFd);
+                    close(dso);
+                    free(path);
+                    unlink(tmpFilename);
+                    return 0;
+                }
+                rr -= wr;
+                bw += wr;
+            }
+            
+            rr = read(dso, buf, len);
+        }
+        close(tmpFd);
+        close(dso);
+        chmod(tmpFilename, 0700);
+
+        handle = dlopen(tmpFilename, RTLD_NOW | RTLD_LOCAL);
+        //
+        // This file is mapped to the process.  No other process will have
+        // access to this tmp file after the following unlink() call.
+        //
+        if(unlink(tmpFilename))
+            // There is no big reason to fuss to much.
+            WARN("unlink(\"%s\") failed", tmpFilename);
+
+        if(!handle) {
+            ERROR("dlopen(\"%s\",) failed: %s", tmpFilename, dlerror());
+            free(path);
+            return 0;
+        }
+    }
+
+
     struct QsFilter *f = AllocAndAddToFilterList(app, loadName);
     f->dlhandle = handle;
 
-    // Clear error
+    // Clear the dl error
     dlerror();
 
     char *err;
@@ -159,7 +235,10 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
             path, f->name);
     free(path);
 
+    DSPEW();
+
     f->idNum = app->filtersCount++;
+    DSPEW();
 
     return f; // success
 
@@ -172,7 +251,7 @@ cleanup:
         // TODO: So what can I do.
     }
 
-    FreeFilterFromList(app, f);
+    RemoveFilterFromList(app, f);
     free(path);
     return 0;
 }

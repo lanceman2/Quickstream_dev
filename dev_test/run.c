@@ -20,16 +20,13 @@ int main(void) {
         return 1;
     }
 
-
     if(!qsAppFilterLoad(app, "stdout.so", "stdout")) {
         qsAppDestroy(app);
         return 1;
     }
 
-
-
-
     qsAppDestroy(app);
+
 
     DSPEW("SUCCESS");
 
