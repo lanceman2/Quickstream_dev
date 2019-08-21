@@ -55,7 +55,17 @@ static inline void FreeFilter(struct QsFilter *f) {
     DASSERT(f, "");
     DASSERT(f->name, "");
     DSPEW("Freeing: %s", f->name);
+
+#ifdef DEBUG
+    memset(f->name, 0, strlen(f->name));
+#endif
+
     free(f->name);
+
+#ifdef DEBUG
+    memset(f, 0, sizeof(*f));
+#endif
+
     free(f);
 }
 
@@ -63,7 +73,7 @@ static inline void FreeFilter(struct QsFilter *f) {
 struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
     DASSERT(app, "");
     DASSERT(handle, "");
-DSPEW();
+
     for(struct QsFilter *f = app->filters; f; f = f->next)
         if(f->dlhandle == handle)
             return f;
@@ -87,12 +97,19 @@ static inline void RemoveFilterFromList(struct QsApp *app, struct QsFilter *f) {
                 prev->next = F->next;
             else
                 app->filters = F->next;
+
+            DASSERT(f->dlhandle, "");
+            dlerror(); // clear error
+            if(dlclose(f->dlhandle))
+                WARN("dlclose(%p): %s", f->dlhandle, dlerror());
+                // TODO: So what can I do.
             FreeFilter(f);
             break;
         }
         prev = F;
         F = F->next;
     }
+    DASSERT(F, "Filter was not found");
 }
 
 

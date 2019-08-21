@@ -4,19 +4,41 @@
 
 struct QsApp {
 
-    // This counter only increases.
-    uint32_t filtersCount;
-
     // List of filters.  Singly linked list.
     struct QsFilter *filters;
+
     // List of streams.  Singly linked list.
     struct QsStream *streams;
+
+    // List of processes
+    struct QsProcess *processes;
+};
+
+
+struct QsThread {
+
+    uint32_t *filters; // array of filter IDs
+};
+
+
+struct QsProcess {
+
+    struct QsThread *threads; // array of threads
 };
 
 
 struct QsStream {
 
+    struct QsApp *app;
 
+    struct QsFilter *sources; // array of filter sources
+
+    // filter connections:
+    uint32_t numConnections;
+    struct QsFilter **from; // array of filters
+    struct QsFilter **to;   // array of filters
+
+    struct QsStream *next; // next stream in app list
 };
 
 
@@ -24,10 +46,10 @@ struct QsFilter {
 
     void *dlhandle;
 
-    uint32_t numOutputs;
+    struct QsApp *app;
+    struct QsStream *stream;
 
-    // idNum is gotten from QsApp::filtersCount at creation time.
-    uint32_t idNum;
+    uint32_t numOutputs;
 
     char *name; // unique name for the Filter in a given app
 
@@ -37,8 +59,13 @@ struct QsFilter {
     int (* stop)(int numInChannels, int numOutChannels);
     int (* input)(void *buffer, size_t len, int inputChannelNum);
 
-    struct QsFilter *next; // next loaded filter
+    struct QsFilter *next; // next loaded filter in app list
 
     struct QsFilter *outputs; // array of filters to output to this filter
 };
+
+
+// TODO: We may make this function public.
+extern
+int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
 

@@ -1,6 +1,10 @@
 #ifndef __qsapp_h__
 #define __qsapp_h__
 
+#include <inttypes.h>
+#include <stdbool.h>
+
+
 // Change this QS_VERSION string to make a new version.
 #define QS_VERSION "0.0.1"
 
@@ -34,12 +38,23 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName,
         const char *loadName);
 
-extern
-int qsFilterUnload(struct QsFilter *f, const char *loadName);
-
 
 extern
-struct QsStream qsAppCreateStream(struct QsApp *app);
+int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay);
 
+
+extern
+int qsFilterUnload(struct QsFilter *filter);
+
+
+extern
+struct QsStream *qsAppStreamCreate(struct QsApp *app);
+
+extern
+int qsStreamDestroy(struct QsStream *stream);
+
+extern
+int qsStreamConnectFilters(struct QsStream *stream,
+        struct QsFilter *from, struct QsFilter *to);
 
 #endif // #ifndef __qsapp_h__

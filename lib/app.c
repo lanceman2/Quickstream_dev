@@ -6,21 +6,21 @@
 #include <string.h>
 #include <stdlib.h>
 #include <alloca.h>
-#include <stdlib.h>
-#include <inttypes.h>
 #include <dlfcn.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
 
 
 // Private interfaces.
-#include "../lib/qsapp.h"
-#include "../lib/debug.h"
+#include "./qsapp.h"
+#include "./debug.h"
 #include "./list.h"
 #include "./GetPath.h"
 
@@ -47,6 +47,10 @@ int qsAppDestroy(struct QsApp *app) {
         FreeFilter(f);
         f = nextF;
     }
+
+#ifdef DEBUG
+    memset(app, 0, sizeof(*app));
+#endif
 
     // Now cleanup this app.
     free(app);
@@ -93,7 +97,8 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         }
     } else if(FindFilterNamed(app, _loadName)) {
         //
-        // Because they requested a particular name we can fail here.
+        // Because they requested a particular name and the name is
+        // already taken, we can fail here.
         //
         ERROR("Filter name \"%s\" is in use already", _loadName);
         return 0;
@@ -237,22 +242,127 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     DSPEW();
 
-    f->idNum = app->filtersCount++;
+    f->app = app;
     DSPEW();
 
     return f; // success
 
 cleanup:
 
-    if(handle) {
-        dlerror(); // clear error
-        if(dlclose(handle))
-            ERROR("dlclose(%p): %s", handle, dlerror());
-        // TODO: So what can I do.
-    }
-
+    // failure mode.
+    //
     RemoveFilterFromList(app, f);
     free(path);
-    return 0;
+    return 0; // failure
 }
 
+
+int qsFilterUnload(struct QsFilter *f) {
+
+    DASSERT(f, "");
+    DASSERT(f->app, "");
+
+    RemoveFilterFromList(f->app, f);
+
+    return 0; // success
+}
+
+int qsAppPrintDotToFile(struct QsApp *app, FILE *file) {
+
+    DASSERT(app, "");
+    DASSERT(file, "");
+
+    fprintf(file, "digraph {\n"
+        "  label=\"quickstream app\";\n");
+
+    uint32_t sNum = 0;
+
+    for(struct QsStream *s = app->streams; s; s = s->next) {
+        fprintf(file, "\n"
+                "  subgraph cluster_%" PRIu32 " {\n"
+                "    label=\"stream %" PRIu32 "\";\n\n",
+                sNum, sNum);
+        for(uint32_t i=0; i<s->numConnections; ++i) {
+            DASSERT(s->from[i], "");
+            DASSERT(s->from[i]->name, "");
+            DASSERT(s->to[i], "");
+            DASSERT(s->to[i]->name, "");
+            fprintf(file, "    \"%s\" -> \"%s\";\n",
+                    s->from[i]->name, s->to[i]->name);
+        }
+        fprintf(file, "  }\n");
+        ++sNum;
+    }
+
+    fprintf(file, "}\n");
+
+
+    DSPEW();
+
+    return 0; // success
+}
+
+int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay) {
+
+    DASSERT(app, "");
+
+    int fd[2];
+    int ret = 0;
+
+    if(pipe(fd) != 0) {
+        ERROR("pipe() failed");
+        return 1;
+    }
+
+    pid_t pid = fork();
+
+    if(pid < 0) {
+        ERROR("fork() failed");
+        return 1;
+    }
+
+    if(pid) {
+        //
+        // I'm the parent
+        //
+        close(fd[0]);
+        FILE *f = fdopen(fd[1], "w");
+        if(!f) {
+            ERROR("fdopen() failed");
+            return 1;
+        }
+
+        if(qsAppPrintDotToFile(app, f))
+            ret = 1; // failure
+        fclose(f);
+
+        if(waitForDisplay) {
+            int status = 0;
+            if(waitpid(pid, &status, 0) == -1) {
+                WARN("waitpid(%u,,0) failed", pid);
+                ret = 1;
+            }
+            INFO("waitpid() returned status=%d", status);
+        }
+    } else {
+        //
+        // I'm the child
+        //
+        DASSERT(pid == 0, "I'm I a child process or not");
+        close(fd[1]);
+        if(fd[0] != 0) {
+            // Use dup2() to turn the read part of the pipe, fd[0], into
+            // the stdin, fd=0, of the child process.
+            if(dup2(fd[0], 0)) { 
+                WARN("dup2(%d,%d) failed", fd[0], 0);
+                exit(1);
+            }
+            close(fd[0]);
+        }
+        execlp("display", "display", (const char *) 0);
+        WARN("execlp(\"%s\", \"%s\", 0) failed", "display", "display");
+        exit(1);
+    }
+
+    return ret; // success ret=0
+}
