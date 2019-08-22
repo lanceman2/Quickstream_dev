@@ -38,6 +38,9 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName,
         const char *loadName);
 
+extern
+int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
+
 
 extern
 int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay);

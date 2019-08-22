@@ -3,7 +3,10 @@
 #include "../../../include/qsfilter.h"
 #include "../../../lib/debug.h"
 
+#ifdef SPEW_LEVEL_DEBUG
 static int count = 0;
+#endif
+
 
 int construct(void) {
 

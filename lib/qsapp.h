@@ -64,8 +64,3 @@ struct QsFilter {
     struct QsFilter *outputs; // array of filters to output to this filter
 };
 
-
-// TODO: We may make this function public.
-extern
-int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
-

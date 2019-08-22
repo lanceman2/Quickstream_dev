@@ -37,7 +37,7 @@ int qsStreamDestroy(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-DSPEW();
+
     // Find and remove this stream from the app.
     //
     struct QsStream *S = s->app->streams;
@@ -71,7 +71,7 @@ DSPEW();
     }
 
     DASSERT(S, "stream was not found in the app object");
- DSPEW();
+
     return 0; // success
 }
 
@@ -93,13 +93,17 @@ int qsStreamConnectFilters(struct QsStream *s,
             "filter cannot be part of another stream");
 
     s->from = realloc(s->from, (s->numConnections+1)*sizeof(*s->from));
+    ASSERT(s->from, "realloc(,%zu) failed",
+            (s->numConnections+1)*sizeof(*s->from));
     s->from[s->numConnections] = from;
     s->to = realloc(s->to, (s->numConnections+1)*sizeof(*s->to));
+    ASSERT(s->to, "realloc(,%zu) failed",
+            (s->numConnections+1)*sizeof(*s->to));
     s->to[s->numConnections] = to;
     ++s->numConnections;
 
     from->stream = s;
     to->stream = s;
-    
+
     return 0; // success
 }

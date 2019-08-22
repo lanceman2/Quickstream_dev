@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include <unistd.h>
 
+//#define TEST_PRIVATE
+
+
 #include "../include/qsapp.h"
-#include "../lib/qsapp.h"
 #include "../lib/debug.h"
 
+#ifdef TEST_PRIVATE
+#  include "../lib/qsapp.h" // private interfaces
+#endif
 
 int main(void) {
 
@@ -57,38 +62,15 @@ int main(void) {
         qsAppDestroy(app);
         return 1;
     }
-    qsAppPrintDotToFile(app, stdout);
+
+    qsAppPrintDotToFile(app, stdout); // private to ../lib/ code.
     qsAppDisplayFlowImage(app, false);
- 
-stream = qsAppStreamCreate(app);
-    if(!stream) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-// TODO: We need to make this fail.
-
-    if(qsStreamConnectFilters(stream, f0, f1)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsStreamConnectFilters(stream, f2, f1)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    qsAppPrintDotToFile(app, stdout);
-    qsAppDisplayFlowImage(app, false);
-    
 
     qsStreamDestroy(stream);
-
-
     qsAppDestroy(app);
 
 
-    DSPEW("SUCCESS");
+    WARN("SUCCESS");
 
     return 0;
 }
