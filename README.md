@@ -46,11 +46,12 @@ For debugging and development additional configuration options can be
 added to the *config.make* files as C preprocesser flags when compiling
 are for example:
 
-  - *CPPFLAGS=-DDEBUG*
-  - *CPPFLAGS="-DDEBUG -DSPEW_LEVEL_DEBUG"*
-  - *CPPFLAGS=-DSPEW_LEVEL_INFO*
-  - *CPPFLAGS="-DDEBUG -DSPEW_LEVEL_NOTICE"*
-  - *CPPFLAGS=-DSPEW_LEVEL_WARN*
+  - *CPPFLAGS = -DDEBUG*
+  - *CPPFLAGS = -DDEBUG -DSPEW_LEVEL_DEBUG*
+  - *CPPFLAGS = -DSPEW_LEVEL_INFO*
+  - *CPPFLAGS = "-DDEBUG -DSPEW_LEVEL_NOTICE"*
+  - *CPPFLAGS = -DSPEW_LEVEL_WARN*
+  - *CFLAGS = -g -Wall -Werror*
 
 See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
 used.
@@ -113,6 +114,7 @@ prerequisites:
 - graphviz
 - graphviz-dev
 - imagemagick
+- doxygen
 
 ## Terminology
 
@@ -307,22 +309,29 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
 
 ## Developer notes
 
-- quickstream code is written fairly simple C with very few dependences
-- the files in the source directly follow the directory structure of the
+- quickstream code is written fairly simple C with very few dependences.
+- The API (application programming interface) user sees data structures as
+  opaque.  They just know that they are pointers to data structures, and
+  they do not see elements in the structures.
+- The files in the source directly follow the directory structure of the
   installed files.  So you don't need to wonder where source files are.
 - consequently programs can run in the source directory after running make
   without installing them.
-- consequently also the running programs find files from a relative paths
+- Consequently also the running programs find files from a relative paths
   between them, the same way as in the installed files as with the files
   in the source.
-- consequently we use the compilers relative linking options to link and
+- Consequently we use the compilers relative linking options to link and
   run programs.
-- you can move the whole encapsulated installation and everything runs the
+- You can move the whole encapsulated installation and everything runs the
   same.
-- environment variables allow users to tell quickstream programs where to
+- Environment variables allow users to tell quickstream programs where to
   find users files that are not in the quickstream source code.
-- the installation prefix directory is not used in an quickstream code,
+- The installation prefix directory is not used in an quickstream code,
   only relative paths are needed for running quickstream files to find
   themselves.
 - C++ code can link with quickstream.
+- The public interfaces are object oriented in a C programming sense.
+- The private code is slightly more integrated than the public interfaces
+  may suggest.
+- We wish to keep this C code small and manageable.
 

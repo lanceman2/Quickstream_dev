@@ -16,5 +16,9 @@ SUBDIRS := ../lib ../include
 run_SOURCES := run.c
 run_LDFLAGS := -L../lib -lqsapp -Wl,-rpath=\$$ORIGIN/../lib
 
+run2_SOURCES := run2.c
+run2_LDFLAGS := -L../lib -lqsapp -Wl,-rpath=\$$ORIGIN/../lib
+
+
 
 include ../quickbuild.make

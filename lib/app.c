@@ -21,7 +21,7 @@
 // Private interfaces.
 #include "./qsapp.h"
 #include "./debug.h"
-#include "./list.h"
+#include "./filterList.h"
 #include "./GetPath.h"
 
 
@@ -37,13 +37,13 @@ struct QsApp *qsAppCreate(void) {
 int qsAppDestroy(struct QsApp *app) {
 
     DASSERT(app, "");
-    DSPEW();
 
     // First cleanup filters in this app list
     struct QsFilter *f = app->filters;
     while(f) {
         struct QsFilter *nextF = f->next;
         // Destroy this filter f.
+
         FreeFilter(f);
         f = nextF;
     }
@@ -240,10 +240,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
             path, f->name);
     free(path);
 
-    DSPEW();
-
     f->app = app;
-    DSPEW();
 
     return f; // success
 
@@ -275,13 +272,35 @@ int qsAppPrintDotToFile(struct QsApp *app, FILE *file) {
     fprintf(file, "digraph {\n"
         "  label=\"quickstream app\";\n");
 
-    uint32_t sNum = 0;
+    uint32_t clusterNum = 0; // Dot cluster counter
+ 
+    // Look for unconnected filters in this app:
+    struct QsFilter *f=app->filters;
+    for(struct QsFilter *f=app->filters; f; f = f->next)
+        if(!f->stream)
+            break;
+    if(f) {
+        // We have at least one unconnected filter in this app
+        fprintf(file, "\n"
+                "  subgraph cluster_%" PRIu32 " {\n"
+                "    label=\" unconnected filters \";\n\n",
+                clusterNum++);
+        
+        for(struct QsFilter *f=app->filters; f; f=f->next)
+            if(!f->stream)
+                fprintf(file, "    \"%s\";\n", f->name);
+
+        fprintf(file, "  }\n");
+    }
+
+
+    uint32_t sNum = 0; // stream counter
 
     for(struct QsStream *s = app->streams; s; s = s->next) {
         fprintf(file, "\n"
                 "  subgraph cluster_%" PRIu32 " {\n"
                 "    label=\"stream %" PRIu32 "\";\n\n",
-                sNum, sNum);
+                clusterNum++, sNum);
         for(uint32_t i=0; i<s->numConnections; ++i) {
             DASSERT(s->from[i], "");
             DASSERT(s->from[i]->name, "");
@@ -295,9 +314,6 @@ int qsAppPrintDotToFile(struct QsApp *app, FILE *file) {
     }
 
     fprintf(file, "}\n");
-
-
-    DSPEW();
 
     return 0; // success
 }

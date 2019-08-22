@@ -1,5 +1,6 @@
-/* This is a private header file that is only used in the quickstream
- * libqsapp.so code. */
+/* This is a private header file that is only used in the quickstream code
+ * internal to libqsapp.so.  The libqsapp.so user, in general, should
+ * not include this header file.  Hence this file is not installed. */
 
 
 struct QsApp {
@@ -17,12 +18,16 @@ struct QsApp {
 
 struct QsThread {
 
-    uint32_t *filters; // array of filter IDs
+    struct QsStream *stream; // stream that owns this thread
+    struct QSProcess *process;
 };
 
 
 struct QsProcess {
 
+    struct QsStream *stream; // stream that owns this process
+
+    uint32_t numThreads;
     struct QsThread *threads; // array of threads
 };
 
@@ -31,7 +36,8 @@ struct QsStream {
 
     struct QsApp *app;
 
-    struct QsFilter *sources; // array of filter sources
+    uint32_t numSources;
+    struct QsFilter **sources; // array of filter sources
 
     // filter connections:
     uint32_t numConnections;
@@ -46,13 +52,15 @@ struct QsFilter {
 
     void *dlhandle;
 
-    struct QsApp *app;
-    struct QsStream *stream;
+    struct QsApp *app; // This does not change
+    struct QsStream *stream; // This stream can be changed
+    struct QsThread *thread; // thread that this filter will run in
 
     uint32_t numOutputs;
 
     char *name; // unique name for the Filter in a given app
 
+    // Callback functions that may be loaded.
     int (* construct)(void);
     int (* destroy)(void);
     int (* start)(int numInChannels, int numOutChannels);
@@ -61,6 +69,6 @@ struct QsFilter {
 
     struct QsFilter *next; // next loaded filter in app list
 
-    struct QsFilter *outputs; // array of filters to output to this filter
+    struct QsFilter *outputs; // array of filters that this filter writes to.
 };
 
