@@ -2,20 +2,19 @@
 #include <unistd.h>
 #include <signal.h>
 
-//#define TEST_PRIVATE
-
-
 #include "../include/qsapp.h"
+
+// Turn on spew macros for this file.
+#ifndef SPEW_LEVEL_DEBUG
+#  define SPEW_LEVEL_DEBUG
+#endif
 #include "../lib/debug.h"
 
-#ifdef TEST_PRIVATE
-#  include "../lib/qsapp.h" // private interfaces
-#endif
 
 
 static void catcher(int signum) {
 
-    SPEW("Caught signal %d\n", signum);
+    WARN("Caught signal %d\n", signum);
     while(1) usleep(10000);
 }
 
@@ -84,10 +83,10 @@ int main(void) {
         return 1;
     }
 
-
+#if 0
     if(qsStreamStart(stream, false) >= 0)
         qsStreamStop(stream);
-
+#endif
 
     struct QsThread *t = qsStreamThreadCreate(stream);
 

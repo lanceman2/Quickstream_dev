@@ -2,14 +2,19 @@
 #include <unistd.h>
 #include <signal.h>
 
-
 #include "../include/qsapp.h"
+
+
+// Turn on spew macros for this file.
+#ifndef SPEW_LEVEL_DEBUG
+#  define SPEW_LEVEL_DEBUG
+#endif
 #include "../lib/debug.h"
 
 
 static void catcher(int signum) {
 
-    SPEW("Caught signal %d\n", signum);
+    WARN("Caught signal %d\n", signum);
     while(1) usleep(10000);
 }
 
@@ -45,20 +50,22 @@ int main(void) {
             return 1;
         }
 #if 0
-    if(qsStreamConnectFilters(stream, f[numFilters-1], f[1])) {
-        qsAppDestroy(app);
-        return 1;
-    }
-    if(qsStreamConnectFilters(stream, f[numFilters-1], f[4])) {
-        qsAppDestroy(app);
-        return 1;
-    }
+
+    qsFilterUnload(f[0]);
+
+    qsAppDisplayFlowImage(app, false);
+
+    f[0] = qsAppFilterLoad(app, "stdin", 0);
+
+    qsStreamConnectFilters(stream, f[0], f[2]);
+    qsStreamConnectFilters(stream, f[2], f[0]);
+
 #endif
 
     qsAppDisplayFlowImage(app, false);
 
-    if(qsStreamStart(stream, false) >= 0)
-        qsStreamStop(stream);
+
+    qsStreamStart(stream);
 
 
     qsAppDestroy(app);

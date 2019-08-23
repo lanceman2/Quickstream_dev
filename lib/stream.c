@@ -109,7 +109,7 @@ int qsStreamConnectFilters(struct QsStream *s,
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    DASSERT(from != to, "");
+    DASSERT(from != to, "a filter cannot connect to itself");
     DASSERT(from, "");
     DASSERT(to, "");
     DASSERT(from->app, "");
@@ -120,6 +120,11 @@ int qsStreamConnectFilters(struct QsStream *s,
             "filter cannot be part of another stream");
     DASSERT(from->stream == s || !from->stream,
             "filter cannot be part of another stream");
+
+    if(from == to) {
+        ERROR("A filter cannot connect to itself");
+        return 1;
+    }
 
     // Grow the from and to arrays
     s->from = realloc(s->from, (s->numConnections+1)*sizeof(*s->from));
@@ -162,7 +167,7 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
         s->to[i] = s->to[i+1];
     }
 
-    // Shrink the from and to arrays by one
+    // Shrink the "from" and "to" arrays by one
     s->from = realloc(s->from, (s->numConnections)*sizeof(*s->from));
     ASSERT(s->from, "realloc(,%zu) failed",
             (s->numConnections)*sizeof(*s->from));
@@ -192,6 +197,8 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(s, "");
     DASSERT(f, "");
+    DASSERT(f->stream == s, "");
+
     bool gotOne = false;
 
     for(uint32_t i=0; i<s->numConnections;) {
@@ -288,27 +295,25 @@ int qsStreamStop(struct QsStream *s) {
      *********************************************************************/
     FreeSources(s);
 
-
     return 0;
 }
 
 
-int qsStreamStart(struct QsStream *s, bool autoStop) {
+int qsStreamStart(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
 
     ///////////////////////////////////////////////////////////////////////
-    //
-    // This has a few stages in which we go through the lists, check
-    // things out, set things up, launch processes, launch threads, and
-    // then let the stream flow through the filters.
-    //
-    // TODO (check this statement): The only functions in the quickstream
-    // filter API that can be called from in here and not functions in the
-    // quickstream app API, except qsStreamStop().
-    //
+    //                                                                   //
+    //  This has a few stages in which we go through the lists, check    //
+    //  things out, set things up, launch processes, launch threads,     //
+    //  and then let the stream flow through the filters.                //
+    //                                                                   // 
     ///////////////////////////////////////////////////////////////////////
+
+    // Failure error return values start at -1 and go down from there;
+    // like: -1, -2, -3, -4, ...
 
     /**********************************************************************
      *            Stage: simple checks
@@ -345,7 +350,7 @@ int qsStreamStart(struct QsStream *s, bool autoStop) {
     if(!s->numSources) {
         // It's not going to flow, or call any filter callbacks
         // for there are no sources.
-        WARN("This stream has no sources");
+        ERROR("This stream has no sources");
         return -1; // error no sources
     }
 
@@ -357,7 +362,7 @@ int qsStreamStart(struct QsStream *s, bool autoStop) {
     for(uint32_t i=0; i<s->numSources; ++i) {
         if(CountFilterPath(s, s->sources[i], 0, s->numConnections) >
                 s->numConnections) {
-            WARN("a stream has loops in it");
+            ERROR("a stream has loops in it");
 #ifdef DEBUG
             qsAppDisplayFlowImage(s->app, true);
 #endif
@@ -366,12 +371,31 @@ int qsStreamStart(struct QsStream *s, bool autoStop) {
         }
     }
 
+    /**********************************************************************
+     *            Stage: Set up filter connections in the filter structs
+     *********************************************************************/
 
-    DSPEW("RUNNING");
 
 
-    if(autoStop)
-        qsStreamStop(s);
+
+
+
+
+
+
+
+
+
+    /**********************************************************************
+     *            Stage:
+     *********************************************************************/
+
+
+
+
+
+    NOTICE("RUNNING");
+
 
 
 
