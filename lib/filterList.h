@@ -35,8 +35,8 @@
 
 
 
-static inline struct QsFilter *FindFilterNamed(struct QsApp *app,
-        const char *name) {
+static inline
+struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
 
     struct QsFilter *F = app->filters;
     // TODO: This could be made quicker, but the quickstream is
@@ -50,11 +50,19 @@ static inline struct QsFilter *FindFilterNamed(struct QsApp *app,
     return 0; // not found
 }
 
-static inline void FreeFilter(struct QsFilter *f) {
+static inline
+void FreeFilter(struct QsFilter *f) {
 
     DASSERT(f, "");
     DASSERT(f->name, "");
+
     DSPEW("Freeing: %s", f->name);
+
+    DASSERT(f->dlhandle, "");
+    dlerror(); // clear error
+    if(dlclose(f->dlhandle))
+        WARN("dlclose(%p): %s", f->dlhandle, dlerror());
+        // TODO: So what can I do.
 
 #ifdef DEBUG
     memset(f->name, 0, strlen(f->name));
@@ -70,6 +78,7 @@ static inline void FreeFilter(struct QsFilter *f) {
 }
 
 
+static inline
 struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
     DASSERT(app, "");
     DASSERT(handle, "");
@@ -82,13 +91,24 @@ struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
 
 
 //
-// Free the filter memory and remove it from the list.
+// This is basically the guts of the filter destructor
 //
-static inline void RemoveFilterFromList(struct QsApp *app, struct QsFilter *f) {
+// Free the filter memory, dlcose() the handle, and remove it from the
+// list.
+//
+static inline
+void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
 
     DASSERT(app, "");
     DASSERT(app->filters, "");
 
+    // Remove any stream filter connections that may include this filter.
+    if(f->stream)
+        // This filter should be listed in this stream and only this
+        // stream.
+        qsStreamRemoveFilter(f->stream, f);
+
+    // Remove it from the app list.
     struct QsFilter *F = app->filters;
     struct QsFilter *prev = 0;
     while(F) {
@@ -98,11 +118,6 @@ static inline void RemoveFilterFromList(struct QsApp *app, struct QsFilter *f) {
             else
                 app->filters = F->next;
 
-            DASSERT(f->dlhandle, "");
-            dlerror(); // clear error
-            if(dlclose(f->dlhandle))
-                WARN("dlclose(%p): %s", f->dlhandle, dlerror());
-                // TODO: So what can I do.
             FreeFilter(f);
             break;
         }
@@ -118,7 +133,8 @@ static inline void RemoveFilterFromList(struct QsApp *app, struct QsFilter *f) {
 //
 // TODO: this is not required to be fast; yet.
 //
-static inline struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
+static inline
+struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         const char *name) {
 
     DASSERT(app, "");

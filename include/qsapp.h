@@ -28,6 +28,29 @@
  */ 
 
 
+/** Read the last quickstream error string
+ *
+ * The user must free() any non-zero returned pointer.  This string is
+ * allocated in order to make this thread safe.
+ *
+ * Calling this function also clears the current error.  This interface is
+ * defective, in that new errors in other threads may overwrite the
+ * internal error string before it can be read with this, or by any
+ * other thread.  Per-thread error strings create other issues.
+ *
+ * To clear the current error, if there is one or not, call
+ * free(qsError()).  This can be called without checking if there is an
+ * error or not.  free(0) is valid code.  See `man 3 free`.
+ *
+ * \return 0 or a malloc() allocated pointer to a string that the user
+ * must free().
+ *
+ *  \todo add error return int values that correspond to strings.
+ */
+extern
+char *qsError(void);
+
+
 /** Create the highest level quickstream construct,
  * a quickstream app.
  *
@@ -108,7 +131,7 @@ int qsStreamConnectFilters(struct QsStream *stream,
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
-int qsStreamStart(struct QsStream *stream, bool autoStop);
+int qsStreamStart(struct QsStream *stream);
 
 
 /** Stop the flow

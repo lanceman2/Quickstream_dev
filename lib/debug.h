@@ -2,36 +2,9 @@
 #define __debug_h__
 
 
-////////////////////////////////////////////////////////////////////////
-//  CPP CONFIGURATION
-////////////////////////////////////////////////////////////////////////
-//
-// DEBUG should be defined or not at this point.
-//
-//
-//
-// You can define a level
-// SPEW_LEVEL_ERROR
-// SPEW_LEVEL_WARN
-// SPEW_LEVEL_NOTICE
-// SPEW_LEVEL_INFO
-// SPEW_LEVEL_DEBUG
-//
-//
-// MACRO functions:
-// 
-// The macros SPEW() ERROR() ASSERT() FAIL() are always on.
-//
-//
-// The macros DSPEW() WARN() NOTICE() INFO() DSPEW() are optional on.
-//
-
-////////////////////////////////////////////////////////////////////////
-
-
 /** This file provides some CPP (C pre processor) macro debug functions:
  *
- *    SPEW() ERROR() ASSERT() FAIL()
+ *    ASSERT() FAIL() ERROR()
  *
  * and compile time conditionally:
  *
@@ -39,8 +12,34 @@
  *
  * see details below.
  *
- *
- *
+ */
+
+///////////////////////////////////////////////////////////////////////////
+// USER DEFINABLE SELECTOR MACROS make the follow macros come to life:
+//
+// DEBUG             -->  DASSERT()
+//
+// SPEW_LEVEL_DEBUG  -->  DSPEW() INFO() NOTICE() WARN() ERROR()
+// SPEW_LEVEL_INFO   -->  INFO() NOTICE() WARN() ERROR()
+// SPEW_LEVEL_NOTICE -->  NOTICE() WARN() ERROR()
+// SPEW_LEVEL_WARN   -->  WARN() ERROR()
+// SPEW_LEVEL_ERROR  -->  ERROR()
+//
+// always on are     --> ASSERT() FAIL()
+//
+// If a macro function is not live it becomes a empty macro with no code.
+//
+//
+// The ERROR() function will also set a string accessible through qsError()
+//
+//
+///////////////////////////////////////////////////////////////////////////
+//
+// Setting SPEW_LEVEL_ERROR is the least verbose level
+//
+
+
+/*
  * It's really not much code but is a powerful development
  * tool like assert.  See 'man assert'.
  *
@@ -58,17 +57,6 @@ extern "C" {
 #endif
 
 
-/////////////////////////////////////////////////////////////////////////
-// This @ SPEW_LEVEL @ will be something like:
-//    #define SPEW_LEVEL_DEBUG
-// or #define SPEW_LEVEL_INFO
-// or #define SPEW_LEVEL_NOTICE
-// or #define SPEW_LEVEL_WARN
-// or #define SPEW_LEVEL_ERROR
-/////////////////////////////////////////////////////////////////////////
-//#define SPEW_LEVEL_DEBUG
-
-
 
 #define SPEW_FILE stderr
 
@@ -83,40 +71,28 @@ extern "C" {
 // See also: https://gcc.gnu.org/onlinedocs/cpp/System-Headers.html
 #pragma GCC system_header
 
-// We would like to be able to just call SPEW() with no arguments
+// We would like to be able to just call DSPEW() with no arguments
 // which can make a zero length printf format.
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 
-//
-///////////////////////////////////////////////////////////////////////////
-//
-// The macros SPEW() ERROR() ASSERT() FAIL() are always on
-//
 
 extern void _spew(FILE *stream, int errn, const char *pre, const char *file,
-        int line, const char *func, const char *fmt, ...)
+        int line, const char *func, bool bufferIt, const char *fmt, ...)
          // check printf format errors at compile time:
-        __attribute__ ((format (printf, 7, 8)));
+        __attribute__ ((format (printf, 8, 9)));
 
 extern void _assertAction(FILE *stream);
 
 
 
-#  define _SPEW(errn, pre, fmt, ... )\
+#  define _SPEW(errn, bufferIt, pre, fmt, ... )\
      _spew(SPEW_FILE, errn, pre, __BASE_FILE__, __LINE__,\
-        __func__, fmt "\n", ##__VA_ARGS__)
-
-#  define ERROR(fmt, ...)\
-     _SPEW(errno, "ERROR: ", fmt, ##__VA_ARGS__)
-
-// SPEW is like ERROR but just called SPEW
-#  define SPEW(fmt, ...)\
-     _SPEW(0, "SPEW: ", fmt, ##__VA_ARGS__)
+        __func__, bufferIt, fmt "\n", ##__VA_ARGS__)
 
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
-            _SPEW(errno, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
+            _SPEW(errno, true, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
             _assertAction(SPEW_FILE);\
         }\
     }\
@@ -124,7 +100,7 @@ extern void _assertAction(FILE *stream);
 
 #  define FAIL(fmt, ...) \
     do {\
-        _SPEW(errno, "FAIL: ", fmt, ##__VA_ARGS__);\
+        _SPEW(errno, true, "FAIL: ", fmt, ##__VA_ARGS__);\
         _assertAction(SPEW_FILE);\
     } while(0)
 
@@ -154,19 +130,6 @@ extern void _assertAction(FILE *stream);
 #endif
 
 
-// Setting SPEW_LEVEL_ERROR is the least verbose level
-// SPEW() and ERROR() will both print at any level
-//
-
-#ifndef SPEW_LEVEL_ERROR
-// We have no level SPEW_LEVEL_(DEBUG|INFO|NOTICE|WARN|ERROR)
-// so we set a default here:
-//#  define SPEW_LEVEL_DEBUG
-#  define SPEW_LEVEL_INFO
-#  define SPEW_LEVEL_NOTICE
-#  define SPEW_LEVEL_WARN
-#endif
-
 
 #ifdef DEBUG
 #  define DASSERT(val, fmt, ...) ASSERT(val, fmt, ##__VA_ARGS__)
@@ -174,26 +137,29 @@ extern void _assertAction(FILE *stream);
 #  define DASSERT(val, fmt, ...) /*empty marco*/
 #endif
 
+
+#define ERROR(fmt, ...) _SPEW(errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+
 #ifdef SPEW_LEVEL_WARN
-#  define WARN(fmt, ...) _SPEW(errno, "WARN: ", fmt, ##__VA_ARGS__)
+#  define WARN(fmt, ...) _SPEW(errno, false, "WARN: ", fmt, ##__VA_ARGS__)
 #else
 #  define WARN(fmt, ...) /*empty macro*/
 #endif 
 
 #ifdef SPEW_LEVEL_NOTICE
-#  define NOTICE(fmt, ...) _SPEW(errno, "NOTICE: ", fmt, ##__VA_ARGS__)
+#  define NOTICE(fmt, ...) _SPEW(errno, false, "NOTICE: ", fmt, ##__VA_ARGS__)
 #else
 #  define NOTICE(fmt, ...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_INFO
-#  define INFO(fmt, ...)   _SPEW(0, "INFO: ", fmt, ##__VA_ARGS__)
+#  define INFO(fmt, ...)   _SPEW(0, false, "INFO: ", fmt, ##__VA_ARGS__)
 #else
 #  define INFO(fmt, ...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_DEBUG
-#  define DSPEW(fmt, ...)  _SPEW(0, "DEBUG: ", fmt, ##__VA_ARGS__)
+#  define DSPEW(fmt, ...)  _SPEW(0, false, "DEBUG: ", fmt, ##__VA_ARGS__)
 #else
 #  define DSPEW(fmt, ...) /*empty macro*/
 #endif

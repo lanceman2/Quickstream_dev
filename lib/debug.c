@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/syscall.h>
 #include <pthread.h>
 
@@ -12,10 +13,36 @@
 #endif
 
 #include "./debug.h"
+#include "../include/qsapp.h"
+
+
+// We make the access to qsErrorBuffer thread safe:
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static char *qsErrorBuffer = 0;
+
+
+//
+// The non-zero return value must be free()ed by the API user.
+//
+// API interface.  Thread safe.
+//
+char *qsError(void) {
+
+    char *ret = 0;
+    // If this pthread_mutex_lock() fails we can't do much about it
+    // because we are in the code that is our error handling code.
+    pthread_mutex_lock(&mutex);
+    if(qsErrorBuffer) {
+        ret = qsErrorBuffer;
+        qsErrorBuffer = 0;
+    }
+    pthread_mutex_unlock(&mutex);
+    return ret;
+}
 
 
 static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
-        int line, const char *func,
+        int line, const char *func, bool bufferIt,
         const char *fmt, va_list ap)
 {
     // We try to buffer this so that prints do not get intermixed with
@@ -39,9 +66,11 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
 
     if(len < 10 || len > BUFLEN - 40)
     {
+        //
+        // This should not happen.
 
         //
-        // Try again without buffering
+        // Try again without stack buffering
         //
         if(errn)
         {
@@ -55,21 +84,38 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
         else
             fprintf(stream, "%s%s:%d:pid=%u:%zu %s(): ", pre, file, line,
                     getpid(), syscall(SYS_gettid), func);
-    
+
         vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
 
         return;
     }
+
     vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
     fputs(buffer, stream);
+
+    if(bufferIt) {
+        //
+        // Put the error string into a globally accessible qsError()
+        // buffer.
+        //
+
+        // If this pthread_mutex_lock() fails we can't do much about it
+        // because we are in the code that is our error handling code.
+        pthread_mutex_lock(&mutex);
+        qsErrorBuffer = realloc(qsErrorBuffer, strlen(buffer) + 1);
+        strcpy(qsErrorBuffer, buffer);
+        pthread_mutex_unlock(&mutex);
+    }
+
 }
 
+
 void _spew(FILE *stream, int errn, const char *pre, const char *file,
-        int line, const char *func, const char *fmt, ...)
+        int line, const char *func, bool bufferIt, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    _vspew(stream, errn, pre, file, line, func, fmt, ap);
+    _vspew(stream, errn, pre, file, line, func, bufferIt, fmt, ap);
     va_end(ap);
 }
 
