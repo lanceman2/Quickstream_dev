@@ -2,31 +2,62 @@
 
 data quickly flows between modules in a directed graph
 
-quickstream is the run library, the filter library, some filter modules,
-and some utility programs.  quickstream is written in C and the libraries
-can link with C and C++ code.  quickstream is for building flow stream
-graphs that process stream data in filter module stages.  quickstream is
-use case is generic, in the way it does not care what kind of data is
-being transferred between stages.  The types of data that flows is in the
-users domain.
+quickstream is a run library, a filter library, some filter modules, and
+some utility programs.  quickstream is written in C and the libraries can
+link with C and C++ code.  quickstream is for building flow stream graphs
+that process data in filter module stages.
+
+## Generic usage
+
+Use it to process video, audio, radio signals, or any data flow that
+requires fast repetitive data transfer between filter modules.
+
+
+## quickstream is fast
+
+The objective is that quickstream flow graph should process data faster
+than any other streaming API (application programming interface).
+
+
+## No connection types
+
+The quickstream use case is generic, in the way it does not care what kind
+of data is being transferred between filter stages, in the same way UNIX
+pipes don't care what kind of data flows through them.  The types of data
+that flows is up to you.  The typing of data flowing between particular
+filters is delegated to a higher protocol layer above quickstream.
+quickstream provides generic management for the connecting and running of
+filter streams.
+
+
+## Restricting filters modules leads to user control and runtime optimisation
+
+quickstream provides generic management for the connecting and running of
+filter streams.  You may change and optimise the distribution of threads
+and processes running each of the filters in the stream while your program
+is running.  quickstream restricts filter interfaces so that it may
+provide an abstraction layer so that filters may be run with their own
+thread or run in a inter-filter shared thread as just a function call on
+the call stack.  Similarly the distribution of filters across processes
+may also be managed at runtime.  This enables you to find what
+distribution of threads and processes that is needed to run your stream
+fast and use less system resources.
+
 
 ## Building and Installing from GitHub Repository Source
 
-Change directory to the top source directory and then run:
+If you got the quickstream source from a repository, and not a tarball,
+change directory to the top source directory and then run:
 
   *./bootstrap*
 
-Then
+Now the source should be like that of the source from a tarball
+distribution with all it's files, and no more downloads needed.  Then 
 
   *echo "PREFIX = MY_PREFIX" > config.make*
 
 where ``MY_PREFIX`` is the top installation directory, like for example
 */usr/local/encap/quickstream*.  Then run
-
-  *make download*
-
-to download additional files to the source directory.
-Then run
 
   *make*
 
@@ -61,7 +92,7 @@ used.
 
 It's like UNIX streams but much faster.  Modules in the stream, or
 pipe-line, may be separate processes, or threads in the same process.  The
-stream can be a general directed graph without cycles.
+stream can be any general directed graph without cycles.
 
 It's faster because the data flowing between the modules is passed through
 shared memory and not a kernel buffer, as in UNIX file streams.  In a UNIX
@@ -84,28 +115,30 @@ circular buffer in order to guarantee consistent lock-less operation.
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
 pattern more so than a particular software development frame-work; as
-such, it may be used as a basis to build a frame-work to write programs to
-process audio, video, software defined radio (SDR), or any kind of digit
-flow pipe-line.
+such, it may be used as a basis to build a frame-work to write programs
+to process audio, video, software defined radio (SDR), or any kind of
+digit flow pipe-line.
 
 Interfaces in quickstream are minimalistic.  To make a filter you do not
 necessarily need to consider data flow connection types.  Connection types
 are left in the quickstream user domain.  In the same way that UNIX
 pipe-lines don't care what type of data is flowing in the pipe,
-quickstream just provides a data streaming utility.  So if to put the wrong
-type of data into your pipe-line, you get what you pay for.  The API
+quickstream just provides a data streaming utility.  So if you put the
+wrong type of data into your pipe-line, you get what you pay for.  The API
 (application programming interface) is also minimalistic, in that you do
-not need to waste time so much time figuring out what functions and/or
-classes to use to do a particular task, the choose should be obvious.
+not need to waste so much time figuring out what functions and/or classes
+to use to do a particular task, the choose should be obvious.
 
 The intent is to construct a flow stream of filters.  The filters do not
 necessarily concern themselves with their neighboring filters; the filters
 just read input from input channels and write output to output channels,
 not necessarily knowing what is writing to them or what is reading from
-them; at least that is the mode of operation at this protocol
-(quickstream API) level.  The user may add more structure to that if they
-need to.  It's like the other UNIX abstractions like sockets, in that the
-type of data is of no concern in this quickstream APIs.
+them; at least that is the mode of operation at this protocol (quickstream
+API) level.  The user may add more structure to that if they need to.
+It's like the other UNIX abstractions like sockets, file streams, and
+pipes, in that the type of data is of no concern in this quickstream
+APIs.
+
 
 ## Prerequisite packages
 Building and installing quickstream requires the following debian package
@@ -116,12 +149,16 @@ prerequisites:
 - imagemagick
 - doxygen
 
+
 ## Terminology
 
 ### Stream
+
 The directed graph that data flows in.  
 
+
 #### Stream states
+
 A high level view of the stream state diagram (not to be confused with a
 stream flow directed graph) looks like so:
 
@@ -195,15 +232,18 @@ integer.  filters do not know if they are running as a single thread by
 themselves or they are sharing their thread execution with other filters.
 From the quickstream user filters just provide executable object code.
 
+
 ### Controller
 
 Or filter controller: That which changes the behavior of a filter
 module.
 
+
 ### Monitor
 
 Or filter monitor: That which monitors a filter, without changing how it
 processes inputs and writes outputs.
+
 
 ### Channel
 
@@ -213,6 +253,7 @@ and output channels.  For that filter running in a given cycle the input
 and output channels are numbered from 0 to N-1, where N is the number of
 input or output channels.
 
+
 ### Source
 
 A filter with no inputs is a source filter.  It may get "input" from
@@ -220,6 +261,7 @@ something other than the stream, like a file, or a socket, but those
 kinds of inputs are external from the quickstream, that is they do get
 any input from the quickstream circular buffer.  So in a more global sense
 that may not be sources, but with respect to quickstream they are sources.
+
 
 ### Sink
 
@@ -243,9 +285,11 @@ utility programs.  The main parts are:
 - the program **qsrun**: which uses *libqs* to run a quickstream with said
   filters.
 
+
 ## OS (operating system) Ports
 
 Debian 9 and Ubuntu 18.04
+
 
 ## Similar Software Projects
 
@@ -258,6 +302,7 @@ things.  We study them and learn.
 - **RedHawk** https://geontech.com/redhawk-sdr/
 - **csdr** https://github.com/simonyiszk/csdr We like straight forward way
   csdr uses UNIX pipe-line stream to make its flow stream.
+
 
 ### What quickstream intends to do better
 
@@ -298,6 +343,7 @@ unloading filters and reconnecting filters at run-time.
 
 In the future benchmarking will tell.  TODO: Add links here...
 
+
 ## A Typical quickstream Flow Graph
 
 ![simple stream state](
@@ -309,18 +355,19 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
 
 ## Developer notes
 
-- quickstream code is written fairly simple C with very few dependences.
+- quickstream code is written in fairly simple C with very few dependences.
 - The API (application programming interface) user sees data structures as
   opaque.  They just know that they are pointers to data structures, and
-  they do not see elements in the structures.
+  they do not see elements in the structures.  We don't use typedef, for
+  that extra layer of indirection makes it harder to "scope the code".
 - The files in the source directly follow the directory structure of the
-  installed files.  So you don't need to wonder where source files are.
+  installed files.  So you don't need to wonder where source files are;
 - consequently programs can run in the source directory after running make
-  without installing them.
-- Consequently also the running programs find files from a relative paths
+  without installing them;
+- consequently also the running programs find files from a relative paths
   between them, the same way as in the installed files as with the files
-  in the source.
-- Consequently we use the compilers relative linking options to link and
+  in the source;
+- consequently we use the compilers relative linking options to link and
   run programs.
 - You can move the whole encapsulated installation and everything runs the
   same.
@@ -334,4 +381,9 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
 - The private code is slightly more integrated than the public interfaces
   may suggest.
 - We wish to keep this C code small and manageable.
+- Minimize the use of CPP macros, so that understanding the code is easy
+  and not a CPP macro nightmare like many C and C++ APIs.  Every
+  programmer knows that excessive use of CPP macros leads to code that is
+  not easily understandable in the future after you haven't looked at it
+  in a while.
 
