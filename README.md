@@ -8,7 +8,7 @@ link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
 
-## Building and Installing from GitHub Repository Source
+## Building and Installing
 
 If you got the quickstream source from a repository, and not a tarball,
 change directory to the top source directory and then run:
