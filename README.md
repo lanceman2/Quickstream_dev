@@ -7,42 +7,6 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
-## Generic usage
-
-Use it to process video, audio, radio signals, or any data flow that
-requires fast repetitive data transfer between filter modules.
-
-
-## quickstream is fast
-
-The objective is that quickstream flow graph should process data faster
-than any other streaming API (application programming interface).
-
-
-## No connection types
-
-The quickstream use case is generic, in the way it does not care what kind
-of data is being transferred between filter stages, in the same way UNIX
-pipes don't care what kind of data flows through them.  The types of data
-that flows is up to you.  The typing of data flowing between particular
-filters is delegated to a higher protocol layer above quickstream.
-quickstream provides generic management for the connecting and running of
-filter streams.
-
-
-## Restricting filters modules leads to user control and runtime optimisation
-
-quickstream provides generic management for the connecting and running of
-filter streams.  You may change and optimise the distribution of threads
-and processes running each of the filters in the stream while your program
-is running.  quickstream restricts filter interfaces so that it may
-provide an abstraction layer so that filters may be run with their own
-thread or run in a inter-filter shared thread as just a function call on
-the call stack.  Similarly the distribution of filters across processes
-may also be managed at runtime.  This enables you to find what
-distribution of threads and processes that is needed to run your stream
-fast and use less system resources.
-
 
 ## Building and Installing from GitHub Repository Source
 
@@ -86,6 +50,43 @@ are for example:
 
 See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
 used.
+
+
+## Generic usage
+
+Use it to process video, audio, radio signals, or any data flow that
+requires fast repetitive data transfer between filter modules.
+
+
+## quickstream is fast
+
+The objective is that quickstream flow graph should process data faster
+than any other streaming API (application programming interface).
+
+
+## No connection types
+
+The quickstream use case is generic, in the way it does not care what kind
+of data is being transferred between filter stages, in the same way UNIX
+pipes don't care what kind of data flows through them.  The types of data
+that flows is up to you.  The typing of data flowing between particular
+filters is delegated to a higher protocol layer above quickstream.
+quickstream provides generic management for the connecting and running of
+filter streams.
+
+
+## Restricting filters modules leads to user control and runtime optimisation
+
+quickstream provides generic management for the connecting and running of
+filter streams.  You may change and optimise the distribution of threads
+and processes running each of the filters in the stream while your program
+is running.  quickstream restricts filter interfaces so that it may
+provide an abstraction layer so that filters may be run with their own
+thread or run in a inter-filter shared thread as just a function call on
+the call stack.  Similarly the distribution of filters across processes
+may also be managed at runtime.  This enables you to find what
+distribution of threads and processes that is needed to run your stream
+fast and use less system resources.
 
 
 ## Description
