@@ -12,7 +12,6 @@
 WEB_DOCS_TARGET_DIR := ../../../quickstream.doc
 
 
-
 DOT := $(wildcard *.dot)
 
 WEB_DOCS :=\
@@ -23,23 +22,36 @@ IMAGES :=\
  $(patsubst %.dot, images/%.png, $(DOT))\
  $(patsubst %.dot, images/%.svg, $(DOT))
 
+# DOX_TARGET is a file that depends on running doxygen
+DOX_TARGET := html/index.html
 
-build: $(IMAGES) html/index.html
 
-
-
-html/index.html:\
+DOX_INFILES :=\
  ../../include/qsapp.h\
  ../../include/qsfilter.h\
- Doxyfile\
- quickstream.dox
+ ../../bin/quickstream.c\
+ mainpage.dox
+
+
+
+build: $(IMAGES) $(DOX_TARGET)
+
+
+Doxyfile: Doxyfile.in
+	@echo "# This is a generated file" > $@
+	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@
+
+$(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5
 	rm -rf html/search
 	rm -rf latex
 	doxygen
 
 
-# Extra make target that only developers need to know:
+# Extra make target that only developers need to know.  It makes binary
+# image files for the web that end up in a different repo then the
+# quickstream repo, quickstream.doc repo.
+#
 web_docs: $(WEB_DOCS)
 
 
@@ -64,7 +76,7 @@ show display: $(DOT)
 
 
 clean:
-	rm -f $(IMAGES)
+	rm -f $(IMAGES) Doxyfile
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5
 	rm -rf html/search

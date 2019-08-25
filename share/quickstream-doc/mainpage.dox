@@ -6,6 +6,8 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
+The **quickstream** homepage is at https://github.com/lanceman2/quickstream
+
 
 \section program the quickstream runner program
 \ref quickstream_program
@@ -15,6 +17,7 @@ that process data in filter module stages.
 
 \section programming_streams programming stream running programs
 \ref qsapp.h
+
 
 
 
