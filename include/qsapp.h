@@ -4,29 +4,46 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-
-// Change this QS_VERSION macro string to make a new version.
-#define QS_VERSION "0.0.1"
-
-/** API (application programming interface) objects
+/** \file
  *
- * - Qs app      a collection of loaded filter module plugins,
- *               a collection of streams
- *               an application container for all that is quickstream
+ * The libqsapp application programming interface (API)
  *
- * - Qs stream   a directed graph of filters,
- *               a mapping of filters to threads,
- *               a mapping of threads to processes
+ * You can link your C and C++ code with the libqsapp library to make
+ * quickstream programs that load quickstream filter modules, assemble
+ * these filters into flow graphs, and run the flow graphs.
  *
- * - Qs filter   a filter module plugin from a dynamic shared object
- *               file
+ * You can do the same with the program \ref quickstream.
  *
- * - Qs process  an operating system process
  *
- * - Qs thread   an operating system thread (pthread)
+ * The following terms are used in function names:
+ *
+ * API objects
+ *
+ * - **Qs app**     a collection of loaded filter module plugins,
+ *                  a collection of streams
+ *                  an application container for all that is quickstream
+ *
+ * - **Qs stream**  a directed graph of filters,
+ *                  a mapping of filters to threads,
+ *                  a mapping of threads to processes
+ *
+ * - **Qs filter**  a filter module plugin from a dynamic shared object
+ *                  file
+ *
+ * - **Qs process** an operating system process
+ *
+ * - **Qs thread**  an operating system thread (pthread)
  *
  */ 
 
+
+/** quickstream release version number
+ *
+ * This release version number is not necessarily the same as library
+ * version numbers.
+ */
+// Change this QS_VERSION macro string to make a new version.
+#define QS_VERSION "0.0.1"
 
 /** Read the last quickstream error string
  *
@@ -54,7 +71,7 @@ char *qsError(void);
 /** Create the highest level quickstream construct,
  * a quickstream app.
  *
- * /return a pointer to an app structure, or 0 on failure*/
+ * \return a pointer to an app structure, or 0 on failure*/
 extern
 struct QsApp *qsAppCreate(void);
 
