@@ -32,9 +32,23 @@ DOX_INFILES :=\
  ../../bin/quickstream.c\
  mainpage.dox
 
+INSTALL_DIR = $(PREFIX)/share/quickstream-doc
+
+# Get a PREFIX if we can
+include ../../config.make
 
 
 build: $(IMAGES) $(DOX_TARGET)
+
+
+
+install:
+ifdef PREFIX
+	mkdir -p $(INSTALL_DIR)
+	cp -r html images $(INSTALL_DIR)
+else
+	@echo "PREFIX is not defined"
+endif
 
 
 Doxyfile: Doxyfile.in
