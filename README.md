@@ -91,9 +91,12 @@ fast and use less system resources.
 
 ## Description
 
-It's like UNIX streams but much faster.  Modules in the stream, or
-pipe-line, may be separate processes, or threads in the same process.  The
-stream can be any general directed graph without cycles.
+It's like UNIX streams but much faster.  Filter modules in the stream, or
+pipe-line, may be run in separate processes, or separate threads in the
+same process, or modules may be run together in a single thread.   The way
+processes and threads are distributed across the filter modules in the
+running flow stream is not necessarily constrained in any way.  The stream
+can be any general directed graph without cycles.
 
 It's faster because the data flowing between the modules is passed through
 shared memory and not a kernel buffer, as in UNIX file streams.  In a UNIX
@@ -112,6 +115,18 @@ pipe-line when running in its normal mode.  We also can eliminate most
 contentious cases by using a lock-less circular buffer, where each
 producer and consumer module makes promises as to how they will access the
 circular buffer in order to guarantee consistent lock-less operation.
+
+quickstream provides the buffering between module filters in the flow.
+The filters may copy the input buffer and then send different data to it's
+outputs, or if the output buffers are or the same size as the input
+buffers, it may modify an input buffer and send it through to an output
+without copying any data were by eliminating an expensive copy
+operation.
+
+quickstream inter-filter shared buffers are circular and lock free.
+This imposes some
+
+
 
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
