@@ -4,3 +4,12 @@
 # system.
 #
 TAR_NAME := quickstream
+
+
+# Edit to make a release:
+#
+RELEASE_MAJOR := 0
+RELEASE_MINOR := 0
+RELEASE_EDIT  := 1
+
+RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_EDIT)

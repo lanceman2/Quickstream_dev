@@ -43,7 +43,7 @@
  * version numbers.
  */
 // Change this QS_VERSION macro string to make a new version.
-#define QS_VERSION "0.0.1"
+#define QS_VERSION "@RELEASE_VERSION@"
 
 /** Read the last quickstream error string
  *

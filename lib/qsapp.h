@@ -47,8 +47,8 @@ struct QsStream {
 
     // filter connections:
     uint32_t numConnections;// length of from and to
-    struct QsFilter **from; // array of filters
-    struct QsFilter **to;   // array of filters
+    struct QsFilter **from; // array of filter pointers
+    struct QsFilter **to;   // array of filter pointers
 
     struct QsStream *next; // next stream in app list
 };
@@ -70,14 +70,18 @@ struct QsFilter {
     // Never change after loading/creation
     int (* construct)(void);
     int (* destroy)(void);
-    int (* start)(uint32_t numInChannels, uint32_t numOutChannels);
-    int (* stop)(uint32_t numInChannels, uint32_t numOutChannels);
+    int (* start)(uint32_t numInputs, uint32_t numOutputs);
+    int (* stop)(uint32_t numInputs, uint32_t numOutputs);
     int (* input)(void *buffer, size_t len, uint32_t inputChannelNum);
 
     struct QsFilter *next; // next loaded filter in app list
 
-    // numOutputs is calculated at start
-    uint32_t numOutputs; // number of connected outputs
-    struct QsFilter *outputs; // array of filters written to.
+
+    // The following are calculated at stream start
+    //
+    uint32_t numInputs; // number of connected input filters
+
+    uint32_t numOutputs; // number of connected output filters
+    struct QsFilter **outputs; // array of filter pointers
 };
 

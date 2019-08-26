@@ -10,7 +10,7 @@
 # source in these directories.   We are testing files in ../lib/ and
 # ../include/ by linking and loading with generated files there-in.
 #
-SUBDIRS := ../lib ../include
+SUBDIRS := ../include ../lib
 
 
 run_SOURCES := run.c

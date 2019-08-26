@@ -15,6 +15,8 @@
 static void catcher(int signum) {
 
     WARN("Caught signal %d\n", signum);
+    fprintf(stderr, "Try running:\n\n"
+            "    gdb -pid %u\n\n", getpid());
     while(1) usleep(10000);
 }
 
@@ -49,21 +51,20 @@ int main(void) {
             qsAppDestroy(app);
             return 1;
         }
-#if 0
 
+#if 1
     qsFilterUnload(f[0]);
 
-    qsAppDisplayFlowImage(app, false);
 
     f[0] = qsAppFilterLoad(app, "stdin", 0);
 
     qsStreamConnectFilters(stream, f[0], f[2]);
-    qsStreamConnectFilters(stream, f[2], f[0]);
+    qsStreamConnectFilters(stream, f[0], f[3]);
+
 
 #endif
 
     qsAppDisplayFlowImage(app, false);
-
 
     qsStreamStart(stream);
 

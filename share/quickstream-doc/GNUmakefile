@@ -41,6 +41,10 @@ include ../../config.make
 build: $(IMAGES) $(DOX_TARGET)
 
 
+# qsapp.h is a generated file
+../../include/qsapp.h:
+	cd ../../include && $(MAKE) qsapp.h
+
 
 install:
 ifdef PREFIX

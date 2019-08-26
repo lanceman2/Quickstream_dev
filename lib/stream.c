@@ -299,6 +299,90 @@ int qsStreamStop(struct QsStream *s) {
 }
 
 
+static
+void CheckCallStart(struct QsStream *s, struct QsFilter *f) {
+
+    if(f->start) {
+        DSPEW("Calling filter \"%s\" start()", f->name);
+        int ret;
+        if((ret = f->start(f->numInputs, f->numOutputs))) {
+            WARN("filter \"%s\" start() returned %d", f->name, ret);
+            // TODO: What to do...
+        }
+    }
+
+    for(uint32_t i=0; i<f->numOutputs; ++i)
+        CheckCallStart(s, f->outputs[i]);
+}
+
+
+
+static
+void CheckCallConstruct(struct QsStream *s, struct QsFilter *f) {
+
+    DASSERT(s, "");
+    DASSERT(f, "");
+    DASSERT(f->stream == s, "");
+
+    if(f->construct) {
+        DSPEW("Calling filter \"%s\" construct()", f->name);
+        int ret = f->construct();
+        // We will never call f->construct() again so
+        // we can mark it as such by setting it to NULL.
+        f->construct = 0;
+        if(ret) {
+            WARN("filter \"%s\" construct() returned %d", f->name, ret);
+            // TODO: What to do...
+        }
+    }
+
+    for(uint32_t i=0; i<f->numOutputs; ++i)
+        CheckCallConstruct(s, f->outputs[i]);
+}
+
+
+static
+void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
+
+    uint32_t i;
+    DASSERT(f->numOutputs == 0, "");
+    DASSERT(f->numInputs == 0, "");
+
+    // count the number of filters that this filter connects to
+    for(i=0; i<s->numConnections; ++i) {
+        if(s->from[i] == f)
+            ++f->numOutputs;
+        if(s->to[i] == f)
+            ++f->numInputs;
+    }
+
+    if(f->numOutputs == 0) return;
+
+    // Make the output array
+    DASSERT(!f->outputs, "");
+    f->outputs = malloc(sizeof(*f->outputs)*f->numOutputs);
+    ASSERT(f->outputs, "malloc(%zu) failed",
+            sizeof(*f->outputs)*f->numOutputs);
+
+    for(i=0; s->from[i] != f; ++i);
+    // s->from[i] == f
+
+    for(uint32_t j=0; j<f->numOutputs;) {
+        f->outputs[j] = s->to[i];
+        ConnectFilterOutputsFrom(s, s->to[i]);
+        ++j;
+
+        if(j == f->numOutputs)
+            // This was the last connection from filter f
+            break;
+
+        // go to next connection that is from this filter f
+        for(++i; s->from[i] != f; ++i);
+        DASSERT(s->from[i] == f, "");
+    }
+}
+
+
 int qsStreamStart(struct QsStream *s) {
 
     DASSERT(s, "");
@@ -376,19 +460,31 @@ int qsStreamStart(struct QsStream *s) {
      *********************************************************************/
 
 
-
-
-
-
-
-
+    for(uint32_t i=0; i<s->numSources; ++i)
+        ConnectFilterOutputsFrom(s, s->sources[i]);
 
 
 
 
     /**********************************************************************
-     *            Stage:
+     *            Stage: call filter construct()
      *********************************************************************/
+
+    
+    for(uint32_t i=0; i<s->numSources; ++i)
+        CheckCallConstruct(s, s->sources[i]);
+
+
+    /**********************************************************************
+     *            Stage: call filter start()
+     *********************************************************************/
+
+
+
+
+    for(uint32_t i=0; i<s->numSources; ++i)
+        CheckCallStart(s, s->sources[i]);
+
 
 
 

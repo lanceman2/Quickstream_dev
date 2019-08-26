@@ -200,9 +200,6 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         goto cleanup;
     }
 
-    f->input(0, 0, 0);
-    if(f->construct) f->construct();
-
     INFO("Successfully loaded module Filter %s with name \"%s\"",
             path, f->name);
     free(path);

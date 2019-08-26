@@ -28,7 +28,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
 
 int start(uint32_t numInChannels, uint32_t numOutChannels) {
 
-    DSPEW("count=%d", count++);
+    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
+            count++, numInChannels, numOutChannels);
     return 0; // success
 }
 
