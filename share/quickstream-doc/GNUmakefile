@@ -60,7 +60,7 @@ Doxyfile: Doxyfile.in
 	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@
 
 $(DOX_TARGET): Doxyfile $(DOX_INFILES)
-	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5
+	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search
 	rm -rf latex
 	doxygen
@@ -96,7 +96,7 @@ show display: $(DOT)
 clean:
 	rm -f $(IMAGES) Doxyfile
 	rm -rf latex
-	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5
+	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search
 
 
