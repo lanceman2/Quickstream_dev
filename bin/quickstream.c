@@ -1,4 +1,6 @@
-/** \page quickstream_program The quickstream runner program
+/** \page quickstream_program quickstream 
+ *
+ * \brief stream runner program
  
 \tableofcontents
 quickstream is a command-line program that can load, connect filters, and
@@ -6,9 +8,9 @@ run the loaded filters in a flow stream
 
 \section quickstream_args command-line arguements
 
-\section quickstream_examples
+\section quickstream_examples quickstream examples
 
-\subsection quickstream_helloworld
+\subsection quickstream_helloworld quickstream helloworld
 
 
 */

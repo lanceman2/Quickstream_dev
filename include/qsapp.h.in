@@ -12,7 +12,7 @@
  * quickstream programs that load quickstream filter modules, assemble
  * these filters into flow graphs, and run the flow graphs.
  *
- * You can do the same with the program \ref quickstream.
+ * You can do the same with the program \ref quickstream_program.
  *
  *
  * The following terms are used in function names:

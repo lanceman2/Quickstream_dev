@@ -42,7 +42,7 @@ build: $(IMAGES) $(DOX_TARGET)
 
 
 # qsapp.h is a generated file
-../../include/qsapp.h:
+../../include/qsapp.h: ../../include/qsapp.h.in
 	cd ../../include && $(MAKE) qsapp.h
 
 
