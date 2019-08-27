@@ -221,24 +221,49 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 }
 
 
-static void inline FreeSources(struct QsStream *s) {
+static inline
+void FreeFilterRunResources(struct QsFilter *f) {
+
+    if(f->numOutputs) {
+#ifdef DEBUG
+        memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
+#endif
+        free(f->outputs);
+#ifdef DEBUG
+        f->outputs = 0;
+#endif
+        free(f->outputs);
+        f->numOutputs = 0;
+    }
+
+    f->u.numInputs = 0;
+    f->isStarted = false;
+}
+
+
+static inline
+void FreeRunResources(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    DASSERT(s->numSources, "");
-    DASSERT(s->sources, "");
 
+    for(int32_t i=0; i<s->numConnections; ++i) {
+        FreeFilterRunResources(s->from[i]);
+        FreeFilterRunResources(s->to[i]);
+    }
+
+
+    if(s->numSources) {
+        // Free the stream sources list
 #ifdef DEBUG
-    memset(s->sources, 0, sizeof(*s->sources)*s->numSources);
+        memset(s->sources, 0, sizeof(*s->sources)*s->numSources);
 #endif
-
-    free(s->sources);
-
+        free(s->sources);
 #ifdef DEBUG
-    s->sources = 0;
+        s->sources = 0;
 #endif
-
-    s->numSources = 0;
+        s->numSources = 0;
+    }
 }
 
 
@@ -250,6 +275,14 @@ static inline uint32_t CountFilterPath(struct QsStream *s,
         // started looping, because we counted more filters in the path
         // than the number of filters that exist.
         return loopCount;
+
+    ++loopCount;
+
+    uint32_t returnCount = loopCount;
+
+    //DSPEW("filter \"%s\"  count=%" PRIu32 "   max=%" PRIu32,
+    //    f->name, loopCount, maxCount);
+
 
     // In any path in the flow we can only have a filter traversed once.
     // If in any path a filter is traversed more than once then there will
@@ -264,14 +297,16 @@ static inline uint32_t CountFilterPath(struct QsStream *s,
         if(s->from[i] == f) {
             uint32_t count =
                 // recurse
-                CountFilterPath(s, s->to[i], loopCount+1, maxCount);
+                CountFilterPath(s, s->to[i], loopCount, maxCount);
             // this filter feeds the "to" filter.
-            if(count > loopCount)
+            if(count > returnCount)
                 // We want the largest filter count in all paths.
-                loopCount = count;
+                returnCount = count;
         }
 
-    return loopCount;
+    //DSPEW("filter \"%s\"  returnCount=%" PRIu32, f->name, returnCount);
+
+    return returnCount;
 }
 
 
@@ -283,7 +318,7 @@ int qsStreamStop(struct QsStream *s) {
     if(s->numSources == 0)
         // The stream was not in a flow state, and none of the filter
         // callbacks where called.
-        return 1;
+        return 0;
 
 
     DASSERT(s->numSources, "");
@@ -291,9 +326,9 @@ int qsStreamStop(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: free sources list
+     *            Stage: free extra run data
      *********************************************************************/
-    FreeSources(s);
+    FreeRunResources(s);
 
     return 0;
 }
@@ -302,10 +337,10 @@ int qsStreamStop(struct QsStream *s) {
 static
 void CheckCallStart(struct QsStream *s, struct QsFilter *f) {
 
-    if(f->start) {
-        DSPEW("Calling filter \"%s\" start()", f->name);
+    if(f->start && !f->isStarted) {
         int ret;
-        if((ret = f->start(f->numInputs, f->numOutputs))) {
+        f->isStarted = true;
+        if((ret = f->start(f->u.numInputs, f->numOutputs))) {
             WARN("filter \"%s\" start() returned %d", f->name, ret);
             // TODO: What to do...
         }
@@ -325,7 +360,7 @@ void CheckCallConstruct(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f->stream == s, "");
 
     if(f->construct) {
-        DSPEW("Calling filter \"%s\" construct()", f->name);
+        //DSPEW("Calling filter \"%s\" construct()", f->name);
         int ret = f->construct();
         // We will never call f->construct() again so
         // we can mark it as such by setting it to NULL.
@@ -344,16 +379,16 @@ void CheckCallConstruct(struct QsStream *s, struct QsFilter *f) {
 static
 void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
-    uint32_t i;
     DASSERT(f->numOutputs == 0, "");
-    DASSERT(f->numInputs == 0, "");
+    DASSERT(f->u.numInputs == 0, "");
 
     // count the number of filters that this filter connects to
+    uint32_t i;
     for(i=0; i<s->numConnections; ++i) {
         if(s->from[i] == f)
             ++f->numOutputs;
         if(s->to[i] == f)
-            ++f->numInputs;
+            ++f->u.numInputs;
     }
 
     if(f->numOutputs == 0) return;
@@ -369,7 +404,8 @@ void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t j=0; j<f->numOutputs;) {
         f->outputs[j] = s->to[i];
-        ConnectFilterOutputsFrom(s, s->to[i]);
+        if(s->to[i]->numOutputs == 0)
+            ConnectFilterOutputsFrom(s, s->to[i]);
         ++j;
 
         if(j == f->numOutputs)
@@ -408,35 +444,46 @@ int qsStreamStart(struct QsStream *s) {
      *            Stage: Find source filters
      *********************************************************************/
 
+    DASSERT(s->numSources == 0,"");
+
     for(uint32_t i=0; i < s->numConnections; ++i) {
 
         struct QsFilter *f = s->from[i];
         uint32_t j=0;
         for(; j<s->numConnections; ++j) {
-            if(i == j) {
-                DASSERT(s->from[i] != s->to[j],
-                        "filter cannot connect to itself");
-                continue;
-            }
             if(s->to[j] == f)
                 // f is not a source
                 break;
         }
-        if(!(j < s->numConnections)) {
-            // Add f to the source list.
-            s->sources = realloc(s->sources,
-                    (s->numSources+1)*sizeof(*s->sources));
-            s->sources[s->numSources] = f;
+        if(!(j < s->numConnections) && !f->u.isSource) {
             ++s->numSources;
+            f->u.isSource = 1;
         }
     }
 
+ 
     if(!s->numSources) {
         // It's not going to flow, or call any filter callbacks
-        // for there are no sources.
+        // because there are no sources.
         ERROR("This stream has no sources");
+        // We have nothing to free at this time.
         return -1; // error no sources
     }
+
+    s->sources = malloc(s->numSources*sizeof(*s->sources));
+    ASSERT(s->sources, "malloc(,%zu) failed",
+            s->numSources*sizeof(*s->sources));
+
+    uint32_t j = 0;
+    for(uint32_t i=0; i < s->numConnections; ++i) {
+        if(s->from[i]->u.isSource) {
+            s->sources[j++] = s->from[i];
+            // reset flag so that s->from[i]->u.numInputs == 0
+            // and we use it for the number of inputs after here.
+            s->from[i]->u.isSource = 0;
+        }
+    }
+    DASSERT(j == s->numSources, "");
 
 
     /**********************************************************************
@@ -450,10 +497,11 @@ int qsStreamStart(struct QsStream *s) {
 #ifdef DEBUG
             qsAppDisplayFlowImage(s->app, true);
 #endif
-            FreeSources(s);
+            FreeRunResources(s);
             return -2; // error we have loops
         }
     }
+
 
     /**********************************************************************
      *            Stage: Set up filter connections in the filter structs
@@ -467,7 +515,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: call filter construct()
+     *            Stage: call all stream's filter construct() if needed
      *********************************************************************/
 
     
@@ -476,10 +524,8 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: call filter start()
+     *            Stage: call all stream's filter start() if present
      *********************************************************************/
-
-
 
 
     for(uint32_t i=0; i<s->numSources; ++i)
@@ -488,11 +534,18 @@ int qsStreamStart(struct QsStream *s) {
 
 
 
+    /**********************************************************************
+     *            Stage: flow
+     *********************************************************************/
+
 
 
     NOTICE("RUNNING");
 
 
+    // We are done running this stream now.
+
+    FreeRunResources(s);
 
 
     return 0; // success

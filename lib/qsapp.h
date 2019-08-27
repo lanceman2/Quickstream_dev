@@ -76,11 +76,20 @@ struct QsFilter {
 
     struct QsFilter *next; // next loaded filter in app list
 
-
-    // The following are calculated at stream start
+    ///////////////////////////////////////////////////////////////////////
+    // The following are setup at stream start and cleaned up at stream
+    // stop
+    ///////////////////////////////////////////////////////////////////////
     //
-    uint32_t numInputs; // number of connected input filters
-
+    bool isStarted;     // flag that start() was called
+    //
+    // We use this u variable at startup and at runtime for two different
+    // things at two different times in the code.
+    union {
+        uint32_t numInputs; // runtime number of connected input filters
+        uint32_t isSource;  // startup flag marking filter as a source
+    } u;
+    //
     uint32_t numOutputs; // number of connected output filters
     struct QsFilter **outputs; // array of filter pointers
 };

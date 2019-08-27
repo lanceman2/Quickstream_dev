@@ -68,6 +68,8 @@ int main(void) {
 
     qsStreamStart(stream);
 
+    qsStreamStart(stream);
+
 
     qsAppDestroy(app);
 
