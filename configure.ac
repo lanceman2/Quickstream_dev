@@ -1,0 +1,186 @@
+
+# AC_INIT( PACKAGE, VERSION, BUGREPORT, TARNAME , URL)
+AC_INIT([quickstream],
+        0.0.1,
+        [https://github.com/lanceman2/quickstream],
+        [quickstream],
+        [https://github.com/lanceman2/quickstream])
+
+
+# See  LIB_VERSION notes at the bottom of this file.
+#
+LIBQSAPP_CURRENT=0
+LIBQSAPP_REVISION=0
+LIBQSAPP_AGE=0
+
+LIBQSFILTER_CURRENT=0
+LIBQSFILTER_REVISION=0
+LIBQSFILTER_AGE=0
+
+#AM_INIT_AUTOMAKE(-Wall -Werror dist-bzip2 no-dist-gzip subdir-objects)
+AM_INIT_AUTOMAKE(-Wall dist-bzip2 no-dist-gzip)
+AM_PROG_AR
+LT_INIT
+AC_PROG_CC
+AC_PROG_CXX
+
+LIBQSAPP_VERSION="${LIBQSAPP_CURRENT}:${LIBQSAPP_REVISION}:${LIBQSAPP_AGE}"
+
+LIBQSFILTER_VERSION="${LIBQSFILTER_CURRENT}:${LIBQSFILTER_REVISION}:${LIBQSFILTER_AGE}"
+
+AC_SUBST(LIBQSAPP_VERSION)
+AC_SUBST(LIBQSAPP_CURRENT)
+AC_SUBST(LIBQSAPP_REVISION)
+AC_SUBST(LIBQSAPP_AGE)
+
+AC_SUBST(LIBQSFILTER_VERSION)
+AC_SUBST(LIBQSFILTER_CURRENT)
+AC_SUBST(LIBQSFILTER_REVISION)
+AC_SUBST(LIBQSFILTER_AGE)
+
+AC_DEFINE_UNQUOTED(LIBQSAPP_VERSION, "$LIBQSAPP_VERSION",
+                   [quickstream app library version number])
+
+AC_DEFINE_UNQUOTED(LIBQSFILTER_VERSION, "$LIBQSFILTER_VERSION",
+                   [quickstream filter module library version number])
+
+################################################################
+#                 --enable-debug
+################################################################
+
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--enable-debug],
+    [compile more debugging code into quickstream and libqsapp\
+ (default is no debugging code).  You do not want this unless\
+ you are debugging or developing quicksteam.  Adding this option may make\
+ use about 10% more CPU usage.  This is unrelated to the compiler\
+ options used.]),
+ [enable_debug="$enableval"],
+ [enable_debug=no])
+
+case "$enable_debug" in
+    y* | Y* )
+    enable_debug="-DDEBUG "
+    ;;
+    * ) # default
+    enable_debug=""
+    ;;
+esac
+
+
+AC_ARG_ENABLE([spew-level],
+    AS_HELP_STRING([--enable-spew-level=error|warn|notice|info|debug],
+    [compile more spewing code into quickstream and libquickstream\
+ (default is no spewing code).  You do not want this unless\
+ you are debugging or developing quickstream.  Adding this option may make\
+ use about 11% more CPU usage.  This is unrelated to the compiler\
+ options used.]),
+ [enable_spew_level="$enableval"],
+ [enable_spew_level=zdefault])
+
+case "$enable_spew_level" in
+    e*|E* )
+    enable_spew_level="-DSPEW_LEVEL_ERROR"
+    ;;
+    w*|W* )
+    enable_spew_level="-DSPEW_LEVEL_WARN"
+    ;;
+    n*|n* )
+    enable_spew_level="-DSPEW_LEVEL_NOTICE"
+    ;;
+    i*|I* )
+    enable_spew_level="-DSPEW_LEVEL_INFO"
+    ;;
+    d*|D* )
+    enable_spew_level="-DSPEW_LEVEL_DEBUG"
+    ;;
+    * ) # default
+    enable_spew_level="-DSPEW_LEVEL_NONE"
+    ;;
+esac
+
+
+
+# AC_SUBST() go into Makefile.am files and other .in files
+# AC_DEFINE*() go into config.h
+
+AM_CPPFLAGS="$enable_debug$enable_spew_level"
+
+AC_SUBST([AM_CPPFLAGS]) 
+
+
+AC_CONFIG_FILES(
+ makefile
+ include/makefile
+ lib/makefile
+ lib/pkgconfig/quickstream.pc
+ bin/makefile
+ lib/plugins/filters/makefile
+ share/quickstream-doc/makefile
+ include/qsapp.h
+)
+
+AC_OUTPUT
+
+# you can add spew here
+
+AC_MSG_RESULT([
+  ------------------------------------------------------------
+    done configuring: $PACKAGE_NAME  version $VERSION
+  ------------------------------------------------------------
+
+              extra debug code (--enable-debug): $debug
+
+                   C Compiler (CC): $CC
+   C Preprocesser Flags (CPPFLAGS): $CPPFLAGS
+         C Compiler Flags (CFLAGS): $CFLAGS
+          C Linker Flags (LDFLAGS): $LDFLAGS
+
+    Installation prefix (--prefix): $prefix
+                            srcdir: $srcdir
+])
+
+
+######################################################################
+#                     LIB_VERSION notes
+######################################################################
+
+#  Updating library version interface information
+#  (from libtool version 1.4.3 info page)
+
+# GNU LibTool library interface numbers
+#
+# CURRENT
+#     The most recent interface number that this library implements.
+#
+# REVISION
+#     The implementation number of the CURRENT interface.
+#
+# AGE
+#     The difference between the newest and oldest interfaces that
+#     this library implements.  In other words, the library implements
+#     all the interface numbers in the range from number `CURRENT -
+#     AGE' to `CURRENT'.
+#
+
+#
+#  1. Start with version information of `0:0:0' for each libtool
+#     library.
+#
+#  2. Update the version information only immediately before a public
+#     release of your software.  More frequent updates are
+#     unnecessary, and only guarantee that the current interface
+#     number gets larger faster.  We do it just after a release.
+#
+#  3. If the library source code has changed at all since the last
+#     update, then increment REVISION (`C:R:A' becomes `C:r+1:A').
+#
+#  4. If any interfaces have been added, removed, or changed since the
+#     last update, increment CURRENT, and set REVISION to 0.
+#
+#  5. If any interfaces have been added since the last public release,
+#     then increment AGE.
+#
+#  6. If any interfaces have been removed since the last public
+#     release, then set AGE to 0.
+#

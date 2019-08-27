@@ -7,26 +7,83 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
+If you are building quickstream from source, you may choose how to build
+it.
 
-## Building and Installing
+
+## Building and Installing for the Impatient
+
+  *make*
+
+  *make install PREFIX=/usr/local/PLACE_TO_INSTALL*
+
+This works, but it's just not standard.
+
+
+## Building and Installing with GNU Autotools
+
+quickstream can be built and installed using a GNU Autotools software
+build system.
+  If you got the source from a repository run
+
+    *./bootstrap*
+
+to add the GNU autotools build files to the source.
+
+  Or if you got this
+source code from a software tarball release change directory to the
+top source directory and do not run bootstrap.
+
+Then from the top source directory run
+
+  *./configure --prefix=/usr/local/PLACE_TO_INSTALL*
+
+where you replace */usr/local/PLACE_TO_INSTALL* with a directory where you
+will like to have the *quickstream* software package installed.  Then run
+
+  *make*
+
+to build the code.  Then run
+
+  *make install*
+
+to install the stream software package in the prefix directory that you
+set above.
+
+If you wish to remove all files that are generated from the build scripts
+in this package, leaving you with just files that are from the repository
+and your added costume files you can run *./RepoClean*.  Do not run
+*./RepoClean* if you need a clean tarball form of the package source,
+use *make distclean* for that.
+
+## Building and Installing with CMake
+
+todo.
+
+
+## Building and Installing with quickbuild
+
+quickbuild was used in the Building and Installing for the Impatient
+above, but here we'll add more options to that build process.
 
 If you got the quickstream source from a repository, and not a tarball,
 change directory to the top source directory and then run:
 
-  *./bootstrap*
+  *./quickbuild*
 
-Now the source should be like that of the source from a tarball
-distribution with all it's files, and no more downloads needed.  Then 
+which will download the file *quickbuild.make*.
+
+Now there are no more downloads needed.  Now run:
 
   *echo "PREFIX = MY_PREFIX" > config.make*
 
 where ``MY_PREFIX`` is the top installation directory, like for example
-*/usr/local/encap/quickstream*.  Then run
+*/usr/local/encap/quickstream*.  Then run:
 
   *make*
 
 to generate (compile) files in the source directory.
-Then run
+Then run:
 
   *make install*
 
@@ -52,13 +109,13 @@ See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
 used.
 
 
-## Generic usage
+## quickstream is Generic
 
 Use it to process video, audio, radio signals, or any data flow that
 requires fast repetitive data transfer between filter modules.
 
 
-## quickstream is fast
+## quickstream is Fast
 
 The objective is that quickstream flow graph should process data faster
 than any other streaming API (application programming interface).
@@ -126,8 +183,6 @@ operation.
 quickstream inter-filter shared buffers are circular and lock free.
 This imposes some
 
-
-
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
 pattern more so than a particular software development frame-work; as
@@ -160,7 +215,6 @@ APIs.
 Building and installing quickstream requires the following debian package
 prerequisites:
 - build-essential
-- graphviz
 - graphviz-dev
 - imagemagick
 - doxygen

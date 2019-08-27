@@ -1,0 +1,7 @@
+
+lib_LTLIBRARIES = libqsapp.la libqsfilter.la
+
+libqsapp_la_SOURCES = app.c filter.c stream.c thread.c debug.c
+libqsapp_la_LDFLAGS = -ldl
+
+libqsfilter_la_SOURCES = libqsfilter.c

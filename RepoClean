@@ -1,0 +1,98 @@
+#!/bin/bash
+
+#
+# This script deletes generated files that are the difference between a
+# repository checkout and a tarball.
+#
+#
+# This script should not delete any user custom files.
+#
+
+
+set -ex
+
+cd $(dirname ${BASH_SOURCE[0]})
+
+
+rm -f quickbuild.make
+
+
+for f in NEWS README AUTHORS ChangeLog COPYING ; do
+    if [ -e $f ] && [ ! -s $f ] ; then
+        rm $f
+    fi
+done
+
+# Remove all the GNU autotools generated files
+#
+rm -f\
+ INSTALL\
+ ar-lib\
+ aclocal.m4\
+ compile\
+ config.guess\
+ config.sub\
+ ltmain.sh\
+ missing\
+ libtool\
+ configure\
+ config.status\
+ config.log\
+ depcomp\
+ install-sh
+
+rm -rf autom4te.cache/
+
+for dir in . bin lib include lib/plugins/filters share/quickstream-doc ; do
+    rm -f $dir/makefile.in $dir/makefile
+done
+
+
+# generated documentation
+#
+d=share/quickstream-doc
+
+rm -f\
+ $d/images/*.png\
+ $d/images/*.svg\
+ $d/html/*.png\
+ $d/html/*.js\
+ $d/html/*.css\
+ $d/html/*.png\
+ $d/html/*.html\
+ $d/html/*.md5\
+ $d/html/*.map\
+ share/quickstream-doc/Doxyfile
+
+rm -rf $d/latex/ $d/html/search/
+
+
+# Remove the autotools code built files
+#
+for d in bin lib lib/plugins/filters ; do
+    rm -rf $d/.deps/ $d/.libs/
+    rm -f $d/*.o $d/*.so $d/*.lo $d/*.la
+done
+
+rm -f\
+ bin/quickstream\
+ lib/pkgconfig/quickstream.pc\
+ include/qsapp.h
+
+
+
+# Remove files specific to building with quickbuild
+#
+rm -rf\
+ bin/qb_build/\
+ lib/qb_build/\
+ lib/plugins/filters/qb_build/\
+ dev_test/qb_build/
+
+rm -f\
+ dev_test/run\
+ dev_test/run2\
+ dev_test/test_qsError
+
+
+
