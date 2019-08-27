@@ -15,8 +15,8 @@
 
 /** Optional constructor function
  *
- * This function, if present, is called only once after the filter
- * is loaded, before any loaded filters \ref start() function.
+ * This function, if present, is called only once just after the filter
+ * is loaded.
  *
  * \return 0 on success
  *
@@ -28,7 +28,7 @@ int constructor(void);
 /** Optional destructor function
  *
  * This function, if present, is called only once just before the filter
- * is unloaded and after any filter \ref stop() functions are called.
+ * is unloaded.
  *
  * \return 0 on success
  *

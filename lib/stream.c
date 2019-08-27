@@ -237,7 +237,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
     }
 
     f->u.numInputs = 0;
-    f->isStarted = false;
 }
 
 
@@ -331,48 +330,6 @@ int qsStreamStop(struct QsStream *s) {
     FreeRunResources(s);
 
     return 0;
-}
-
-
-static
-void CheckCallStart(struct QsStream *s, struct QsFilter *f) {
-
-    if(f->start && !f->isStarted) {
-        int ret;
-        f->isStarted = true;
-        if((ret = f->start(f->u.numInputs, f->numOutputs))) {
-            WARN("filter \"%s\" start() returned %d", f->name, ret);
-            // TODO: What to do...
-        }
-    }
-
-    for(uint32_t i=0; i<f->numOutputs; ++i)
-        CheckCallStart(s, f->outputs[i]);
-}
-
-
-
-static
-void CheckCallConstruct(struct QsStream *s, struct QsFilter *f) {
-
-    DASSERT(s, "");
-    DASSERT(f, "");
-    DASSERT(f->stream == s, "");
-
-    if(f->construct) {
-        //DSPEW("Calling filter \"%s\" construct()", f->name);
-        int ret = f->construct();
-        // We will never call f->construct() again so
-        // we can mark it as such by setting it to NULL.
-        f->construct = 0;
-        if(ret) {
-            WARN("filter \"%s\" construct() returned %d", f->name, ret);
-            // TODO: What to do...
-        }
-    }
-
-    for(uint32_t i=0; i<f->numOutputs; ++i)
-        CheckCallConstruct(s, f->outputs[i]);
 }
 
 
@@ -513,24 +470,13 @@ int qsStreamStart(struct QsStream *s) {
 
 
 
-
-    /**********************************************************************
-     *            Stage: call all stream's filter construct() if needed
-     *********************************************************************/
-
-    
-    for(uint32_t i=0; i<s->numSources; ++i)
-        CheckCallConstruct(s, s->sources[i]);
-
-
     /**********************************************************************
      *            Stage: call all stream's filter start() if present
      *********************************************************************/
 
-
-    for(uint32_t i=0; i<s->numSources; ++i)
-        CheckCallStart(s, s->sources[i]);
-
+    for(struct QsFilter *f = s->app->filters; f; f = f->next)
+        if(f->stream == s && f->start)
+            f->start(f->u.numInputs, f->numOutputs);
 
 
 
@@ -543,7 +489,29 @@ int qsStreamStart(struct QsStream *s) {
     NOTICE("RUNNING");
 
 
+    /**********************************************************************
+     *            Stage: flush
+     *********************************************************************/
+
+
+
+
+
     // We are done running this stream now.
+
+
+    /**********************************************************************
+     *            Stage: call all stream's filter stop() if present
+     *********************************************************************/
+
+    for(struct QsFilter *f = s->app->filters; f; f = f->next)
+        if(f->stream == s && f->stop)
+            f->stop(f->u.numInputs, f->numOutputs);
+
+
+    /**********************************************************************
+     *            Stage: cleanup run resources
+     *********************************************************************/
 
     FreeRunResources(s);
 

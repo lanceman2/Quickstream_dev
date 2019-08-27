@@ -8,6 +8,7 @@
 // likely that you will need to "scope the code" in app.c, filter.c,
 // stream.c, thread.c, and process.c to get there.
 
+
 struct QsApp {
 
     // List of filters.  Head of a singly linked list.
@@ -17,7 +18,7 @@ struct QsApp {
     struct QsStream *streams;
 
     // List of processes
-    struct QsProcess *processes;
+    //struct QsProcess *processes;
 };
 
 
@@ -68,7 +69,8 @@ struct QsFilter {
 
     // Callback functions that may be loaded.
     // Never change after loading/creation
-    int (* construct)(void);
+    // int (* construct)(void); is not needed here because it is called in
+    // qsAppFilterLoad() just after loading the module.
     int (* destroy)(void);
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
@@ -81,11 +83,11 @@ struct QsFilter {
     // stop
     ///////////////////////////////////////////////////////////////////////
     //
-    bool isStarted;     // flag that start() was called
-    //
     // We use this u variable at startup and at runtime for two different
     // things at two different times in the code.
     union {
+        // We don't used both of these 2 variables at the same time so
+        // they can use the same memory:
         uint32_t numInputs; // runtime number of connected input filters
         uint32_t isSource;  // startup flag marking filter as a source
     } u;

@@ -185,7 +185,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     // If "construct", "destroy", "start", or "stop"
     // are not present, that's okay, they are optional.
-    f->construct = dlsym(handle, "construct");
+    int (* construct)(void) = dlsym(handle, "construct");
     f->destroy = dlsym(handle, "destroy");
     f->start = dlsym(handle, "start");
     f->stop = dlsym(handle, "stop");
@@ -206,12 +206,18 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     f->app = app;
 
+    if(construct) construct();
+
     return f; // success
 
 cleanup:
 
     // failure mode.
     //
+
+    // We do not want to call the filter's destroy() in this case.
+    f->destroy = 0;
+
     DestroyFilter(app, f);
     free(path);
     return 0; // failure
