@@ -1,0 +1,10 @@
+AM_LDFLAGS = -module -avoid-version -shared
+
+filterdir = $(pkglibdir)/plugins/filters
+
+filter_LTLIBRARIES = stdin.la stdout.la
+
+#pkglib_LTLIBRARIES = stdin.la stdout.la
+
+stdin_la_SOURCES = stdin.c
+stdout_la_SOURCES = stdout.c

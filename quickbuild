@@ -110,3 +110,5 @@ sed quickbuild.make.org -e 's/^\s*\#.*$//g' -e '/^$/d' >> quickbuild.make.tmp
 rm quickbuild.make.org
 mv quickbuild.make.tmp quickbuild.make
 
+./RELEASE.bash package.make.in > package.make
+

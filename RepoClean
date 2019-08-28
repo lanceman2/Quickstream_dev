@@ -23,7 +23,8 @@ for f in NEWS README AUTHORS ChangeLog COPYING ; do
     fi
 done
 
-# Remove all the GNU autotools generated files
+
+# Remove all the GNU autotools related generated files
 #
 rm -f\
  INSTALL\
@@ -36,14 +37,17 @@ rm -f\
  missing\
  libtool\
  configure\
+ configure.ac\
  config.status\
  config.log\
  depcomp\
- install-sh
+ install-sh\
+ stamp-h1\
+ prefix.make
 
 rm -rf autom4te.cache/
 
-for dir in . bin lib include lib/plugins/filters share/quickstream-doc ; do
+for dir in . bin lib include lib/quickstream/plugins/filters ; do
     rm -f $dir/makefile.in $dir/makefile
 done
 
@@ -69,7 +73,7 @@ rm -rf $d/latex/ $d/html/search/
 
 # Remove the autotools code built files
 #
-for d in bin lib lib/plugins/filters ; do
+for d in bin lib lib/quickstream/plugins/filters ; do
     rm -rf $d/.deps/ $d/.libs/
     rm -f $d/*.o $d/*.so $d/*.lo $d/*.la
 done
@@ -86,13 +90,14 @@ rm -f\
 rm -rf\
  bin/qb_build/\
  lib/qb_build/\
- lib/plugins/filters/qb_build/\
+ lib/quickstream/plugins/filters/qb_build/\
  dev_test/qb_build/
 
 rm -f\
  dev_test/run\
  dev_test/run2\
- dev_test/test_qsError
-
-
+ dev_test/test_qsError\
+ quickbuild.make.org\
+ quickbuild.make.tmp\
+ package.make
 

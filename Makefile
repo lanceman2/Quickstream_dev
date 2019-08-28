@@ -1,5 +1,10 @@
 
-SUBDIRS := include lib bin lib/plugins/filters share/quickstream-doc
+SUBDIRS :=\
+ include\
+ lib\
+ bin\
+ lib/quickstream/plugins/filters\
+ share/quickstream-doc
 
 quickbuild.make:
 	./quickbuild

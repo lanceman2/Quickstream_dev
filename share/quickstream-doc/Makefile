@@ -34,9 +34,19 @@ DOX_INFILES :=\
 
 INSTALL_DIR = $(PREFIX)/share/quickstream-doc
 
-# Get a PREFIX if we can
-include ../../config.make
+# Get a PREFIX if we can from quickbuild config.make
+-include ../../config.make
 
+# Get a PREFIX if we can from autotools generated file
+ifeq (,$(wildcard prefix.make))
+include ../../prefix.make
+else
+# Get a PREFIX if we can from quickbuild config.make
+-include ../../config.make
+endif
+
+
+all: build
 
 build: $(IMAGES) $(DOX_TARGET)
 
@@ -101,3 +111,4 @@ clean:
 
 
 cleaner: clean
+distclean: cleaner

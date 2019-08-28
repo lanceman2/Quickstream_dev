@@ -108,7 +108,7 @@ static inline char *GetPluginPathFromEnv(const char *category, const char *name)
 // Probability
 #define DIR_CHAR '/'
 
-#define PRE "/lib/plugins/"
+#define PRE "/lib/quickstream/plugins/"
 
 //
 // A thread-safe path finder that looks at /proc/self which is the same as
@@ -144,7 +144,7 @@ static inline char *GetPluginPath(const char *category, const char *name)
     if((buf = GetPluginPathFromEnv(category, name)))
         return buf;
 
-    // postLen = strlen("/lib/plugins/" + category + '/' + name)
+    // postLen = strlen("/lib/quickstream/plugins/" + category + '/' + name)
     const ssize_t postLen =
         strlen(PRE) + strlen(category) +
         strlen(name) + 5/* for '/' and ".so" and '\0' */;

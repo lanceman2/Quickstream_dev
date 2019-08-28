@@ -1,0 +1,23 @@
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+datarootdir=@datarootdir@
+datadir=@datadir@
+
+homepage=@PACKAGE_URL@
+
+about=quickstream version: @VERSION@
+
+###################################
+# standard pkg-config options
+Name: @PACKAGE_NAME@
+Description: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Homepage: @PACKAGE_URL@
+URL: @PACKAGE_URL@
+Requires:
+Libs: -Wl,-rpath -Wl,${libdir} -L${libdir} -lqsapp
+Cflags: -I${includedir}
+

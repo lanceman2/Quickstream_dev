@@ -8,10 +8,12 @@ link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
 If you are building quickstream from source, you may choose how to build
-it.
+it using different build systems, quickbuild, GNU autotools, and CMake.
+You cannot build it using quickbuild and GNU autotools in the source
+directory are the same time.
 
 
-## Building and Installing for the Impatient
+## Building and Installing for the Impatient using quickbuild
 
   *make*
 
@@ -56,12 +58,12 @@ and your added costume files you can run *./RepoClean*.  Do not run
 *./RepoClean* if you need a clean tarball form of the package source,
 use *make distclean* for that.
 
-## Building and Installing with CMake
+## Building and Installing for CMake fans
 
 todo.
 
 
-## Building and Installing with quickbuild
+## Building and Installing with quickbuild with options
 
 quickbuild was used in the Building and Installing for the Impatient
 above, but here we'll add more options to that build process.
@@ -95,7 +97,7 @@ skip making the *config.make* file and in place of running *make install*
 you can run *make install PREFIX=MY_PREFIX*.
 
 For debugging and development additional configuration options can be
-added to the *config.make* files as C preprocesser flags when compiling
+added to the *config.make* files as C preprocessor flags when compiling
 are for example:
 
   - *CPPFLAGS = -DDEBUG*
@@ -107,6 +109,12 @@ are for example:
 
 See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
 used.
+
+If you wish to remove all files that are generated from the build scripts
+in this package, leaving you with just files that are from the repository
+and your added costume files you can run *./RepoClean*.  Do not run
+*./RepoClean* if you need a clean tarball form of the package source,
+use *make distclean* for that.
 
 
 ## quickstream is Generic

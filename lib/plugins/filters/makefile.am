@@ -1,7 +1,0 @@
-pkglib_LTLIBRARIES = stdin.la stdout.la
-
-stdin_la_SOURCES = stdin.c
-stdin_la_LDFLAGS = -module
-
-stdout_la_SOURCES = stdout.c
-stdout_la_LDFLAGS = -module

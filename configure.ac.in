@@ -1,26 +1,28 @@
 
-# AC_INIT( PACKAGE, VERSION, BUGREPORT, TARNAME , URL)
-AC_INIT([quickstream],
-        0.0.1,
-        [https://github.com/lanceman2/quickstream],
-        [quickstream],
-        [https://github.com/lanceman2/quickstream])
+
+# AC_INIT( PACKAGE_NAME, PACKAGE_VERSION, BUGREPORT, TARNAME , URL)
+AC_INIT([@PACKAGE_NAME@],
+        [@PACKAGE_VERSION@],
+        [@PACKAGE_BUGREPORT@],
+        [@PACKAGE_TARNAME@],
+        [@PACKAGE_URL@])
 
 
-# See  LIB_VERSION notes at the bottom of this file.
+
+# See LIBRARY VERSION notes at the bottom of this file.
 #
-LIBQSAPP_CURRENT=0
-LIBQSAPP_REVISION=0
-LIBQSAPP_AGE=0
+LIBQSAPP_CURRENT=@LIBQSAPP_CURRENT@
+LIBQSAPP_REVISION=@LIBQSAPP_REVISION@
+LIBQSAPP_AGE=@LIBQSAPP_AGE@
 
-LIBQSFILTER_CURRENT=0
-LIBQSFILTER_REVISION=0
-LIBQSFILTER_AGE=0
+LIBQSFILTER_CURRENT=@LIBQSFILTER_CURRENT@
+LIBQSFILTER_REVISION=@LIBQSFILTER_REVISION@
+LIBQSFILTER_AGE=@LIBQSFILTER_AGE@
+
 
 #AM_INIT_AUTOMAKE(-Wall -Werror dist-bzip2 no-dist-gzip subdir-objects)
-AM_INIT_AUTOMAKE(-Wall dist-bzip2 no-dist-gzip)
-AM_PROG_AR
-LT_INIT
+AM_INIT_AUTOMAKE(-Wall dist-bzip2 no-dist-gzip subdir-objects)
+LT_INIT([disable-static])
 AC_PROG_CC
 AC_PROG_CXX
 
@@ -44,6 +46,9 @@ AC_DEFINE_UNQUOTED(LIBQSAPP_VERSION, "$LIBQSAPP_VERSION",
 AC_DEFINE_UNQUOTED(LIBQSFILTER_VERSION, "$LIBQSFILTER_VERSION",
                    [quickstream filter module library version number])
 
+# We uncomment this for testing.
+#AC_CONFIG_HEADERS([config.h])
+
 ################################################################
 #                 --enable-debug
 ################################################################
@@ -61,15 +66,17 @@ AC_ARG_ENABLE([debug],
 case "$enable_debug" in
     y* | Y* )
     enable_debug="-DDEBUG "
+    debug="yes"
     ;;
     * ) # default
     enable_debug=""
+    debug="no"
     ;;
 esac
 
 
 AC_ARG_ENABLE([spew-level],
-    AS_HELP_STRING([--enable-spew-level=error|warn|notice|info|debug],
+    AS_HELP_STRING([--enable-spew-level=error|warn|notice|info|debug|none],
     [compile more spewing code into quickstream and libquickstream\
  (default is no spewing code).  You do not want this unless\
  you are debugging or developing quickstream.  Adding this option may make\
@@ -81,21 +88,27 @@ AC_ARG_ENABLE([spew-level],
 case "$enable_spew_level" in
     e*|E* )
     enable_spew_level="-DSPEW_LEVEL_ERROR"
+    spew_level=none
     ;;
     w*|W* )
     enable_spew_level="-DSPEW_LEVEL_WARN"
+    spew_level=warn
     ;;
-    n*|n* )
+    not*|NOT* )
     enable_spew_level="-DSPEW_LEVEL_NOTICE"
+    spew_level=notice
     ;;
     i*|I* )
     enable_spew_level="-DSPEW_LEVEL_INFO"
+    spew_level=info
     ;;
     d*|D* )
     enable_spew_level="-DSPEW_LEVEL_DEBUG"
+    spew_level=debug
     ;;
     * ) # default
     enable_spew_level="-DSPEW_LEVEL_NONE"
+    spew_level=none
     ;;
 esac
 
@@ -112,12 +125,12 @@ AC_SUBST([AM_CPPFLAGS])
 AC_CONFIG_FILES(
  makefile
  include/makefile
+ include/qsapp.h
  lib/makefile
  lib/pkgconfig/quickstream.pc
  bin/makefile
- lib/plugins/filters/makefile
- share/quickstream-doc/makefile
- include/qsapp.h
+ lib/quickstream/plugins/filters/makefile
+ prefix.make
 )
 
 AC_OUTPUT
@@ -130,6 +143,7 @@ AC_MSG_RESULT([
   ------------------------------------------------------------
 
               extra debug code (--enable-debug): $debug
+                 extra spew code (--spew-level): $spew_level
 
                    C Compiler (CC): $CC
    C Preprocesser Flags (CPPFLAGS): $CPPFLAGS
