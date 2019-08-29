@@ -7,26 +7,13 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
-If you are building quickstream from source, you may choose how to build
-it using different build systems, quickbuild, GNU autotools, and CMake.
-You cannot build it using quickbuild and GNU autotools in the source
-directory are the same time.
-
-
-## Building and Installing for the Impatient using quickbuild
-
-  *make*
-
-  *make install PREFIX=/usr/local/PLACE_TO_INSTALL*
-
-This works, but it's just not standard.
-
 
 ## Building and Installing with GNU Autotools
 
 quickstream can be built and installed using a GNU Autotools software
 build system.
-  If you got the source from a repository run
+
+If you got the source from a repository run
 
     *./bootstrap*
 
@@ -56,19 +43,43 @@ If you wish to remove all files that are generated from the build scripts
 in this package, leaving you with just files that are from the repository
 and your added costume files you can run *./RepoClean*.  Do not run
 *./RepoClean* if you need a clean tarball form of the package source,
-use *make distclean* for that.
-
-## Building and Installing for CMake fans
-
-todo.
+use *make distclean* (after running ./configure) for that.
 
 
-## Building and Installing with quickbuild with options
+## Building and Installing with quickbuild
 
-quickbuild was used in the Building and Installing for the Impatient
-above, but here we'll add more options to that build process.
+The quickstream developers build system.  Without some care the quickbuild
+build system and the GNU autotools build system will conflict with each
+other.  So why we have two build systems?:
 
-If you got the quickstream source from a repository, and not a tarball,
+The use of quickbuild is for quickstream developers, not users.
+quickbuild is just some GNU make make files and some bash scripts.  We
+added these make files named "Makefile" and other files so that we could
+develop, compile and run programs without being forced to install files.
+GNU autotools does not allow you to load dynamic shared object (DSO)
+plugin modules without installing them first, whereby making a much longer
+compile and test cycle.  The same, more-so, can be said of CMake.  As a
+code developer we just want to quickly compile source and run it.
+
+The quickbuild make files tend to be much smaller than the GNU autotools
+generated make files.
+
+
+### quickbuild quick and easy
+
+Run:
+
+  *make*
+
+  *make install PREFIX=MY_PREFIX*
+
+where MY_PREFIX is the top installation directory.  That's it,
+if you have the needed dependences it should be installed.
+
+
+### quickbuild with more options
+
+If you got the quickstream source from a repository, or a tarball,
 change directory to the top source directory and then run:
 
   *./quickbuild*
@@ -464,4 +475,6 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   programmer knows that excessive use of CPP macros leads to code that is
   not easily understandable in the future after you haven't looked at it
   in a while.
+- If you wish to make a tarball release use the GNU autotool building
+  method and run *./configure* and *make dist*.
 

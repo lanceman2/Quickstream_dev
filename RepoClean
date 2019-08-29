@@ -9,12 +9,43 @@
 #
 
 
+if [ -n "$1" ] && [ "$1" != "-x" ] ; then
+    cat << EOF
+
+    Usage: $0 [-x]
+
+    Remove generated files; that's all files that are not checked into
+    a repository.  This will not remove users files that are not built
+    from the scripts here in.  So ya, this will not delete your notes,
+    assuming you don't put them in a autotools .lib/ directory or
+    something like that.
+
+    If you wish to remove files needed to bring this source to a fresh
+    tarball state run "make distclean".
+
+
+         OPTIONS
+
+       -x    remove the automatically downloaded file quickbuild.make
+             and package.make too.
+
+
+EOF
+    exit 1
+fi
+
 set -ex
+
 
 cd $(dirname ${BASH_SOURCE[0]})
 
 
-rm -f quickbuild.make
+# The extra clean option.  quickbuild.make is downloaded.
+#
+# We don't remove it by default, without the -x extra clean command-line
+# option.  package.make is generated from running the "quickbuild"
+# download script.
+[ -n "$1" ] && rm -f quickbuild.make package.make
 
 
 for f in NEWS README AUTHORS ChangeLog COPYING ; do
@@ -43,11 +74,16 @@ rm -f\
  depcomp\
  install-sh\
  stamp-h1\
- prefix.make
+ share/quickstream-doc/prefix.make
 
 rm -rf autom4te.cache/
 
-for dir in . bin lib include lib/quickstream/plugins/filters ; do
+for dir in .\
+ bin\
+ lib\
+ include\
+ lib/quickstream/plugins/filters\
+ share/quickstream-doc ; do
     rm -f $dir/makefile.in $dir/makefile
 done
 
@@ -98,6 +134,5 @@ rm -f\
  dev_test/run2\
  dev_test/test_qsError\
  quickbuild.make.org\
- quickbuild.make.tmp\
- package.make
+ quickbuild.make.tmp
 

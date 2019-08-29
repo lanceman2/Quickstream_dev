@@ -1,0 +1,31 @@
+# This needs to be made more consistent with Makefile
+# which is used when building and installing with quickbuild.
+
+# DOX_TARGET is a file that depends on running doxygen
+DOX_TARGET := html/index.html
+
+
+DOX_INFILES =\
+ ../../include/qsapp.h\
+ ../../include/qsfilter.h\
+ ../../bin/quickstream.c\
+ mainpage.dox
+
+
+Doxyfile: Doxyfile.in
+	@echo "# This is a generated file" > $@
+	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@
+
+$(DOX_TARGET): Doxyfile $(DOX_INFILES)
+	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
+	rm -rf html/search
+	rm -rf latex
+	doxygen
+
+
+INSTALL_DIR = $(prefix)/share/quickstream-doc
+
+
+install-exec-hook:
+	mkdir -p $(INSTALL_DIR)
+	cp -r html images $(INSTALL_DIR)

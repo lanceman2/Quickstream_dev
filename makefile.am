@@ -6,3 +6,52 @@ SUBDIRS =\
  lib/quickstream/plugins/filters\
  share/quickstream-doc
 
+#DISTCLEANFILES +=
+
+
+# docfiles From running from a clean top source directory:
+# 
+# find share/quickstream-doc share/quickstream-doc/html share/quickstream-doc/images -type f,l -printf ' %p\\\n'
+#
+docfiles =\
+ share/quickstream-doc/quickstream_complex.dot\
+ share/quickstream-doc/quickstream_simple.dot\
+ share/quickstream-doc/images/README\
+ share/quickstream-doc/stateExpaned.dot\
+ share/quickstream-doc/stateSimple.dot\
+ share/quickstream-doc/Doxyfile.in\
+ share/quickstream-doc/prefix.make.in\
+ share/quickstream-doc/mainpage.dox\
+ share/quickstream-doc/README\
+ share/quickstream-doc/html/README\
+ share/quickstream-doc/Makefile\
+ share/quickstream-doc/html/README\
+ share/quickstream-doc/images/README
+
+# quickbuild_makefiles is from running:
+#
+# find -name Makefile -prune -printf ' %P\\\n'
+#
+quickbuild_makefiles =\
+ share/quickstream-doc/Makefile\
+ include/Makefile\
+ dev_test/Makefile\
+ lib/quickstream/plugins/filters/Makefile\
+ lib/Makefile\
+ Makefile\
+ bin/Makefile
+
+
+EXTRA_DIST =\
+ quickbuild\
+ quickbuild.make\
+ configure.ac.rl\
+ LICENSE\
+ package.make.rl\
+ package.make\
+ README.md\
+ RELEASE.bash\
+ RepoClean\
+ $(docfiles)\
+ $(quickbuild_makefiles)
+

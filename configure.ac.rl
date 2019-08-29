@@ -1,3 +1,5 @@
+# We called this file configure.ac.rl and not configure.ac.in so that we
+# did not get built in make rules for .in file missing with it.
 
 
 # AC_INIT( PACKAGE_NAME, PACKAGE_VERSION, BUGREPORT, TARNAME , URL)
@@ -21,7 +23,7 @@ LIBQSFILTER_AGE=@LIBQSFILTER_AGE@
 
 
 #AM_INIT_AUTOMAKE(-Wall -Werror dist-bzip2 no-dist-gzip subdir-objects)
-AM_INIT_AUTOMAKE(-Wall dist-bzip2 no-dist-gzip subdir-objects)
+AM_INIT_AUTOMAKE(-Wall dist-bzip2 subdir-objects)
 LT_INIT([disable-static])
 AC_PROG_CC
 AC_PROG_CXX
@@ -130,7 +132,8 @@ AC_CONFIG_FILES(
  lib/pkgconfig/quickstream.pc
  bin/makefile
  lib/quickstream/plugins/filters/makefile
- prefix.make
+ share/quickstream-doc/prefix.make
+ share/quickstream-doc/makefile
 )
 
 AC_OUTPUT

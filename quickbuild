@@ -18,7 +18,7 @@
 # The tag can be "master" or a full git check-in hash in lower case hex
 # like for example:
 #tag=dc184319be9a272ffa4528f5bb5d0902f1edbbbb
-tag=0.1
+tag=0.2
 url=https://raw.githubusercontent.com/lanceman2/quickbuild/$tag/quickbuild.make
 
 # If we wanted a particular file, so we checks it's sha512 sum.
@@ -30,9 +30,9 @@ url=https://raw.githubusercontent.com/lanceman2/quickbuild/$tag/quickbuild.make
 
 #sha512sum=8c586f7d3a587e449667d547a4cb2dac6a3ece4e764a2d1494888d12c94a10384520be70ab76b580d966ecd94a20a14690530e33c2db5e0a5252d05ed42581aa
 
-sha512sum=4bb12b01391d1c62cc7cebd0705ba2cd5409c8d4e275f4952a120\
-2e0b1d442c435b2b9403eeffecbcd85e625325f2337ef60ec176840aa7f0c7a\
-e5efc57f1b13
+sha512sum=d72c983ea6e308312be9b2e2503c754840c98b7d78\
+f3b37c64c45d84fc844e0b4773e33ad3addf8267d84ccc626ae0\
+afb41530f46769f6584da279c7fd4519e3
 
 
 function usage()
@@ -110,5 +110,5 @@ sed quickbuild.make.org -e 's/^\s*\#.*$//g' -e '/^$/d' >> quickbuild.make.tmp
 rm quickbuild.make.org
 mv quickbuild.make.tmp quickbuild.make
 
-./RELEASE.bash package.make.in > package.make
+./RELEASE.bash package.make.rl > package.make
 

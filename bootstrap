@@ -10,13 +10,21 @@ set -ex
 cd $(dirname ${BASH_SOURCE[0]})
 
 
-for f in NEWS README AUTHORS ChangeLog COPYING ; do
+for f in NEWS README AUTHORS ChangeLog ; do
     if [ ! -e $f ] ; then
         touch $f
     fi
 done
 
-./RELEASE.bash configure.ac.in > configure.ac
+
+echo -e "This is a pre-release generated file\n\nSee file LICENSE\n" > COPYING
+
+./RELEASE.bash configure.ac.rl > configure.ac
 
 autoreconf --force --verbose --install
+
+# We need the quickbuild files for "make dist".
+if [ ! -e quickbuild.make ] ; then
+    ./quickbuild
+fi
 

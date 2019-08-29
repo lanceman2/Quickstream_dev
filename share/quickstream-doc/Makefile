@@ -38,8 +38,8 @@ INSTALL_DIR = $(PREFIX)/share/quickstream-doc
 -include ../../config.make
 
 # Get a PREFIX if we can from autotools generated file
-ifeq (,$(wildcard prefix.make))
-include ../../prefix.make
+ifneq (,$(wildcard prefix.make))
+include prefix.make
 else
 # Get a PREFIX if we can from quickbuild config.make
 -include ../../config.make

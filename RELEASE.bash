@@ -116,7 +116,7 @@ function ReplaceReleaseStrings() {
         replace="${replace} -e s/@${key}@/${rstr}/g"
     done
 
-    echo "# This is a generated file"
+    echo "# This file is generated for a given software release"
     sed$replace "$1"
 }
 

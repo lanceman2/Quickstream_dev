@@ -9,8 +9,5 @@ INSTALLED := qsfilter.h qsapp.h
 IN_VARS := RELEASE_VERSION
 
 
-qsapp.h: qsapp.h.in ../package.make
-
-
 
 include ../quickbuild.make

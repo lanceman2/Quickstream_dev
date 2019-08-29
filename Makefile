@@ -6,7 +6,7 @@ SUBDIRS :=\
  lib/quickstream/plugins/filters\
  share/quickstream-doc
 
-quickbuild.make:
+quickbuild.make: 
 	./quickbuild
 
 include quickbuild.make
