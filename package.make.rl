@@ -4,6 +4,8 @@
 # system.  This should not contain any user installation configuration.
 #
 
+# quickbuild.make looks are TAR_NAME when composing the default
+# prefix.
 TAR_NAME := @PACKAGE_NAME@
 
 

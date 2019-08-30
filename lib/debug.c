@@ -72,18 +72,18 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
         //
         // Try again without stack buffering
         //
-        if(errn)
-        {
-            char estr[128];
-            strerror_r(errn, estr, 128);
-            fprintf(stream, "%s%s:%d:pid=%u:%zu %s():errno=%d:%s: ",
+        if(stream) {
+            if(errn) {
+                char estr[128];
+                strerror_r(errn, estr, 128);
+                fprintf(stream, "%s%s:%d:pid=%u:%zu %s():errno=%d:%s: ",
                     pre, file, line,
                     getpid(), syscall(SYS_gettid), func,
                     errn, estr);
+            } else
+                fprintf(stream, "%s%s:%d:pid=%u:%zu %s(): ", pre, file, line,
+                        getpid(), syscall(SYS_gettid), func);
         }
-        else
-            fprintf(stream, "%s%s:%d:pid=%u:%zu %s(): ", pre, file, line,
-                    getpid(), syscall(SYS_gettid), func);
 
         vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
 
@@ -91,7 +91,9 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
     }
 
     vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
-    fputs(buffer, stream);
+
+    if(stream)
+        fputs(buffer, stream);
 
     if(bufferIt) {
         //

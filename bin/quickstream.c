@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include "../include/qsapp.h"
 
@@ -14,7 +15,8 @@
 
 static void catcher(int signum) {
 
-    WARN("Caught signal %d\n", signum);
+    fprintf(stderr, "\n\n  Caught signal %d\n", signum);
+    fprintf(stderr, "\n\n  try running:\n\n   gdb -pid %u\n\n", getpid());
     while(1) usleep(10000);
 }
 
@@ -79,6 +81,15 @@ int main(void) {
 
 
     qsAppDisplayFlowImage(app, false);
+
+    if(qsStreamStart(stream)) {
+        char *err = qsError();
+        fprintf(stderr, "\"\"qsStreamStart() failed: %s\"\"\n", err);
+        free(err);
+        qsAppDestroy(app);
+        return 1;
+    }
+
 
     qsStreamDestroy(stream);
 

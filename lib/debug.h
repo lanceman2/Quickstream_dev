@@ -4,11 +4,11 @@
 
 /** This file provides some CPP (C pre processor) macro debug functions:
  *
- *    ASSERT() FAIL() ERROR()
+ *    ASSERT() FAIL()
  *
  * and compile time conditionally:
  *
- *    WARN() NOTICE() INFO() DSPEW() DASSERT()
+ *    ERROR() WARN() NOTICE() INFO() DSPEW() DASSERT()
  *
  * see details below.
  *
@@ -35,7 +35,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 //
-// Setting SPEW_LEVEL_ERROR is the least verbose level
+// Setting SPEW_LEVEL_NONE with still have ASSERT() FAIL() spewing
+// and ERROR() will not spew but will still set the qsError string
 //
 
 
@@ -85,14 +86,14 @@ extern void _assertAction(FILE *stream);
 
 
 
-#  define _SPEW(errn, bufferIt, pre, fmt, ... )\
-     _spew(SPEW_FILE, errn, pre, __BASE_FILE__, __LINE__,\
+#  define _SPEW(stream, errn, bufferIt, pre, fmt, ... )\
+     _spew(stream, errn, pre, __BASE_FILE__, __LINE__,\
         __func__, bufferIt, fmt "\n", ##__VA_ARGS__)
 
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
-            _SPEW(errno, true, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
+            _SPEW(SPEW_FILE, errno, true, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
             _assertAction(SPEW_FILE);\
         }\
     }\
@@ -100,12 +101,14 @@ extern void _assertAction(FILE *stream);
 
 #  define FAIL(fmt, ...) \
     do {\
-        _SPEW(errno, true, "FAIL: ", fmt, ##__VA_ARGS__);\
+        _SPEW(SPEW_FILE, errno, true, "FAIL: ", fmt, ##__VA_ARGS__);\
         _assertAction(SPEW_FILE);\
     } while(0)
 
 
 ///////////////////////////////////////////////////////////////////////////
+// We let the highest verbosity macro flag win.
+//
 
 
 #ifdef SPEW_LEVEL_DEBUG // The highest verbosity
@@ -129,6 +132,13 @@ extern void _assertAction(FILE *stream);
 #  endif
 #endif
 
+#ifdef SPEW_LEVEL_ERROR
+#  ifdef SPEW_LEVEL_NONE
+#    undef SPEW_LEVEL_NONE
+#  endif
+#endif
+
+
 
 
 #ifdef DEBUG
@@ -137,29 +147,32 @@ extern void _assertAction(FILE *stream);
 #  define DASSERT(val, fmt, ...) /*empty marco*/
 #endif
 
-
-#define ERROR(fmt, ...) _SPEW(errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+#ifdef SPEW_LEVEL_NONE
+#define ERROR(fmt, ...) _SPEW(0/*no spew stream*/, errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+#else
+#define ERROR(fmt, ...) _SPEW(SPEW_FILE, errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+#endif
 
 #ifdef SPEW_LEVEL_WARN
-#  define WARN(fmt, ...) _SPEW(errno, false, "WARN: ", fmt, ##__VA_ARGS__)
+#  define WARN(fmt, ...) _SPEW(SPEW_FILE, errno, false, "WARN: ", fmt, ##__VA_ARGS__)
 #else
 #  define WARN(fmt, ...) /*empty macro*/
 #endif 
 
 #ifdef SPEW_LEVEL_NOTICE
-#  define NOTICE(fmt, ...) _SPEW(errno, false, "NOTICE: ", fmt, ##__VA_ARGS__)
+#  define NOTICE(fmt, ...) _SPEW(SPEW_FILE, errno, false, "NOTICE: ", fmt, ##__VA_ARGS__)
 #else
 #  define NOTICE(fmt, ...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_INFO
-#  define INFO(fmt, ...)   _SPEW(0, false, "INFO: ", fmt, ##__VA_ARGS__)
+#  define INFO(fmt, ...)   _SPEW(SPEW_FILE, 0, false, "INFO: ", fmt, ##__VA_ARGS__)
 #else
 #  define INFO(fmt, ...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_DEBUG
-#  define DSPEW(fmt, ...)  _SPEW(0, false, "DEBUG: ", fmt, ##__VA_ARGS__)
+#  define DSPEW(fmt, ...)  _SPEW(SPEW_FILE, 0, false, "DEBUG: ", fmt, ##__VA_ARGS__)
 #else
 #  define DSPEW(fmt, ...) /*empty macro*/
 #endif
