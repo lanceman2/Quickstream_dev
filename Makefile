@@ -4,7 +4,7 @@ SUBDIRS :=\
  lib\
  bin\
  lib/quickstream/plugins/filters\
- share/quickstream-doc
+ share/doc/quickstream
 
 quickbuild.make: 
 	./quickbuild

@@ -54,6 +54,7 @@ for f in NEWS README AUTHORS ChangeLog COPYING ; do
     fi
 done
 
+docdir=share/doc/quickstream
 
 # Remove all the GNU autotools related generated files
 #
@@ -74,37 +75,36 @@ rm -f\
  depcomp\
  install-sh\
  stamp-h1\
- share/quickstream-doc/prefix.make
+ $docdir/prefix.make
 
-rm -rf autom4te.cache/
+rm -rf autom4te.cache/ m4/
 
 for dir in .\
  bin\
  lib\
  include\
  lib/quickstream/plugins/filters\
- share/quickstream-doc ; do
+ $docdir ; do
     rm -f $dir/makefile.in $dir/makefile
 done
 
 
 # generated documentation
 #
-d=share/quickstream-doc
 
 rm -f\
- $d/images/*.png\
- $d/images/*.svg\
- $d/html/*.png\
- $d/html/*.js\
- $d/html/*.css\
- $d/html/*.png\
- $d/html/*.html\
- $d/html/*.md5\
- $d/html/*.map\
- share/quickstream-doc/Doxyfile
+ $docdir/images/*.png\
+ $docdir/images/*.svg\
+ $docdir/html/*.png\
+ $docdir/html/*.js\
+ $docdir/html/*.css\
+ $docdir/html/*.png\
+ $docdir/html/*.html\
+ $docdir/html/*.md5\
+ $docdir/html/*.map\
+ $docdir/Doxyfile
 
-rm -rf $d/latex/ $d/html/search/
+rm -rf $docdir/latex/ $docdir/html/search/
 
 
 # Remove the autotools code built files

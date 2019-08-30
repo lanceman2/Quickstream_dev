@@ -1,6 +1,10 @@
 # This is a "GNU make" make file.
 
 
+topdir := ../../..
+
+
+
 # WEB_DOCS_TARGET_DIR directory may be a git clone of
 # https://github.com:lanceman2/quickstream.doc.git
 #
@@ -9,7 +13,7 @@
 # https://github.com/lanceman2/quickstream/ so that we don't put generated
 # binary image files in the source repo.
 #
-WEB_DOCS_TARGET_DIR := ../../../quickstream.doc
+WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream.doc
 
 
 DOT := $(wildcard *.dot)
@@ -18,6 +22,9 @@ WEB_DOCS :=\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))
 
+
+
+
 IMAGES :=\
  $(patsubst %.dot, images/%.png, $(DOT))\
  $(patsubst %.dot, images/%.svg, $(DOT))
@@ -25,35 +32,24 @@ IMAGES :=\
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET := html/index.html
 
-
-DOX_INFILES :=\
- ../../include/qsapp.h\
- ../../include/qsfilter.h\
- ../../bin/quickstream.c\
+DOX_INFILES =\
+ $(topdir)/include/qsapp.h\
+ $(topdir)/include/qsfilter.h\
+ $(topdir)/bin/quickstream.c\
  mainpage.dox
 
-INSTALL_DIR = $(PREFIX)/share/quickstream-doc
+INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 
-# Get a PREFIX if we can from quickbuild config.make
+
 -include ../../config.make
 
-# Get a PREFIX if we can from autotools generated file
-ifneq (,$(wildcard prefix.make))
-include prefix.make
-else
-# Get a PREFIX if we can from quickbuild config.make
--include ../../config.make
-endif
-
-
-all: build
 
 build: $(IMAGES) $(DOX_TARGET)
 
 
 # qsapp.h is a generated file
-../../include/qsapp.h: ../../include/qsapp.h.in
-	cd ../../include && $(MAKE) qsapp.h
+$(topdir)/include/qsapp.h: $(topdir)/include/qsapp.h.in
+	cd $(topdir)/include && $(MAKE) qsapp.h
 
 
 install:
@@ -112,3 +108,4 @@ clean:
 
 cleaner: clean
 distclean: cleaner
+

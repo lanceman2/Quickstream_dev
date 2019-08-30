@@ -23,7 +23,10 @@ LIBQSFILTER_AGE=@LIBQSFILTER_AGE@
 
 
 #AM_INIT_AUTOMAKE(-Wall -Werror dist-bzip2 no-dist-gzip subdir-objects)
-AM_INIT_AUTOMAKE(-Wall dist-bzip2 subdir-objects)
+AM_INIT_AUTOMAKE(-Wall dist-bzip2 dist-xz subdir-objects)
+AC_CONFIG_MACRO_DIRS([m4])
+AM_PROG_AR
+AC_PROG_LIBTOOL
 LT_INIT([disable-static])
 AC_PROG_CC
 AC_PROG_CXX
@@ -132,8 +135,8 @@ AC_CONFIG_FILES(
  lib/pkgconfig/quickstream.pc
  bin/makefile
  lib/quickstream/plugins/filters/makefile
- share/quickstream-doc/prefix.make
- share/quickstream-doc/makefile
+ share/doc/quickstream/prefix.make
+ share/doc/quickstream/makefile
 )
 
 AC_OUTPUT

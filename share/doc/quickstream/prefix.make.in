@@ -1,5 +1,5 @@
 # This makefile is used to pass the value PREFIX to make running in
-# share/quickstream-doc/ when this package is built using GNU autotools.
+# share/doc/quickstream/ when this package is built using GNU autotools.
 #
 # This file is not used when building this package with quickbuild.
 

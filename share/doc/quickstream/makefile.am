@@ -2,13 +2,17 @@
 # which is used when building and installing with quickbuild.
 
 # DOX_TARGET is a file that depends on running doxygen
-DOX_TARGET := html/index.html
+DOX_TARGET = html/index.html
 
+html_DATA = $(DOX_TARGET)
+
+
+topdir = ../../..
 
 DOX_INFILES =\
- ../../include/qsapp.h\
- ../../include/qsfilter.h\
- ../../bin/quickstream.c\
+ $(topdir)/include/qsapp.h\
+ $(topdir)/include/qsfilter.h\
+ $(topdir)/bin/quickstream.c\
  mainpage.dox
 
 
@@ -23,9 +27,6 @@ $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	doxygen
 
 
-INSTALL_DIR = $(prefix)/share/quickstream-doc
-
-
 install-exec-hook:
-	mkdir -p $(INSTALL_DIR)
-	cp -r html images $(INSTALL_DIR)
+	mkdir -p $(htmldir)
+	cp -r html images $(htmldir)

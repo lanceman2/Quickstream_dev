@@ -1,48 +1,62 @@
 
+docdir = share/doc/quickstream
+plugindir = lib/quickstream/plugins/filters
+
 SUBDIRS =\
  include\
  lib\
  bin\
- lib/quickstream/plugins/filters\
- share/quickstream-doc
+ $(plugindir)\
+ $(docdir)
 
 #DISTCLEANFILES +=
 
 
 # docfiles From running from a clean top source directory:
 # 
-# find share/quickstream-doc share/quickstream-doc/html share/quickstream-doc/images -type f,l -printf ' %p\\\n'
+# find share/doc/quickstream share/doc/quickstream/html share/doc/quickstream/images -type f,l -printf ' %p\\\n' | sed -e 's/share\/doc\/quickstream/\$\(docdir\)/g'
 #
 docfiles =\
- share/quickstream-doc/quickstream_complex.dot\
- share/quickstream-doc/quickstream_simple.dot\
- share/quickstream-doc/images/README\
- share/quickstream-doc/stateExpaned.dot\
- share/quickstream-doc/stateSimple.dot\
- share/quickstream-doc/Doxyfile.in\
- share/quickstream-doc/prefix.make.in\
- share/quickstream-doc/mainpage.dox\
- share/quickstream-doc/README\
- share/quickstream-doc/html/README\
- share/quickstream-doc/Makefile\
- share/quickstream-doc/html/README\
- share/quickstream-doc/images/README
+ $(docdir)/quickstream_complex.dot\
+ $(docdir)/quickstream_simple.dot\
+ $(docdir)/images/README\
+ $(docdir)/stateExpaned.dot\
+ $(docdir)/stateSimple.dot\
+ $(docdir)/Doxyfile.in\
+ $(docdir)/prefix.make.in\
+ $(docdir)/mainpage.dox\
+ $(docdir)/README\
+ $(docdir)/html/README\
+ $(docdir)/Makefile\
+ $(docdir)/html/README\
+ $(docdir)/images/README
 
 # quickbuild_makefiles is from running:
 #
 # find -name Makefile -prune -printf ' %P\\\n'
 #
 quickbuild_makefiles =\
- share/quickstream-doc/Makefile\
+ $(docdir)/Makefile\
  include/Makefile\
  dev_test/Makefile\
- lib/quickstream/plugins/filters/Makefile\
+ $(plugindir)/Makefile\
  lib/Makefile\
  Makefile\
  bin/Makefile
 
 
+# dev_tests files
+#
+# find dev_test -type f -printf ' %p\\\n' | grep -v Makefile
+#
+dev_tests =\
+ dev_test/run.c\
+ dev_test/test_qsError.c\
+ dev_test/run2.c
+
+
 EXTRA_DIST =\
+ bootstrap\
  quickbuild\
  quickbuild.make\
  configure.ac.rl\
@@ -53,5 +67,6 @@ EXTRA_DIST =\
  RELEASE.bash\
  RepoClean\
  $(docfiles)\
- $(quickbuild_makefiles)
+ $(quickbuild_makefiles)\
+ $(dev_tests)
 

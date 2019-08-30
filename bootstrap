@@ -2,8 +2,32 @@
 
 # Run this file if you got the source from a git repository.
 # Running this generates some GNU autotools files that will complete the
-# tarball source of this package.  A bootstrap script is required to
-# using GNU autotools.   A bootstrap 
+# tarball source of this package.
+
+if [ -e configure ] && [ "$1" != "-f" ] ; then
+
+    [ -e configure ] &&\
+        echo -e "\nThe file \"configure\" already exists\n\n"
+
+    cat << EOF
+
+  Usage: $0 [-f]
+
+  Generate GNU autotools build system files for this software project.
+  This script does not run configure.  This script generate files that
+  are needed to make a tarball release for a repository checkout.
+  tarballs contain more files that what is in a repository checkout.
+
+
+                        OPTIONS
+
+    -f   run this script even if the configure script already exists.
+
+EOF
+    exit 1
+fi
+
+
 
 set -ex
 
@@ -20,6 +44,8 @@ done
 echo -e "This is a pre-release generated file\n\nSee file LICENSE\n" > COPYING
 
 ./RELEASE.bash configure.ac.rl > configure.ac
+
+mkdir -p m4
 
 autoreconf --force --verbose --install
 

@@ -7,10 +7,11 @@
 
 # This directory is not recursed into from the directory above this, so we
 # recurse into these directories so that we stay consistent with the
-# source in these directories.   We are testing files in ../lib/ and
-# ../include/ by linking and loading with generated files there-in.
+# source in these directories.   We are testing files in ../lib/,
+# ../include/, and ../lib/quickstream/plugins/filters by linking and
+# loading with generated files there-in.
 #
-SUBDIRS := ../include ../lib
+SUBDIRS := ../include ../lib ../lib/quickstream/plugins/filters
 
 
 run_SOURCES := run.c

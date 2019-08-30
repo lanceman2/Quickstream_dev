@@ -45,6 +45,31 @@ and your added costume files you can run *./RepoClean*.  Do not run
 *./RepoClean* if you need a clean tarball form of the package source,
 use *make distclean* (after running ./configure) for that.
 
+We use the GNU autotool build system to generate tarball releases.  To
+make a tarball release, after you finish testing and editing, edit
+RELEASE.bash changing the version numbers and so on, then you can run a
+sequence of programs something like the following:
+
+  *./RepoClean*
+
+then make sure that the files that remain are what you want, if not you
+may need to edit *RepoClean*.  After you're confident that is doing what
+you want run:
+
+  *./bootstrap*
+
+which will generate many files needed for a tarball release.  Then run:
+
+  *./configure*
+
+which the is famous GNU autotools generated *configure* script for this
+package.  Then run:
+
+  *make dist*
+
+which should generate the tarball file *quickstream-0.0.1.tar.gz* and
+other compression format versions of tarball files.
+
 
 ## Building and Installing with quickbuild
 
@@ -52,17 +77,21 @@ The quickstream developers build system.  Without some care the quickbuild
 build system and the GNU autotools build system will conflict with each
 other.  So why we have two build systems?:
 
-The use of quickbuild is for quickstream developers, not users.
-quickbuild is just some GNU make make files and some bash scripts.  We
-added these make files named "Makefile" and other files so that we could
-develop, compile and run programs without being forced to install files.
 GNU autotools does not allow you to load dynamic shared object (DSO)
 plugin modules without installing them first, whereby making a much longer
 compile and test cycle.  The same, more-so, can be said of CMake.  As a
-code developer we just want to quickly compile source and run it.
+code developer we just want to quickly compile source and run it from the
+source directory, without installing anything.
+
+The use of quickbuild is for quickstream developers, not users.
+quickbuild is just some "GNU make" make files and some bash scripts.  We
+added these make files named "Makefile" and other files so that we could
+develop, compile and run programs without being forced to install files.
+We use "makefile" as the make file for GNU autotools generated make files,
+which overrides "Makefile".
 
 The quickbuild make files tend to be much smaller than the GNU autotools
-generated make files.
+generated make files.  
 
 
 ### quickbuild quick and easy
