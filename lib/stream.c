@@ -220,6 +220,9 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
     return gotOne?0:1;
 }
 
+#define SPEW(fmt, ... ) fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+//#define SPEW(fmt, ... ) /* empty macro */
+
 
 static inline
 void FreeFilterRunResources(struct QsFilter *f) {
@@ -232,7 +235,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
 #ifdef DEBUG
         f->outputs = 0;
 #endif
-        free(f->outputs);
         f->numOutputs = 0;
     }
 
@@ -266,7 +268,7 @@ void FreeRunResources(struct QsStream *s) {
 }
 
 
-static inline uint32_t CountFilterPath(struct QsStream *s,
+static uint32_t CountFilterPath(struct QsStream *s,
         struct QsFilter *f, uint32_t loopCount, uint32_t maxCount) {
 
     if(loopCount > maxCount)
@@ -278,9 +280,6 @@ static inline uint32_t CountFilterPath(struct QsStream *s,
     ++loopCount;
 
     uint32_t returnCount = loopCount;
-
-    //DSPEW("filter \"%s\"  count=%" PRIu32 "   max=%" PRIu32,
-    //    f->name, loopCount, maxCount);
 
 
     // In any path in the flow we can only have a filter traversed once.
@@ -440,6 +439,7 @@ int qsStreamStart(struct QsStream *s) {
             s->from[i]->u.isSource = 0;
         }
     }
+
     DASSERT(j == s->numSources, "");
 
 
@@ -485,7 +485,6 @@ int qsStreamStart(struct QsStream *s) {
      *********************************************************************/
 
 
-
     NOTICE("RUNNING");
 
 
@@ -514,7 +513,6 @@ int qsStreamStart(struct QsStream *s) {
      *********************************************************************/
 
     FreeRunResources(s);
-
 
     return 0; // success
 }
