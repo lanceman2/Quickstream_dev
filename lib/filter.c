@@ -27,7 +27,8 @@
 
 
 struct QsFilter *qsAppFilterLoad(struct QsApp *app,
-        const char *fileName, const char *_loadName) {
+        const char *fileName, const char *_loadName,
+        int argc, const char **argv) {
 
     DASSERT(app, "");
     DASSERT(fileName, "");

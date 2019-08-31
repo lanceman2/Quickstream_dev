@@ -45,7 +45,6 @@ struct QsStream {
     uint32_t numThreads;       // length of threads
     struct QsThread **threads; // array of threads
 
-
     // The array list of sources is created at start:
     uint32_t numSources;       // length of sources
     struct QsFilter **sources; // array of filter sources

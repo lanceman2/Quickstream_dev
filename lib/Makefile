@@ -5,7 +5,6 @@ libqsapp.so_SOURCES :=\
  app.c\
  filter.c\
  stream.c\
- stream_run_0p_0t.c\
  thread.c\
  debug.c
 libqsapp.so_LDFLAGS := -ldl

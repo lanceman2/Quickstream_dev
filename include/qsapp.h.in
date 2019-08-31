@@ -93,7 +93,8 @@ int qsAppDestroy(struct QsApp *app);
 extern
 struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName,
-        const char *loadName);
+        const char *loadName,
+        int argc, const char **argv);
 
 extern
 int qsAppPrintDotToFile(struct QsApp *app, FILE *file);

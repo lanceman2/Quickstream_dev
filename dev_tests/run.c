@@ -29,17 +29,17 @@ int main(void) {
 
     struct QsFilter *f0, *f1, *f2;
 
-    if(!(f0 = qsAppFilterLoad(app, "stdin.so", 0))) {
+    if(!(f0 = qsAppFilterLoad(app, "tests/sleep.so", 0, 0, 0))) {
         qsAppDestroy(app);
         return 1;
     }
 
-    if(!(f2 = qsAppFilterLoad(app, "stdin.so", 0))) {
+    if(!(f2 = qsAppFilterLoad(app, "stdin.so", 0, 0, 0))) {
         qsAppDestroy(app);
         return 1;
     }
 
-    f1 = qsAppFilterLoad(app, "stdout.so", "stdout");
+    f1 = qsAppFilterLoad(app, "tests/sleep.so", "SLEEP", 0, 0);
 
     if(!f1) {
         qsAppDestroy(app);
@@ -51,7 +51,7 @@ int main(void) {
         return 1;
     }
 
-    if(!(f2 = qsAppFilterLoad(app, "stdin.so", 0))) {
+    if(!(f2 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0))) {
         qsAppDestroy(app);
         return 1;
     }

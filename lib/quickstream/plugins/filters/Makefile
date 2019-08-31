@@ -1,3 +1,4 @@
+SUBDIRS := tests
 
 INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters
 

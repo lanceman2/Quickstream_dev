@@ -22,7 +22,7 @@
  *
  * \todo figure out more return codes and what they mean
  */
-int constructor(void);
+int constructor(int argc, const char **argv);
 
 
 /** Optional destructor function

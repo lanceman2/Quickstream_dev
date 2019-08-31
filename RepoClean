@@ -127,12 +127,12 @@ rm -rf\
  bin/qb_build/\
  lib/qb_build/\
  lib/quickstream/plugins/filters/qb_build/\
- dev_test/qb_build/
+ dev_tests/qb_build/
 
 rm -f\
- dev_test/run\
- dev_test/run2\
- dev_test/test_qsError\
+ dev_tests/run\
+ dev_tests/run2\
+ dev_tests/test_qsError\
  quickbuild.make.org\
  quickbuild.make.tmp
 

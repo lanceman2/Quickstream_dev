@@ -9,6 +9,7 @@
 // Private interfaces.
 #include "./qsapp.h"
 #include "./debug.h"
+#include "./stream_run_0p_0t.h"
 
 
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
@@ -484,12 +485,14 @@ int qsStreamStart(struct QsStream *s) {
      *            Stage: flow
      *********************************************************************/
 
-
     NOTICE("RUNNING");
+
+    if(s->numThreads == 0)
+        stream_run_0p_0t(s);
 
 
     /**********************************************************************
-     *            Stage: flush
+     *            Stage: flush?
      *********************************************************************/
 
 

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include "../../../../include/qsfilter.h"
-#include "../../../../lib/debug.h"
+#include "../../../../../include/qsfilter.h"
+#include "../../../../../lib/debug.h"
 
 #ifdef SPEW_LEVEL_DEBUG
 static int count = 0;

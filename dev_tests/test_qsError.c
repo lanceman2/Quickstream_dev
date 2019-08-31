@@ -32,7 +32,7 @@ int main(void) {
     struct QsFilter *f[numFilters];
 
     for(int i=0; i<numFilters; ++i)
-        if(!(f[i] = qsAppFilterLoad(app, "stdin.so", 0))) {
+        if(!(f[i] = qsAppFilterLoad(app, "stdin.so", 0, 0, 0))) {
             qsAppDestroy(app);
             return 1;
         }

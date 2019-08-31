@@ -34,7 +34,7 @@ int main(void) {
     struct QsFilter *f[numFilters];
 
     for(int i=0; i<numFilters; ++i)
-        if(!(f[i] = qsAppFilterLoad(app, "stdin.so", 0))) {
+        if(!(f[i] = qsAppFilterLoad(app, "tests/sleep.so", 0, 0, 0))) {
             qsAppDestroy(app);
             return 1;
         }
@@ -56,7 +56,7 @@ int main(void) {
     qsFilterUnload(f[0]);
 
 
-    f[0] = qsAppFilterLoad(app, "stdin", 0);
+    f[0] = qsAppFilterLoad(app, "stdin", 0, 0, 0);
 
     qsStreamConnectFilters(stream, f[0], f[2]);
     qsStreamConnectFilters(stream, f[0], f[3]);
@@ -66,10 +66,6 @@ int main(void) {
 
     qsAppDisplayFlowImage(app, false);
 
-    for(int i=0; i<10000; ++i)
-    qsStreamStart(stream);
-
-    qsStreamStart(stream);
     qsStreamStart(stream);
 
     qsStreamStart(stream);

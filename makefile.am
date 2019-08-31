@@ -38,7 +38,7 @@ docfiles =\
 quickbuild_makefiles =\
  $(docdir)/Makefile\
  include/Makefile\
- dev_test/Makefile\
+ dev_tests/Makefile\
  $(plugindir)/Makefile\
  lib/Makefile\
  Makefile\
@@ -47,12 +47,12 @@ quickbuild_makefiles =\
 
 # dev_tests files
 #
-# find dev_test -type f -printf ' %p\\\n' | grep -v Makefile
+# find dev_tests -type f -printf ' %p\\\n' | grep -v Makefile
 #
 dev_tests =\
- dev_test/run.c\
- dev_test/test_qsError.c\
- dev_test/run2.c
+ dev_tests/run.c\
+ dev_tests/test_qsError.c\
+ dev_tests/run2.c
 
 
 EXTRA_DIST =\
