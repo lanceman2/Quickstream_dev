@@ -39,6 +39,9 @@ to build the code.  Then run
 to install the stream software package in the prefix directory that you
 set above.
 
+
+### Making a Tarball Release
+
 If you wish to remove all files that are generated from the build scripts
 in this package, leaving you with just files that are from the repository
 and your added costume files you can run *./RepoClean*.  Do not run
