@@ -482,16 +482,19 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   they do not see elements in the structures.  We don't use typedef, for
   that extra layer of indirection makes it harder to "scope the code".
 - The files in the source directly follow the directory structure of the
-  installed files.  So you don't need to wonder where source files are;
-- consequently programs can run in the source directory after running make
-  without installing them;
-- consequently also the running programs find files from a relative paths
-  between them, the same way as in the installed files as with the files
-  in the source;
-- consequently we use the compilers relative linking options to link and
-  run programs.
-- You can move the whole encapsulated installation and everything runs the
-  same.
+  installed files.  Files in the source are located in the same relative
+  path of files that they are most directly related to in the installed
+  paths.  Consequently:
+  - you don't need to wonder where source files are,
+  - programs can run in the source directory after running make without
+    installing them,
+  - the running programs find files from a relative paths between them,
+    the same way as in the installed files as with the files in the
+    source,
+  - we use the compilers relative linking options to link and run
+    programs, and
+  - you can move the whole encapsulated installation (top install
+    directory) and everything runs the same.
 - Environment variables allow users to tell quickstream programs where to
   find users files that are not in the quickstream source code.
 - The installation prefix directory is not used in an quickstream code,
@@ -509,4 +512,5 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   in a while.
 - If you wish to make a tarball release use the GNU autotool building
   method and run *./configure* and *make dist*.
-
+- Files in the source are located in the same relative path of files that
+  they are most directly related to in the installed paths.

@@ -57,12 +57,14 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->name, "");
 
     DSPEW("Freeing: %s", f->name);
-
-    if(f->destroy) {
-        int ret = f->destroy();
-        if(ret) {
-            // TODO: what do we use this return value for??
-            WARN("filter \"%s\" destroy() returned %d", f->name, ret);
+    if(f->dlhandle) {
+        int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
+        if(destroy) {
+            int ret = destroy();
+            if(ret) {
+                // TODO: what do we use this return value for??
+                WARN("filter \"%s\" destroy() returned %d", f->name, ret);
+            }
         }
     }
 

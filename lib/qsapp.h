@@ -42,6 +42,10 @@ struct QsStream {
 
     struct QsApp *app;
 
+    uint32_t numThreads;       // length of threads
+    struct QsThread **threads; // array of threads
+
+
     // The array list of sources is created at start:
     uint32_t numSources;       // length of sources
     struct QsFilter **sources; // array of filter sources
@@ -63,15 +67,14 @@ struct QsFilter {
     struct QsStream *stream; // This stream can be changed
     struct QsThread *thread; // thread that this filter will run in
 
- 
     // The name never changes after filter loading/creation
+    // pointer to malloc()ed memory.
     char *name; // unique name for the Filter in a given app
 
-    // Callback functions that may be loaded.
-    // Never change after loading/creation
-    // int (* construct)(void); is not needed here because it is called in
-    // qsAppFilterLoad() just after loading the module.
-    int (* destroy)(void);
+    // Callback functions that may be loaded.  We don not get a copy of
+    // the construct() and destroy() functions because they are only
+    // called once, so we just dlsym() (if we have a dlhandle) them just
+    // before we call them.
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
     int (* input)(void *buffer, size_t len, uint32_t inputChannelNum);
@@ -95,4 +98,3 @@ struct QsFilter {
     uint32_t numOutputs; // number of connected output filters
     struct QsFilter **outputs; // array of filter pointers
 };
-
