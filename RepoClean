@@ -84,6 +84,7 @@ for dir in .\
  lib\
  include\
  lib/quickstream/plugins/filters\
+ lib/quickstream/plugins/filters/tests\
  $docdir ; do
     rm -f $dir/makefile.in $dir/makefile
 done
@@ -109,7 +110,8 @@ rm -rf $docdir/latex/ $docdir/html/search/
 
 # Remove the autotools code built files
 #
-for d in bin lib lib/quickstream/plugins/filters ; do
+for d in bin lib lib/quickstream/plugins/filters\
+    lib/quickstream/plugins/filters/tests ; do
     rm -rf $d/.deps/ $d/.libs/
     rm -f $d/*.o $d/*.so $d/*.lo $d/*.la
 done
@@ -127,6 +129,7 @@ rm -rf\
  bin/qb_build/\
  lib/qb_build/\
  lib/quickstream/plugins/filters/qb_build/\
+ lib/quickstream/plugins/filters/tests/qb_build/\
  dev_tests/qb_build/
 
 rm -f\

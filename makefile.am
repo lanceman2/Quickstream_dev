@@ -40,6 +40,7 @@ quickbuild_makefiles =\
  include/Makefile\
  dev_tests/Makefile\
  $(plugindir)/Makefile\
+ $(plugindir)/tests/Makefile\
  lib/Makefile\
  Makefile\
  bin/Makefile

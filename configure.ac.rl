@@ -135,6 +135,7 @@ AC_CONFIG_FILES(
  lib/pkgconfig/quickstream.pc
  bin/makefile
  lib/quickstream/plugins/filters/makefile
+ lib/quickstream/plugins/filters/tests/makefile
  share/doc/quickstream/prefix.make
  share/doc/quickstream/makefile
 )

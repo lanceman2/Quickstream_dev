@@ -1,0 +1,7 @@
+AM_LDFLAGS = -module -avoid-version -shared
+
+filterdir = $(pkglibdir)/plugins/filters/tests
+
+filter_LTLIBRARIES = sleep.la
+
+sleep_la_SOURCES = sleep.c

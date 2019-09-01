@@ -1,4 +1,5 @@
 
+
 lib_LTLIBRARIES = libqsapp.la libqsfilter.la
 
 libqsapp_la_SOURCES =\
