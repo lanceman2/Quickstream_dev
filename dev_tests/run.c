@@ -95,19 +95,16 @@ int main(void) {
     qsThreadDestroy(t);
 
 
-    qsAppPrintDotToFile(app, stdout); // private to ../lib/ code.
     qsAppDisplayFlowImage(app, false);
 
     qsStreamRemoveFilter(stream, f2);
     //qsStreamConnectFilters(stream, f2, f1);
 
 
-    qsAppPrintDotToFile(app, stdout); // private to ../lib/ code.
     qsAppDisplayFlowImage(app, false);
 
     qsStreamDestroy(stream);
 
-    qsAppPrintDotToFile(app, stdout); // private to ../lib/ code.
     qsAppDisplayFlowImage(app, false);
 
 

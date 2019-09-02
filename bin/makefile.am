@@ -1,5 +1,5 @@
 bin_PROGRAMS = quickstream
 
 quickstream_SOURCES = quickstream.c
-quickstream_LDADD = $(top_builddir)/lib/libqsapp.la -lpthread -ldl
+quickstream_LDADD = $(top_builddir)/lib/libsuickstream.la
 

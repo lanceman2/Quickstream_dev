@@ -26,6 +26,43 @@
 
 
 
+int qsFilterPrintHelp(const char *filterName, FILE *f) {
+
+    if(f == 0) f = stderr;
+
+    char *path = GetPluginPath("filters", filterName);
+    // It should be a full path now.
+    DASSERT(path[0] == '/', "");
+
+    void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+
+    if(!handle) {
+        ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
+        free(path);
+        return -1; // error
+    }
+
+    dlerror(); // clear error
+    void (*help)(FILE *) = dlsym(handle, "help");
+    char *err = dlerror();
+    if(err) {
+        // We must have a input() function.
+        ERROR("Module at path=\"%s\" no input() provided:"
+                " dlsym(\"help\") error: %s", path, err);
+        free(path);
+        dlclose(handle);
+        return -1; // error
+    }
+
+    fprintf(f, "\nfilter path=%s\n\n", path);
+    help(f);
+
+    dlclose(handle);
+    free(path);
+    return 0; // success
+}
+
+
 struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName, const char *_loadName,
         int argc, const char **argv) {
@@ -44,7 +81,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         size_t len = strlen(fileName) + 1;
         char *s = loadName = alloca(len);
         strncpy(s, fileName, len);
-        // loadName = "/the/filename.so"
+        // loadName = "foo/filter/test/filename.so"
         // loadName[0] => '/'
         if(len > 4) {
             loadName += len - 4;
@@ -59,9 +96,22 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
             //
             while(loadName != s && *loadName != DIR_CHAR)
                 loadName--;
+            // loadName = "/filename"
+
+            // If the next directory in the path is not named
+            // "/filter/" we add it to the loadName.
+            const size_t flen = strlen(DIR_STR "filters");
+            while(!(loadName - s > flen &&
+                    strncmp(loadName-flen, DIR_STR "filters", flen)
+                    == 0) &&
+                    loadName > s + 2) {
+                --loadName;
+                while(loadName != s && *loadName != DIR_CHAR)
+                    loadName--;
+                // loadName = "/test/filename"
+            }
             if(*loadName == DIR_CHAR)
                 ++loadName;
-            // loadName = "filename"
         }
     } else if(FindFilterNamed(app, _loadName)) {
         //
@@ -71,25 +121,10 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         ERROR("Filter name \"%s\" is in use already", _loadName);
         return 0;
     }
-    char *path = 0;
 
-    if(fileName[0] == DIR_CHAR) {
+    char *path = GetPluginPath("filters", fileName);
 
-        // We where given full path starting with '/'.
-        size_t len = strlen(fileName);
-
-        if(len > 3 && strcmp(&fileName[len-3], ".so") == 0)
-            // There is a ".so" suffix.
-            path = strdup(fileName);
-        else {
-            // There is no ".so" suffix.
-            path = malloc(len + 4);
-            snprintf(path, len + 4, "%s.so", fileName);
-        }
-    } else
-        path = GetPluginPath("filters", fileName);
-    
-    // It should be a full path.
+    // It should be a full path now.
     DASSERT(path[0] == '/', "");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
@@ -190,9 +225,20 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
     char *err = dlerror();
     if(err) {
         // We must have a input() function.
-        ERROR("dlsym(\"input\") error: %s", err);
+        ERROR("no input() provided: dlsym(\"input\") error: %s", err);
         goto cleanup;
     }
+
+    dlerror(); // clear error
+    // "help()" is not optional.
+    dlsym(handle, "help");
+    err = dlerror();
+    if(err) {
+        // We must have a help() function.
+        ERROR("no help() provided: dlsym(\"help\") error: %s", err);
+        goto cleanup;
+    }
+
 
     if(construct) construct();
 

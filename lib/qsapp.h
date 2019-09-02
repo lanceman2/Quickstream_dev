@@ -1,12 +1,13 @@
 /* This is a private header file that is only used in the quickstream code
- * internal to libqsapp.so.  The libqsapp.so user, in general, should
- * not include this header file.  Hence this file is not installed. */
+ * internal to libquickstream.so.  The libquickstream.so user, in general,
+ * should not include this header file.  Hence this file is not installed.
+ * */
 
-// This file is the guts of quickstream libqsapp API.  By understanding
-// each data member in these data structures you can get a clear
-// understanding of the insides of quickstream, and code it.  But it's
-// likely that you will need to "scope the code" in app.c, filter.c,
-// stream.c, thread.c, and process.c to get there.
+// This file is the guts of quickstream libquickstream API.  By
+// understanding each data member in these data structures you can get a
+// clear understanding of the insides of quickstream, and code it.  But
+// it's likely that you will need to "scope the code" in app.c,
+// filter.c, stream.c, thread.c, and process.c to get there.
 
 
 struct QsApp {
@@ -97,3 +98,8 @@ struct QsFilter {
     uint32_t numOutputs; // number of connected output filters
     struct QsFilter **outputs; // array of filter pointers
 };
+
+
+extern
+__thread struct QsFilter *_qsCurrentFilter;
+

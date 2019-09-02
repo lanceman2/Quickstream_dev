@@ -5,7 +5,8 @@
 // This returns a value if we can access it with the composed path.
 //
 //
-static inline char *GetPluginPathFromEnv(const char *category, const char *name)
+static inline char *GetPluginPathFromEnv(const char *category,
+        const char *name)
 {
     char *env = 0;
     char **envPaths = 0;
@@ -96,6 +97,8 @@ static inline char *GetPluginPathFromEnv(const char *category, const char *name)
             // The user of this function must free buf.
             return buf; // success, we can access this file.
         }
+        else
+            errno = 0;
     }
 
     // No memory leaks here:
@@ -105,8 +108,9 @@ static inline char *GetPluginPathFromEnv(const char *category, const char *name)
     return 0; // failed to access a file in "that path".
 }
 
-// Probability
+// Portability
 #define DIR_CHAR '/'
+#define DIR_STR  "/"
 
 #define PRE "/lib/quickstream/plugins/"
 
@@ -119,25 +123,25 @@ static inline char *GetPluginPathFromEnv(const char *category, const char *name)
 static inline char *GetPluginPath(const char *category, const char *name)
 {
     DASSERT(name && strlen(name) >= 1, "");
-    DASSERT(category && strlen(category) >= 1, "");
-
+    
     if(name[0] == DIR_CHAR) {
-        //
-        // We have full path.
-        //
+        char *path;
         // We where given full path starting with '/'.
         size_t len = strlen(name);
-        DASSERT(len < 1024*10, "");
-
         if(len > 3 && strcmp(&name[len-3], ".so") == 0)
             // There is a ".so" suffix.
-            return strdup(name);
-        // There is no ".so" suffix.
-        char *path = malloc(len + 4);
-        snprintf(path, len + 4, "%s.so", name);
+            path = strdup(name);
+        else {
+            // There is no ".so" suffix, so we add it.
+            path = malloc(len + 4);
+            snprintf(path, len + 4, "%s.so", name);
+        }
+        // This is the full path.
         return path;
     }
 
+
+    DASSERT(category && strlen(category) >= 1, "");
 
     char *buf;
 

@@ -66,14 +66,13 @@ void FreeFilter(struct QsFilter *f) {
                 WARN("filter \"%s\" destroy() returned %d", f->name, ret);
             }
         }
+
+        dlerror(); // clear error
+        if(dlclose(f->dlhandle))
+            WARN("dlclose(%p): %s", f->dlhandle, dlerror());
+            // TODO: So what can I do.
+
     }
-
-    DASSERT(f->dlhandle, "");
-    dlerror(); // clear error
-    if(dlclose(f->dlhandle))
-        WARN("dlclose(%p): %s", f->dlhandle, dlerror());
-        // TODO: So what can I do.
-
 #ifdef DEBUG
     memset(f->name, 0, strlen(f->name));
 #endif

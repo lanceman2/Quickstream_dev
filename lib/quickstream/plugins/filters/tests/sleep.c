@@ -8,6 +8,9 @@ static int count = 0;
 #endif
 
 
+void help(FILE *f) {
+}
+
 int construct(int argc, const char **argv) {
 
     DSPEW("count=%d", count++);

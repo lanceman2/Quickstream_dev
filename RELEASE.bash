@@ -52,18 +52,11 @@ function ReplaceReleaseStrings() {
 # versions.
 #
 
-# For the library libqsapp.so the stream app library
+# For the library libquickstream.so the stream app library
 
-        [LIBQSAPP_CURRENT]=0
-        [LIBQSAPP_REVISION]=0
-        [LIBQSAPP_AGE]=0
-
-
-# For the library libqsfilter for linking with filter modules
-
-        [LIBQSFILTER_CURRENT]=0
-        [LIBQSFILTER_REVISION]=0
-        [LIBQSFILTER_AGE]=0
+        [LIBQS_CURRENT]=0
+        [LIBQS_REVISION]=0
+        [LIBQS_AGE]=0
 
 
 

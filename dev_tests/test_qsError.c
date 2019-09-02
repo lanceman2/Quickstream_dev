@@ -6,11 +6,11 @@
 #include "../include/qsapp.h"
 
 //
-// This program needs to be linked with a version of libqsapp.so that is
-// built with CPP macro DEBUG not set.  Otherwise We'll get DASSERT()
-// calls causing the program to stop and wait do to the error.
-// To defining DEBUG causes DASSERT() calls, in libqsapp.so code, to
-// disappear when it is compiled.
+// This program needs to be linked with a version of libquickstream.so
+// that is built with CPP macro DEBUG not set.  Otherwise We'll get
+// DASSERT() calls causing the program to stop and wait do to the error.
+// To defining DEBUG causes DASSERT() calls, in libquickstream.so code,
+// to disappear when it is compiled.
 //
 
 static void catcher(int signum) {

@@ -13,13 +13,10 @@ AC_INIT([@PACKAGE_NAME@],
 
 # See LIBRARY VERSION notes at the bottom of this file.
 #
-LIBQSAPP_CURRENT=@LIBQSAPP_CURRENT@
-LIBQSAPP_REVISION=@LIBQSAPP_REVISION@
-LIBQSAPP_AGE=@LIBQSAPP_AGE@
 
-LIBQSFILTER_CURRENT=@LIBQSFILTER_CURRENT@
-LIBQSFILTER_REVISION=@LIBQSFILTER_REVISION@
-LIBQSFILTER_AGE=@LIBQSFILTER_AGE@
+LIBQS_CURRENT=@LIBQS_CURRENT@
+LIBQS_REVISION=@LIBQS_REVISION@
+LIBQS_AGE=@LIBQS_AGE@
 
 
 #AM_INIT_AUTOMAKE(-Wall -Werror dist-bzip2 no-dist-gzip subdir-objects)
@@ -31,25 +28,17 @@ LT_INIT([disable-static])
 AC_PROG_CC
 AC_PROG_CXX
 
-LIBQSAPP_VERSION="${LIBQSAPP_CURRENT}:${LIBQSAPP_REVISION}:${LIBQSAPP_AGE}"
+LIBQS_VERSION="${LIBQS_CURRENT}:${LIBQS_REVISION}:${LIBQS_AGE}"
 
-LIBQSFILTER_VERSION="${LIBQSFILTER_CURRENT}:${LIBQSFILTER_REVISION}:${LIBQSFILTER_AGE}"
 
-AC_SUBST(LIBQSAPP_VERSION)
-AC_SUBST(LIBQSAPP_CURRENT)
-AC_SUBST(LIBQSAPP_REVISION)
-AC_SUBST(LIBQSAPP_AGE)
+AC_SUBST(LIBQS_VERSION)
+AC_SUBST(LIBQS_CURRENT)
+AC_SUBST(LIBQS_REVISION)
+AC_SUBST(LIBQS_AGE)
 
-AC_SUBST(LIBQSFILTER_VERSION)
-AC_SUBST(LIBQSFILTER_CURRENT)
-AC_SUBST(LIBQSFILTER_REVISION)
-AC_SUBST(LIBQSFILTER_AGE)
+AC_DEFINE_UNQUOTED(LIBQS_VERSION, "$LIBQS_VERSION",
+                   [quickstream library version number])
 
-AC_DEFINE_UNQUOTED(LIBQSAPP_VERSION, "$LIBQSAPP_VERSION",
-                   [quickstream app library version number])
-
-AC_DEFINE_UNQUOTED(LIBQSFILTER_VERSION, "$LIBQSFILTER_VERSION",
-                   [quickstream filter module library version number])
 
 # We uncomment this for testing.
 #AC_CONFIG_HEADERS([config.h])
@@ -60,7 +49,7 @@ AC_DEFINE_UNQUOTED(LIBQSFILTER_VERSION, "$LIBQSFILTER_VERSION",
 
 AC_ARG_ENABLE([debug],
     AS_HELP_STRING([--enable-debug],
-    [compile more debugging code into quickstream and libqsapp\
+    [compile more debugging code into quickstream and libquickstream\
  (default is no debugging code).  You do not want this unless\
  you are debugging or developing quicksteam.  Adding this option may make\
  use about 10% more CPU usage.  This is unrelated to the compiler\

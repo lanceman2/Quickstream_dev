@@ -15,13 +15,13 @@ SUBDIRS := ../include ../lib ../lib/quickstream/plugins/filters
 
 
 run_SOURCES := run.c
-run_LDFLAGS := -L../lib -lqsapp -Wl,-rpath=\$$ORIGIN/../lib
+run_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 run2_SOURCES := run2.c
-run2_LDFLAGS := -L../lib -lqsapp -Wl,-rpath=\$$ORIGIN/../lib
+run2_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 test_qsError_SOURCES := test_qsError.c
-test_qsError_LDFLAGS := -L../lib -lqsapp -Wl,-rpath=\$$ORIGIN/../lib
+test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 
 

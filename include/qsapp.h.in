@@ -6,11 +6,11 @@
 
 /** \file
  *
- * The libqsapp application programming interface (API)
+ * The libquickstream application programming interface (API)
  *
- * You can link your C and C++ code with the libqsapp library to make
- * quickstream programs that load quickstream filter modules, assemble
- * these filters into flow graphs, and run the flow graphs.
+ * You can link your C and C++ code with the libquickstrean library to
+ * make quickstream programs that load quickstream filter modules,
+ * assemble these filters into flow graphs, and run the flow graphs.
  *
  * You can do the same with the program \ref quickstream_program.
  *
@@ -98,6 +98,13 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
 extern
 int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
+
+
+/** Print the help for the filter module
+ *
+ */
+extern
+int qsFilterPrintHelp(const char *filterName, FILE *f);
 
 
 /**

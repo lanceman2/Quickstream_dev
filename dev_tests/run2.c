@@ -74,6 +74,7 @@ int main(void) {
 
     qsAppDestroy(app);
 
+    qsFilterPrintHelp("stdin", stderr);
 
     WARN("SUCCESS");
 

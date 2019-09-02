@@ -397,13 +397,14 @@ they are sinks.
 ## Interfaces
 
 quickstream has two APIs (application programming interfaces) and some
-utility programs.  The main parts are:
+utility programs.  Both APIs in use the libquickstream library.  The main
+parts are:
 
-- a filter API **libqsfilter**: which is used to build a quickstream filter
+- a filter API **qsfilter.h**: which is used to build a quickstream filter
   dynamic shared object filter modules.
-- a stream program API **libqsapp**: which is used to build programs that run
+- a stream program API **qsapp.h**: which is used to build programs that run
   a quickstream with said filters.
-- the program **qsrun**: which uses *libqs* to run a quickstream with said
+- the program **quickstream**: which uses *qsapp.h* to run a quickstream with said
   filters.
 
 
