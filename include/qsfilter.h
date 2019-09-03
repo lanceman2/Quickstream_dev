@@ -126,7 +126,7 @@ extern
 void *qsBufferGet(size_t *len, uint32_t outputChannelNum);
 
 extern
-void qsOutput(size_t len, uint32_t outputChannelNum);
+void qsPush(size_t len, uint32_t outputChannelNum);
 
 
 

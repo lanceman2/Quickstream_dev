@@ -31,7 +31,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
 
     DSPEW("count=%d", count++);
 
-    buffer = qsBufferGet(&len, QS_ALLCHANNELS);
+    buffer = qsBufferGet(len=1024, QS_ALLCHANNELS);
 
     DASSERT(len > 0, "");
 
@@ -43,7 +43,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
     }
 
     // Output to all output channels 
-    qsOutput(len, QS_ALLCHANNELS);
+    qsPush(len, QS_ALLCHANNELS);
 
     return 0; // success
 }

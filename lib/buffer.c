@@ -5,13 +5,14 @@
 #include <inttypes.h>
 
 #include "./qsfilter.h"
+#include "./qsapp.h"
 #include "./debug.h"
 
 
 __thread struct QsFilter *_qsCurrentFilter = 0;
 
 
-void *qsBufferGet(size_t *len, uint32_t outputChannelNum) {
+void *qsBufferGet(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_qsCurrentFilter,"");
 
@@ -19,13 +20,10 @@ void *qsBufferGet(size_t *len, uint32_t outputChannelNum) {
 }
 
 
-void qsOutput(size_t len, uint32_t outputChannelNum) {
+void qsPush(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_qsCurrentFilter,"");
 
 
 }
-
-
-
 
