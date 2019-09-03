@@ -11,7 +11,7 @@ libquickstream.so_SOURCES :=\
  opts.c\
  buffer.c\
  makeRingBuffer.c
-libquickstream.so_LDFLAGS := -lpthread -ldl
+libquickstream.so_LDFLAGS := -lpthread -ldl -lrt
 
 # build and install pkgconfig/quickstream.pc
 #
