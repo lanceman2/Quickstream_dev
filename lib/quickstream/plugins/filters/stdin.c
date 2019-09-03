@@ -31,9 +31,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
 
     DSPEW("count=%d", count++);
 
+    // For output buffering.
     buffer = qsBufferGet(len=1024, QS_ALLCHANNELS);
-
-    DASSERT(len > 0, "");
 
     // TODO: handle the stream closing.
 

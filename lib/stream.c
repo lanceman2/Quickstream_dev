@@ -9,7 +9,6 @@
 // Private interfaces.
 #include "./qsapp.h"
 #include "./debug.h"
-#include "./stream_run_0p_0t.h"
 
 
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
@@ -229,6 +228,7 @@ static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
     if(f->numOutputs) {
+        FreeOutputBuffers(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
 #endif
@@ -352,15 +352,15 @@ void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
     // Make the output array
     DASSERT(!f->outputs, "");
-    f->outputs = malloc(sizeof(*f->outputs)*f->numOutputs);
-    ASSERT(f->outputs, "malloc(%zu) failed",
+    f->outputs = calloc(1, sizeof(*f->outputs)*f->numOutputs);
+    ASSERT(f->outputs, "calloc(1,%zu) failed",
             sizeof(*f->outputs)*f->numOutputs);
 
     for(i=0; s->from[i] != f; ++i);
     // s->from[i] == f
 
     for(uint32_t j=0; j<f->numOutputs;) {
-        f->outputs[j] = s->to[i];
+        f->outputs[j].filter = s->to[i];
         if(s->to[i]->numOutputs == 0)
             ConnectFilterOutputsFrom(s, s->to[i]);
         ++j;
@@ -470,14 +470,28 @@ int qsStreamStart(struct QsStream *s) {
         ConnectFilterOutputsFrom(s, s->sources[i]);
 
 
-
     /**********************************************************************
      *            Stage: call all stream's filter start() if present
      *********************************************************************/
 
+    // By using the app list of filters we do not call any filter start()
+    // more than once.
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->start)
             f->start(f->u.numInputs, f->numOutputs);
+
+
+    /**********************************************************************
+     *            Stage: Allocate flow buffers
+     *********************************************************************/
+
+    // Any filters' special buffer requirements should have been gotten
+    // from the filters' start() function. Now we can allocated the memory
+    // that is the conveyor belt between filters.  We follow every path in
+    // the stream:
+    for(uint32_t i=0; i<s->numSources; ++i)
+        // It easier to now because the f->outputs are more setup now.
+        AllocateOutputBuffers(s->sources[i]);
 
 
 

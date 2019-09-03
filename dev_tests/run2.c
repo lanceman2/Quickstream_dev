@@ -67,6 +67,10 @@ int main(void) {
     qsAppDisplayFlowImage(app, false);
 
     qsStreamStart(stream);
+    qsStreamStart(stream);
+    qsStreamStart(stream);
+    qsStreamStart(stream);
+    qsStreamStart(stream);
 
     qsStreamStart(stream);
 

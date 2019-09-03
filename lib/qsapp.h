@@ -94,12 +94,68 @@ struct QsFilter {
         uint32_t numInputs; // runtime number of connected input filters
         uint32_t isSource;  // startup flag marking filter as a source
     } u;
+
     //
     uint32_t numOutputs; // number of connected output filters
-    struct QsFilter **outputs; // array of filter pointers
+    struct QsOutput *outputs; // array of struct QsOutput
 };
+
+
+struct QsOutput {
+
+    // The "reading filter" that sees this output as input.
+    struct QsFilter *filter;
+
+    // This may point to the same (shared) buffer in other outputs.
+    struct QsBuffer *buffer;
+
+    // This is where the filter that is reading the buffer last
+    // read from in the buffer memory.
+    uint8_t *readPtr;
+
+    // Sizes in bytes:
+    size_t maxReadThreshold, // This reading filter promises to read
+           // any data at or above this threshold.  So we will keep
+           // calling the filter input() function until the amount that
+           // can be read is less than this threshold.
+           minReadThreshold; // This reading filter will not read
+           // any data until this threshold is meant.  So we will not call
+           // the filter input() function until this threshold is met.
+};
+
+
+struct QsBuffer {
+
+    uint8_t *mem;
+
+    size_t mapLength, overhangLength;
+
+    // This is the last place a writing filter wrote to in this memory.
+    uint8_t *writePtr;
+};
+
 
 
 extern
 __thread struct QsFilter *_qsCurrentFilter;
+
+
+extern
+void AllocateOutputBuffers(struct QsFilter *f);
+
+
+extern
+void FreeOutputBuffers(struct QsFilter *f);
+
+extern
+int stream_run_0p_0t(struct QsStream *s);
+
+
+extern
+void *makeRingBuffer(size_t *len, size_t *overhang);
+
+
+extern
+void freeRingBuffer(void *x, size_t len, size_t overhang);
+
 

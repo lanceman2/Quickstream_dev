@@ -5,10 +5,12 @@ libquickstream.so_SOURCES :=\
  app.c\
  filter.c\
  stream.c\
+ stream_run_0p_0t.c\
  thread.c\
  debug.c\
  opts.c\
- buffer.c
+ buffer.c\
+ makeRingBuffer.c
 libquickstream.so_LDFLAGS := -lpthread -ldl
 
 # build and install pkgconfig/quickstream.pc

@@ -123,7 +123,7 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
 
 
 extern
-void *qsBufferGet(size_t *len, uint32_t outputChannelNum);
+void *qsBufferGet(size_t len, uint32_t outputChannelNum);
 
 extern
 void qsPush(size_t len, uint32_t outputChannelNum);
