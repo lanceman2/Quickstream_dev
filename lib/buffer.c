@@ -16,8 +16,8 @@ __thread struct QsFilter *_qsCurrentFilter = 0;
 
 
 
-
-void _AllocateOutputBuffer(struct QsOutput *o) {
+static inline
+void _AllocateRingBuffer(struct QsOutput *o) {
 
     DASSERT(o, "");
 
@@ -29,16 +29,16 @@ void _AllocateOutputBuffer(struct QsOutput *o) {
 // Here we are setting up the memory conveyor belt that connects filters
 // in the stream.  Note this recurses.
 //
-void AllocateOutputBuffers(struct QsFilter *f) {
+void AllocateRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
 
     for(uint32_t i=0; i<f->numOutputs; ++i)
-        _AllocateOutputBuffer(f->outputs+i);
+        _AllocateRingBuffer(f->outputs+i);
 
     // Allocate for all children.
     for(uint32_t i=0; i<f->numOutputs; ++i)
-        AllocateOutputBuffers(f->outputs[i].filter);
+        AllocateRingBuffers(f->outputs[i].filter);
 
 
 }
@@ -46,7 +46,7 @@ void AllocateOutputBuffers(struct QsFilter *f) {
 
 // Note this does not recurse.
 //
-void FreeOutputBuffers(struct QsFilter *f) {
+void FreeRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
 
@@ -56,7 +56,7 @@ void FreeOutputBuffers(struct QsFilter *f) {
 
 
 
-// The current filter gets an output buffer.
+// The current writer filter gets an output buffer.
 void *qsBufferGet(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_qsCurrentFilter,"");
@@ -65,7 +65,7 @@ void *qsBufferGet(size_t len, uint32_t outputChannelNum) {
 }
 
 
-void qsPush(size_t len, uint32_t outputChannelNum) {
+void qsOutput(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_qsCurrentFilter,"");
 

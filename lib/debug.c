@@ -112,7 +112,7 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
 }
 
 
-void _spew(FILE *stream, int errn, const char *pre, const char *file,
+void qs_spew(FILE *stream, int errn, const char *pre, const char *file,
         int line, const char *func, bool bufferIt, const char *fmt, ...)
 {
     va_list ap;
@@ -122,7 +122,7 @@ void _spew(FILE *stream, int errn, const char *pre, const char *file,
 }
 
 
-void _assertAction(FILE *stream)
+void qs_assertAction(FILE *stream)
 {
     pid_t pid;
     pid = getpid();
@@ -137,5 +137,3 @@ void _assertAction(FILE *stream)
     while(i) { sleep(1); }
 #endif
 }
-
-

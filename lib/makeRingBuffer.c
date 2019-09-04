@@ -53,6 +53,24 @@
 //  "overhang" should be the maximum length that is accessed in a single
 //  action.
 //
+//
+
+// TODO:
+//
+// Since mmap()ing and munmap() this memory is an expensive part of the
+// stream startup and stopping, we need to consider making a circular
+// buffer allocator by putting the buffers in a (red/black?) tree with a
+// key that is the sum of mapLength and overhangLength.  Maybe a searching
+// a singly linked list would be much faster than all the mmap()ing and
+// munmap() system calls.  Or we could put the list of circular buffers in
+// an ordered array so we can have O(log) speed search.  Or maybe just not
+// sweat it because the kernel will be caching these pages for us anyway,
+// so the cost gets smaller when we cycle the starting and stopping.  The
+// most expensive startup cost would be fork() and pthread_create().  Do
+// we need process and thread pools?
+//
+
+
 
 static size_t pagesize = 0;
 
@@ -74,8 +92,14 @@ static inline void bumpSize(size_t *len)
 
 void *makeRingBuffer(size_t *len, size_t *overhang)
 {
-    if(!pagesize)
+    DASSERT(len, "");
+    DASSERT(overhang, "");
+
+    if(!pagesize) {
         pagesize = getpagesize();
+        // Lets see if this ever changes:
+        DASSERT(pagesize == 4*1024, "");
+    }
 
     // This is not thread safe.  We expect that this is only
     // called by the main thread.
@@ -93,6 +117,10 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
 
     snprintf(tmp, TMP_LEN, "/qs_ringbuffer_%" PRIu32 "_%d",
             segmentCount, getpid());
+
+
+    // It's all just a crap ton of system calls that can't fail hence
+    // ASSERT().
 
 
     // Using shm_open(), instead of open(), incurs less overhead in use.
@@ -133,6 +161,12 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
 
 void freeRingBuffer(void *x, size_t len, size_t overhang)
 {
+    DASSERT(x, "");
+    DASSERT(len, "");
+    DASSERT(overhang, "");
+    DASSERT(len%pagesize == 0, "");
+    DASSERT(overhang%pagesize == 0, "");
+
     ASSERT(0 == munmap(x, len), "");
     ASSERT(0 == munmap((uint8_t *) x + len, overhang), "");
 }

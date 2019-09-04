@@ -12,6 +12,7 @@ libquickstream.so_SOURCES :=\
  buffer.c\
  makeRingBuffer.c
 libquickstream.so_LDFLAGS := -lpthread -ldl -lrt
+# need to add something like: -export-symbols-regex '^qs'
 
 # build and install pkgconfig/quickstream.pc
 #

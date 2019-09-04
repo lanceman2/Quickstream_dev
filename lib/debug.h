@@ -77,24 +77,24 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 
 
-extern void _spew(FILE *stream, int errn, const char *pre, const char *file,
+extern void qs_spew(FILE *stream, int errn, const char *pre, const char *file,
         int line, const char *func, bool bufferIt, const char *fmt, ...)
          // check printf format errors at compile time:
         __attribute__ ((format (printf, 8, 9)));
 
-extern void _assertAction(FILE *stream);
+extern void qs_assertAction(FILE *stream);
 
 
 
 #  define _SPEW(stream, errn, bufferIt, pre, fmt, ... )\
-     _spew(stream, errn, pre, __BASE_FILE__, __LINE__,\
+     qs_spew(stream, errn, pre, __BASE_FILE__, __LINE__,\
         __func__, bufferIt, fmt "\n", ##__VA_ARGS__)
 
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
             _SPEW(SPEW_FILE, errno, true, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
-            _assertAction(SPEW_FILE);\
+            qs_assertAction(SPEW_FILE);\
         }\
     }\
     while(0)
@@ -102,7 +102,7 @@ extern void _assertAction(FILE *stream);
 #  define FAIL(fmt, ...) \
     do {\
         _SPEW(SPEW_FILE, errno, true, "FAIL: ", fmt, ##__VA_ARGS__);\
-        _assertAction(SPEW_FILE);\
+        qs_assertAction(SPEW_FILE);\
     } while(0)
 
 

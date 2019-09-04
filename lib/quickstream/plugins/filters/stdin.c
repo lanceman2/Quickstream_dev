@@ -42,7 +42,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
     }
 
     // Output to all output channels 
-    qsPush(len, QS_ALLCHANNELS);
+    qsOutput(len, QS_ALLCHANNELS);
 
     return 0; // success
 }

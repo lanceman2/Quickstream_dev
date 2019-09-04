@@ -220,7 +220,10 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
     return gotOne?0:1;
 }
 
-#define SPEW(fmt, ... ) fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
+// TEMPORARY DEBUGGING // TODELETE
+#define SPEW(fmt, ... )\
+    fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 //#define SPEW(fmt, ... ) /* empty macro */
 
 
@@ -228,7 +231,7 @@ static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
     if(f->numOutputs) {
-        FreeOutputBuffers(f);
+        FreeRingBuffers(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
 #endif
@@ -334,7 +337,7 @@ int qsStreamStop(struct QsStream *s) {
 
 
 static
-void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
+void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(f->numOutputs == 0, "");
     DASSERT(f->u.numInputs == 0, "");
@@ -362,7 +365,8 @@ void ConnectFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     for(uint32_t j=0; j<f->numOutputs;) {
         f->outputs[j].filter = s->to[i];
         if(s->to[i]->numOutputs == 0)
-            ConnectFilterOutputsFrom(s, s->to[i]);
+            // recurse
+            AllocateFilterOutputsFrom(s, s->to[i]);
         ++j;
 
         if(j == f->numOutputs)
@@ -393,8 +397,10 @@ int qsStreamStart(struct QsStream *s) {
     // like: -1, -2, -3, -4, ...
 
     /**********************************************************************
-     *            Stage: simple checks
+     *            Stage: lazy cleanup
      *********************************************************************/
+
+    FreeRunResources(s);
 
 
     /**********************************************************************
@@ -465,9 +471,8 @@ int qsStreamStart(struct QsStream *s) {
      *            Stage: Set up filter connections in the filter structs
      *********************************************************************/
 
-
     for(uint32_t i=0; i<s->numSources; ++i)
-        ConnectFilterOutputsFrom(s, s->sources[i]);
+        AllocateFilterOutputsFrom(s, s->sources[i]);
 
 
     /**********************************************************************
@@ -491,7 +496,7 @@ int qsStreamStart(struct QsStream *s) {
     // the stream:
     for(uint32_t i=0; i<s->numSources; ++i)
         // It easier to now because the f->outputs are more setup now.
-        AllocateOutputBuffers(s->sources[i]);
+        AllocateRingBuffers(s->sources[i]);
 
 
 
@@ -525,10 +530,14 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: cleanup run resources
+     *            Stage: lazy cleanup, later
      *********************************************************************/
 
-    FreeRunResources(s);
+    
+
+    //FreeRunResources(s);
+
+
 
     return 0; // success
 }
