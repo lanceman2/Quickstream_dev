@@ -20,7 +20,6 @@ __thread struct QsFilter *_qsCurrentFilter = 0;
 void _AllocateOutputBuffer(struct QsOutput *o) {
 
     DASSERT(o, "");
-    DASSERT(o->buffer == 0, "");
 
 
 

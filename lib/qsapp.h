@@ -101,37 +101,71 @@ struct QsFilter {
 };
 
 
+// Given the parameters in these data structures (QsOutput and QsBuffer)
+// the stream running code should be able to determine the size needed for
+// the associated circular buffers.
+
+
 struct QsOutput {
 
-    // The "reading filter" that sees this output as input.
+    // The "reading filter" (or access filter) that sees this output as
+    // input.
     struct QsFilter *filter;
 
-    // This may point to the same (shared) buffer in other outputs.
-    struct QsBuffer *buffer;
+    // Here's where it gets weird: We need a buffer and a write pointer,
+    // where the buffer can be shared between filters.  That's because we
+    // want to be able to have pass-through buffers that use one circular
+    // buffer that is passed through filters (and maybe changing the
+    // values in the memory) without a memory copy.
+    struct QsWriter *writer;
 
-    // This is where the filter that is reading the buffer last
-    // read from in the buffer memory.
-    uint8_t *readPtr;
+    // This is where the filter that is reading (and maybe writing) the
+    // buffer last access in the buffer memory.
+    //
+    // TODO: in the case of a pass-through buffer this should also be the
+    // same as a writePtr in a struct QsWriter.  So that sucks having to
+    // keep this pointer and the QsWriter::writePtr with the same value.
+    uint8_t *accessPtr;
 
     // Sizes in bytes:
-    size_t maxReadThreshold, // This reading filter promises to read
-           // any data at or above this threshold.  So we will keep
-           // calling the filter input() function until the amount that
-           // can be read is less than this threshold.
-           minReadThreshold; // This reading filter will not read
-           // any data until this threshold is meant.  So we will not call
-           // the filter input() function until this threshold is met.
+    size_t
+        maxReadThreshold, // This reading filter promises to read
+        // any data at or above this threshold; so we will keep calling
+        // the filter input() function until the amount that can be read
+        // is less than this threshold.
+
+        minReadThreshold, // This reading filter will not read
+        // any data until this threshold is met; so we will not call the
+        // filter input() function until this threshold is met.
+
+        maxReadSize; // This reading filter will not read more than
+        // this, if this is set.  The filter sets this so that the stream
+        // running does not call input() with more data than this.  This
+        // is a convenience, so the filter does not need to tell the
+        // stream running to not advance the buffer so far at every
+        // input() call.
+};
+
+
+struct QsWriter {
+
+    // QsBuffer may be shared by other QsWriter's, if the buffer is shared
+    // it's a pass-through buffer, and it should be also written to in an
+    // neighboring down-stream filter.
+    struct QsBuffer *buffer;
+
+    // This is the last place a writing filter wrote to in this memory.
+    uint8_t *writePtr;
 };
 
 
 struct QsBuffer {
 
-    uint8_t *mem;
+    uint8_t *mem; // Pointer to start of mmap()ed memory.
 
+    // These two parameters make it a circular buffer.  See
+    // makeRingBuffer.c.
     size_t mapLength, overhangLength;
-
-    // This is the last place a writing filter wrote to in this memory.
-    uint8_t *writePtr;
 };
 
 

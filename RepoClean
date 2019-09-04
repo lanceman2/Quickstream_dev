@@ -48,7 +48,7 @@ cd $(dirname ${BASH_SOURCE[0]})
 [ -n "$1" ] && rm -f quickbuild.make package.make
 
 
-for f in NEWS README AUTHORS ChangeLog COPYING ; do
+for f in NEWS README AUTHORS ChangeLog ; do
     if [ -e $f ] && [ ! -s $f ] ; then
         rm $f
     fi
@@ -59,6 +59,7 @@ docdir=share/doc/quickstream
 # Remove all the GNU autotools related generated files
 #
 rm -f\
+ COPYING\
  INSTALL\
  ar-lib\
  aclocal.m4\
