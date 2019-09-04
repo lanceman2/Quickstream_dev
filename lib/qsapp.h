@@ -131,7 +131,7 @@ struct QsOutput {  // reader
     // and shared between outputs in different adjacent filters.
     //
     // That's because we want to be able to have pass-through buffers that
-    // use one circular buffer that is passed through filters (and maybe
+    // use one ring buffer that is passed through filters (and maybe
     // changing the values in the memory) without a memory copy.
     //
     // The writer for this particular output.  This writer can be shared
@@ -142,7 +142,7 @@ struct QsOutput {  // reader
 
     // read filter access pointer to the circular buffer.
     //
-    uint8_t *accessPtr;
+    uint8_t *readPtr;
 
 
     // All these limits may be set in the reading filters start()
