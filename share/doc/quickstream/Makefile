@@ -62,8 +62,11 @@ endif
 
 
 Doxyfile: Doxyfile.in
-	@echo "# This is a generated file" > $@
-	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@
+	@echo "# This is a generated file" > $@.tmp
+	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@.tmp
+	$(topdir)/RELEASE.bash $@.tmp > $@
+	rm $@.tmp
+
 
 $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
@@ -100,7 +103,7 @@ show display: $(DOT)
 
 
 clean:
-	rm -f $(IMAGES) Doxyfile
+	rm -f $(IMAGES) Doxyfile Doxyfile.tmp
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search
