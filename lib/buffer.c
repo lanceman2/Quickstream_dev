@@ -15,7 +15,6 @@ __thread struct QsFilter *_qsCurrentFilter = 0;
 
 
 
-
 static inline
 void _AllocateRingBuffer(struct QsOutput *o) {
 
@@ -27,11 +26,16 @@ void _AllocateRingBuffer(struct QsOutput *o) {
 
 
 // Here we are setting up the memory conveyor belt that connects filters
-// in the stream.  Note this recurses.
+// in the stream.  This function can call itself.
 //
 void AllocateRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
+
+    if(f->numOutputs == 0 || f->outputs[0].readPtr)
+        // It should be that all the outputs in this filter
+        // are already setup.
+        return;
 
     for(uint32_t i=0; i<f->numOutputs; ++i)
         _AllocateRingBuffer(f->outputs+i);
@@ -39,8 +43,6 @@ void AllocateRingBuffers(struct QsFilter *f) {
     // Allocate for all children.
     for(uint32_t i=0; i<f->numOutputs; ++i)
         AllocateRingBuffers(f->outputs[i].filter);
-
-
 }
 
 
@@ -49,6 +51,7 @@ void AllocateRingBuffers(struct QsFilter *f) {
 void FreeRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
+    DASSERT(f->numOutputs, "");
 
 
 

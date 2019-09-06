@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 /** \file
  *
@@ -47,25 +48,22 @@
 
 /** Read the last quickstream error string
  *
- * The user must free() any non-zero returned pointer.  This string is
- * allocated in order to make this thread safe.
- *
  * Calling this function also clears the current error.  This interface is
  * defective, in that new errors in other threads may overwrite the
  * internal error string before it can be read with this, or by any
  * other thread.  Per-thread error strings create other issues.
  *
  * To clear the current error, if there is one or not, call
- * free(qsError()).  This can be called without checking if there is an
- * error or not.  free(0) is valid code.  See `man 3 free`.
+ * qsError().  This can be called without checking if there is an
+ * error or not.
  *
- * \return 0 or a malloc() allocated pointer to a string that the user
- * must free().
+ * \return a pointer to a string, or 0 if there is no error.  The
+ * memory for the string is managed by the qsError() function.
  *
  *  \todo add error return int values that correspond to strings.
  */
 extern
-char *qsError(void);
+const char *qsError(void);
 
 
 /** Create the highest level quickstream construct,
@@ -125,6 +123,21 @@ int qsFilterUnload(struct QsFilter *filter);
 
 extern
 struct QsStream *qsAppStreamCreate(struct QsApp *app);
+
+
+/** allow or disallow loops in the stream\
+ *
+ * By default the stream does not allow loops in the filter stream graph.
+ *
+ * \para stream is the stream that we are allowing or disallowing loops
+ * in.
+ *
+ * \para doAllow Pass the doAllow value of true to set allowing loops in
+ * the stream graph.  Pass in doAllow value of false to not allow loops in the
+ * stream graph.
+ */
+extern
+void qsStreamAllowLoops(struct QsStream *stream, bool doAllow);
 
 extern
 int qsStreamDestroy(struct QsStream *stream);

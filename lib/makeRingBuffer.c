@@ -65,9 +65,10 @@
 // munmap() system calls.  Or we could put the list of circular buffers in
 // an ordered array so we can have O(log) speed search.  Or maybe just not
 // sweat it because the kernel will be caching these pages for us anyway,
-// so the cost gets smaller when we cycle the starting and stopping.  The
-// most expensive startup cost would be fork() and pthread_create().  Do
-// we need process and thread pools?
+// so the cost gets smaller when we cycle the starting and stopping.
+//
+// The most expensive stream tartup cost will be fork() and
+// pthread_create().  Do we need process and thread pools?
 //
 
 

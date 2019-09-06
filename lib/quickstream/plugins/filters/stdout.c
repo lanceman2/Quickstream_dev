@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "../../../../include/qsfilter.h"
 #include "../../../../lib/debug.h"
 
@@ -12,7 +10,8 @@ void help(FILE *f) {
 }
 
 
-int input(void *buffer, size_t len, uint32_t inputChannelNum) {
+int input(void *buffer, size_t len, uint32_t inputChannelNum,
+        uint32_t flowState) {
 
     DSPEW("Count=%d", count++);
 

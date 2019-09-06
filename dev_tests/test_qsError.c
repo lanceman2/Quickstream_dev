@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -43,10 +42,8 @@ int main(void) {
         return 1;
     }
 
-    // First clear the Qs error to test this:
-    free(qsError());
     // First clear the Qs error to test this again:
-    free(qsError());
+    qsError();
 
     for(int i=0; i<numFilters-1; ++i)
         if(qsStreamConnectFilters(stream, f[i], f[i+1])) {
@@ -54,12 +51,12 @@ int main(void) {
             return 1;
         }
 
+   // Clear the Qs error to test this again:
+    qsError();
 
     // This should cause a recoverable error.
     if(qsStreamConnectFilters(stream, f[0], f[0])) {
-        char *err = qsError();
-        printf("\n\nqsError()=%s\n\n", err);
-        free(err);
+        printf("\n\nqsError()=%s\n\n", qsError());
     }
 
     printf("DONE\n");

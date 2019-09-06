@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
@@ -11,12 +10,22 @@
 #include "./debug.h"
 
 
+
+// TEMPORARY DEBUGGING // TODELETE
+#define SPEW(fmt, ... )\
+    fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+//#define SPEW(fmt, ... ) /* empty macro */
+
+
+
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
     
     DASSERT(app, "");
 
     struct QsStream *s = calloc(1, sizeof(*s));
     ASSERT(s, "calloc(1, %zu) failed", sizeof(*s));
+
+    s->flags = _QS_STREAM_DEFAULTFLAGS;
 
     // Add this stream to the end of the app list
     //
@@ -31,6 +40,17 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     return s;
 }
+
+void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
+
+    DASSERT(s, "");
+
+    if(doAllow)
+        s->flags |= _QS_STREAM_ALLOWLOOPS;
+    else
+        s->flags &= ~_QS_STREAM_ALLOWLOOPS;
+}
+
 
 static inline void CleanupStream(struct QsStream *s) {
 
@@ -221,12 +241,6 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 }
 
 
-// TEMPORARY DEBUGGING // TODELETE
-#define SPEW(fmt, ... )\
-    fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-//#define SPEW(fmt, ... ) /* empty macro */
-
-
 static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
@@ -339,6 +353,8 @@ int qsStreamStop(struct QsStream *s) {
 static
 void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
+    // This will work if there are loops in the graph.
+
     DASSERT(f->numOutputs == 0, "");
     DASSERT(f->u.numInputs == 0, "");
 
@@ -351,7 +367,10 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
             ++f->u.numInputs;
     }
 
-    if(f->numOutputs == 0) return;
+    if(f->numOutputs == 0 || f->outputs)
+        // There are no outputs or the outputs have been already
+        // allocated.
+        return;
 
     // Make the output array
     DASSERT(!f->outputs, "");
@@ -359,13 +378,22 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     ASSERT(f->outputs, "calloc(1,%zu) failed",
             sizeof(*f->outputs)*f->numOutputs);
 
+
     for(i=0; s->from[i] != f; ++i);
     // s->from[i] == f
 
     for(uint32_t j=0; j<f->numOutputs;) {
+
         f->outputs[j].filter = s->to[i];
+
+        // Set some possibly non-zero default values:
+        f->outputs[j].maxReadThreshold = _QS_DEFAULT_maxReadThreshold;
+        f->outputs[j].minReadThreshold = _QS_DEFAULT_minReadThreshold;
+        f->outputs[j].maxReadSize = _QS_DEFAULT_maxReadSize;
+        // All other values in the QsOutput will start at 0.
+
         if(s->to[i]->numOutputs == 0)
-            // recurse
+            // recurse.  Allocate children.
             AllocateFilterOutputsFrom(s, s->to[i]);
         ++j;
 
@@ -451,20 +479,23 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: Check flows for loops, which we can't have
+     *            Stage: Check flows for loops, if we can't have them
      *********************************************************************/
 
-    for(uint32_t i=0; i<s->numSources; ++i) {
-        if(CountFilterPath(s, s->sources[i], 0, s->numConnections) >
-                s->numConnections) {
-            ERROR("a stream has loops in it");
-#ifdef DEBUG
-            qsAppDisplayFlowImage(s->app, true);
-#endif
-            FreeRunResources(s);
-            return -2; // error we have loops
+    if(!(s->flags && _QS_STREAM_ALLOWLOOPS))
+        // In this case, we do not allow loops in the filter graph.
+        for(uint32_t i=0; i<s->numSources; ++i) {
+            if(CountFilterPath(s, s->sources[i], 0, s->numConnections) >
+                    s->numConnections) {
+                ERROR("a stream has loops in it consider"
+                        " calling: qsStreamAllowLoops()");
+//#ifdef DEBUG
+                qsAppDisplayFlowImage(s->app, true);
+//#endif
+                FreeRunResources(s);
+                return -2; // error we have loops
+            }
         }
-    }
 
 
     /**********************************************************************
@@ -499,7 +530,6 @@ int qsStreamStart(struct QsStream *s) {
         AllocateRingBuffers(s->sources[i]);
 
 
-
     /**********************************************************************
      *            Stage: flow
      *********************************************************************/
@@ -530,10 +560,8 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: lazy cleanup, later
+     *            Stage: cleanup later
      *********************************************************************/
-
-    
 
     //FreeRunResources(s);
 

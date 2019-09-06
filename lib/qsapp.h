@@ -40,9 +40,22 @@ struct QsProcess {
 };
 
 
+
+// bit Flags for the stream
+//
+#define _QS_STREAM_ALLOWLOOPS     (01)
+
+#define _QS_STREAM_DEFAULTFLAGS   (0)
+
+
+
 struct QsStream {
 
     struct QsApp *app;
+
+    uint32_t flags; // bit flags that configure the stream
+    // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
+    // in the graph.
 
     uint32_t numThreads;       // length of threads
     struct QsThread **threads; // array of threads
@@ -120,6 +133,11 @@ struct QsFilter {
 // ways.
 
 
+#define _QS_DEFAULT_maxReadThreshold  ((size_t) 1024)
+#define _QS_DEFAULT_minReadThreshold  ((size_t) 1)
+#define _QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
+
+
 struct QsOutput {  // reader
 
     // The "reading filter" (or access filter) that sees this output as
@@ -163,7 +181,7 @@ struct QsOutput {  // reader
         // running does not call input() with more data than this.  This
         // is a convenience, so the filter does not need to tell the
         // stream running to not advance the buffer so far at every
-        // input() call.
+        // input() call had the input length exceeded this number.
 };
 
 
@@ -193,7 +211,6 @@ struct QsBuffer {
     // makeRingBuffer.c.
     size_t mapLength, overhangLength;
 };
-
 
 
 // The current filter that is having its' input() called in this thread.

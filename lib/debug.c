@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -20,24 +19,37 @@
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char *qsErrorBuffer = 0;
 
+#define BUFLEN  1024
 
 //
 // The non-zero return value must be free()ed by the API user.
 //
 // API interface.  Thread safe.
 //
-char *qsError(void) {
+const char *qsError(void) {
 
-    char *ret = 0;
+    // Adds a pointer for every thread created; is better than adding the
+    // whole string of memory.
+    static __thread char *buffer = 0;
+
+    if(buffer) {
+        // cleanup from the last call from this thread.
+        free(buffer);
+        buffer = 0;
+    }
+
     // If this pthread_mutex_lock() fails we can't do much about it
     // because we are in the code that is our error handling code.
     pthread_mutex_lock(&mutex);
     if(qsErrorBuffer) {
-        ret = qsErrorBuffer;
+        // copy the error string
+        buffer = strdup(qsErrorBuffer);
+        // clear the error string
         qsErrorBuffer = 0;
     }
     pthread_mutex_unlock(&mutex);
-    return ret;
+    // return the copy if there was one.
+    return (const char *) buffer;
 }
 
 
@@ -47,7 +59,6 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
 {
     // We try to buffer this so that prints do not get intermixed with
     // other prints.
-#define BUFLEN  1024
     char buffer[BUFLEN];
     int len;
 

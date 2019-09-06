@@ -95,9 +95,8 @@ int main(void) {
     qsAppDisplayFlowImage(app, false);
 
     if(qsStreamStart(stream)) {
-        char *err = qsError();
+        const char *err = qsError();
         fprintf(stderr, "\"\"qsStreamStart() failed: %s\"\"\n", err);
-        free(err);
         qsAppDestroy(app);
         return 1;
     }

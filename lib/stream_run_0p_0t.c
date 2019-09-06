@@ -11,7 +11,7 @@
 
 
 
-// Run when user set no threads and no processes
+// Run when user set 0 threads and 0 processes
 //
 // In this case each source should be calling something like a blocking
 // read, otherwise if it is not a blocking read than this will use a lot

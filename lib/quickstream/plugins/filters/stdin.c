@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include "../../../../include/qsfilter.h"
 #include "../../../../lib/debug.h"
 
@@ -27,7 +25,8 @@ int destroy(void) {
     return 0; // success
 }
 
-int input(void *buffer, size_t len, uint32_t inputChannelNum) {
+int input(void *buffer, size_t len, uint32_t inputChannelNum,
+        uint32_t flowState) {
 
     DSPEW("count=%d", count++);
 
@@ -37,11 +36,16 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum) {
     // TODO: handle the stream closing.
 
     if(len != fread(buffer, 1, len, stdin)) {
+
+        if(feof(stdin)) { ; }
+
         ERROR("fread(,,,stdin) failed");
         return -1; // error
     }
 
-    // Output to all output channels 
+    // Output to all output channels
+    //
+    // This is the default after return:
     qsOutput(len, QS_ALLCHANNELS);
 
     return 0; // success
