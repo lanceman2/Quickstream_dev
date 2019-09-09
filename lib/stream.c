@@ -18,6 +18,19 @@
 
 
 
+// The filter that is having start() called.
+// There is only one thread when start() is called.
+//
+struct QsFilter *_qsStartFilter = 0;
+
+
+// The current filter that is having it's input() called in this thread.
+//
+__thread struct QsFilter *_qsInputFilter = 0;
+
+
+
+
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
     
     DASSERT(app, "");
@@ -511,10 +524,37 @@ int qsStreamStart(struct QsStream *s) {
      *********************************************************************/
 
     // By using the app list of filters we do not call any filter start()
-    // more than once.
+    // more than once, but is the order in which we call them okay?
+    //
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
-        if(f->stream == s && f->start)
-            f->start(f->u.numInputs, f->numOutputs);
+        if(f->stream == s && f->start) {
+            // We mark which filter we are calling the start() for so that
+            // if the filter start() calls any filter API function to get
+            // resources we know what filter these resources belong to.
+            _qsStartFilter = f;
+            // Call a filter start() function:
+            int ret = f->start(f->u.numInputs, f->numOutputs);
+            _qsStartFilter = 0;
+            if(ret) {
+                // TODO: Should we call filter stop() functions?
+                //
+                ERROR("filter \"%s\" start()=%d failed", f->name, ret);
+                return -3;
+            }
+        }
+
+
+    /**********************************************************************
+     *           Stage: Add default output buffer configuration
+     *********************************************************************/
+
+    for(uint32_t i=0; i<s->numSources; ++i) {
+        // It easier to now because the f->outputs are more setup now.
+        AllocateRingBuffers(s->sources[i]);
+
+    }
+
+
 
 
     /**********************************************************************

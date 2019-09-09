@@ -184,12 +184,16 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
 
 /** get a buffer write pointer
  *
- * qsBufferGet() may only be called in the filters input() function.  If a
+ * qsGetBuffer() may only be called in the filters input() function.  If a
  * given filter at a given \ref input() call will generate output than
- * qsBufferGet() must be called.
+ * qsGetBuffer() must be called.
+ *
+ * If output is to be generated for this output channel number than
+ * qsOutput() must be called some time after this call to qsGetBuffer().
  *
  * If qsGetBuffer() is not called in a given filter input() callback
- * function there will be no output from the filter.
+ * function there will be no output from the filter in the given input()
+ * call.
  *
  * \para outputChannelNum the associated output channel.  If the output
  * channel is sharing a buffer between other output channels from this
@@ -202,13 +206,9 @@ extern
 void *qsGetBuffer(uint32_t outputChannelNum);
 
 
-/** explicitly trigger the call the listed output filters input() function
+/** trigger the call the listed output filters input() function
  *
- * qsBufferGet() must be called before qsOutput().   If qsOutput() is not
- * called after qsBufferGet(), in a given input() call, than the effect
- * will be that qsOutput() is called implicitly after the filters input()
- * function returns, and the value for len with be the same value that was
- * passed to qsBufferGet().
+ * qsGetBuffer() must be called before qsOutput().
  *
  * \para outputChannelNum is the associated output channel.  If the buffer
  * of this output channel is shared between other output channels than
@@ -311,7 +311,16 @@ extern
 void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
 
 
+#define QS_ARRAYTERM    ((uint32_t) -1)
+
+
 /** Create an output buffer that is associated with the listed channels
+ *
+ * If there is more than one output channel number given than the ring
+ * buffer will be shared between the output channels, and the data read by
+ * all the receiving filters will be the same.
+ *
+ * qsBufferCreate() can only be called in the filter's start() function.
  * 
  * The total amount of memory allocated for this ring buffer depends on
  * maxWrite, and other parameters set by other filters that may be
@@ -322,7 +331,7 @@ void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
  * memory may be corrupted.
  *
  * \para outputChannelNums is a pointer to an array of output channel
- * numbers.
+ * numbers which is terminated with a value QS_ARRAYTERM.
  */
 extern
 void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);

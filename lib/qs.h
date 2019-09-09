@@ -148,14 +148,17 @@ struct QsOutput {  // reader
     // Here's where it gets weird: We need a buffer and a write pointer,
     // where the buffer may be shared between outputs in the same filter
     // and shared between outputs in different adjacent filters.
-    //
-    // That's because we want to be able to have pass-through buffers that
-    // use one ring buffer that is passed through filters (and maybe
-    // changing the values in the memory) without a memory copy.
+    // So we may have more than one output point to a writer.
     //
     // The writer for this particular output.  This writer can be shared
     // between many outputs in one filter, hence this is just a pointer
-    // and a single writer is used for more than one output.
+    // and a single writer that may be used for more than one output.
+    //
+    // TODO: "passthrough buffers" in which the buffer can be shared
+    // for multiple filter levels, that is a filter can read the buffer
+    // and then treat it like it is the writer to the next filter.
+    // The passing filter can't change the size of the buffer, but it
+    // can over-write it's content if it's careful.
     //
     struct QsWriter *writer;
 
@@ -203,7 +206,7 @@ struct QsWriter {
 
 struct QsBuffer {
 
-    // They can be many outputs and filters accessing this memory, unlike
+    // Their can be many outputs and filters accessing this memory, unlike
     // GNU radio.
 
     uint8_t *mem; // Pointer to start of mmap()ed memory.
@@ -216,7 +219,14 @@ struct QsBuffer {
 
 // The current filter that is having its' input() called in this thread.
 extern
-__thread struct QsFilter *_qsCurrentFilter;
+__thread struct QsFilter *_qsInputFilter;
+
+
+// The filter that is having start() called.
+// There is only one thread when start() is called.
+extern
+struct QsFilter *_qsStartFilter;
+
 
 
 
