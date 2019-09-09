@@ -6,7 +6,7 @@
 #include "../include/qsapp.h"
 
 // Private interfaces.
-#include "./qsapp.h"
+#include "./qs.h"
 #include "./debug.h"
 
 

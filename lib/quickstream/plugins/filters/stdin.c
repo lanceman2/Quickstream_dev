@@ -13,9 +13,11 @@ void help(FILE *f) {
         "This filter will read stdin and write it to all outputs.\n");
 }
 
+
 int construct(int argc, const char **argv) {
 
     DSPEW("count=%d", count++);
+
     return 0; // success
 }
 
@@ -31,7 +33,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     DSPEW("count=%d", count++);
 
     // For output buffering.
-    buffer = qsBufferGet(len=1024, QS_ALLCHANNELS);
+    buffer = qsGetBuffer(0);
+    len = QS_DEFAULTWRITELENGTH;
 
     // TODO: handle the stream closing.
 
@@ -46,7 +49,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     // Output to all output channels
     //
     // This is the default after return:
-    qsOutput(len, QS_ALLCHANNELS);
+    qsOutput(len, 0);
 
     return 0; // success
 }

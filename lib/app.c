@@ -18,7 +18,7 @@
 
 
 // Private interfaces.
-#include "./qsapp.h"
+#include "./qs.h"
 #include "./debug.h"
 #include "./filterList.h"
 

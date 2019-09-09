@@ -1,7 +1,8 @@
 /* This is a private header file that is only used in the quickstream code
  * internal to libquickstream.so.  The libquickstream.so user, in general,
- * should not include this header file.  Hence this file is not installed.
- * */
+ * should not include this header file.  Hence this file is not installed
+ * and is kept with the lib/libquickstream.so source code.
+ */
 
 // This file is the guts of quickstream libquickstream API.  By
 // understanding each data member in these data structures you can get a

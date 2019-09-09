@@ -5,8 +5,7 @@
 #include <inttypes.h>
 #include <sys/mman.h>
 
-#include "./qsfilter.h"
-#include "./qsapp.h"
+#include "./qs.h"
 #include "./debug.h"
 
 

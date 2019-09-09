@@ -1,6 +1,7 @@
 #include <string.h>
+#include <inttypes.h>
 
-#include "./qsfilter.h"
+#include "./qs.h"
 #include "./debug.h"
 
 

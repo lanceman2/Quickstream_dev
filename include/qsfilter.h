@@ -12,10 +12,21 @@
 //
 
 
-#define QS_ALLCHANNELS   ((uint32_t) -1)
-#define QS_ALLCHANNELS   ((uint32_t) -1)
+/** A special value to mean an array of all channel numbers.
+ *
+ * The filter writer does not need to figure out how many channels there
+ * are if they are just treating all the channels the same.  They can just
+ * use this macro to mean all channels.
+ *
+ * This macro may be used in qsSetMaxReadThreshold(),
+ * qsSetMinReadThreshold(), qsSetMaxReadSize(), and qsBufferCreate().
+ */
+#define QS_ALLCHANNELS   ((uint32_t *)(-1))
 
-#define QS_NONE          ((size_t) -1)
+
+/** A special value or length to pass to qsOutput() to cause no output.
+ */
+#define QS_NONE          ((size_t) -1) // not 0
 
 
 
@@ -29,8 +40,13 @@
  * plugins may provide are: construct(), destroy(), start(), and stop().
  *
  * The libquickstream library provides utility functions that the filter
- * module plugins may use.
+ * module plugins may use are declared in this header file.
  *
+ * Lock-less shared ring buffers are used to pass data between filter
+ * input() (or work) functions.  The size of the ring buffers depends on
+ * parameters set in both the sending and the receiving filters.  These
+ * buffer parameters may optionally be set in the filter start()
+ * functions.
  */
 
 
@@ -155,26 +171,35 @@ int start(uint32_t numInChannels, uint32_t numOutChannels);
 int stop(uint32_t numInChannels, uint32_t numOutChannels);
 
 
+/** get the default maximum length in bytes that may be written
+ *
+ * A filter that has output may set the maximum length in bytes that may
+ * be written for a given qsOutput() call for a given output channel
+ * number.  If the value of the maximum length in bytes that may be
+ * written was not set in the filter start() function it's value will be
+ * QS_DEFAULTWRITELENGTH.
+ */
+#define QS_DEFAULTWRITELENGTH  ((size_t) 1024)
+
+
 /** get a buffer write pointer
  *
  * qsBufferGet() may only be called in the filters input() function.  If a
- * given filter at a given input() call will generate output than
- * qsBufferGet() must be called.  If qsBufferGet() must be called to have
- * output.
+ * given filter at a given \ref input() call will generate output than
+ * qsBufferGet() must be called.
  *
- * \para len is the length of the writable portion of buffer memory.  len
- * may not exceed the maximum write length that for the given output
- * channel number.
+ * If qsGetBuffer() is not called in a given filter input() callback
+ * function there will be no output from the filter.
  *
  * \para outputChannelNum the associated output channel.  If the output
  * channel is sharing a buffer between other output channels from this
- * filter then value of outputChannelNum may be any of the output channel
- * numbers that are in the output channel buffer share group.
+ * filter then the value of outputChannelNum may be any of the output
+ * channel numbers that are in the output channel shared buffer group.
  *
  * \return a pointer to the first writable byte in the buffer.
  */
 extern
-void *qsBufferGet(size_t len, uint32_t outputChannelNum);
+void *qsGetBuffer(uint32_t outputChannelNum);
 
 
 /** explicitly trigger the call the listed output filters input() function
@@ -189,10 +214,13 @@ void *qsBufferGet(size_t len, uint32_t outputChannelNum);
  * of this output channel is shared between other output channels than
  * all the sharing output channels will also be used.
  *
- * \para len the length in bytes to advance the output buffer.  len
- * may be 0 to cause the corresponding output filters input() functions
- * to be called with an input length of 0.  Setting len to QS_NONE to stop
- * the corresponding output filters input() functions from being called.
+ * \para len the length in bytes to advance the output buffer.  len may be
+ * 0 to cause the corresponding output filters input() functions to be
+ * called with an input length of 0.  Setting len to QS_NONE to stop the
+ * corresponding output filters input() functions from being called.
+ * Passing a len value of 0 will still trigger a call the listed output
+ * filters input() function with an input length of 0, like it was a
+ * source filter.
  */
 extern
 void qsOutput(size_t len, uint32_t outputChannelNum);
@@ -211,26 +239,101 @@ void qsOutput(size_t len, uint32_t outputChannelNum);
  * This has no effect on output from the current filter.  This only
  * effects the current input channel number that passed to input();
  *
+ * It may be that you need a filter to read more than one input buffer
+ * (input channel) in the same input() call.  You can do that just by
+ * saving the buffer pointer and length of one of the input channels,
+ * calling qsAdvanceInput(0, N) which keeps the buffer for the channel
+ * accessible, and when input() is called again for another channel, the
+ * filter will now have access to both channel's buffers.
+ *
  * \para len advance the current input buffer len bytes.  len can be less
  * than or equal to the length in bytes that was passed to the input()
  * call.
- *
  */
 extern
-void qsAdvanceInput(size_t len);
+void qsAdvanceInput(size_t len, uint32_t inputChannelNum);
+
+
+/** Set the maximum buffer read threshold
+ *
+ * qsSetMaxReadThreshold() may only be called in filters start() function.
+ *
+ * \para len This reading filter promises to read any data at or above
+ * this threshold; so we will keep calling the filter input() function
+ * until the amount that can be read is less than this threshold.
+ *
+ * \para inputChannelNums a list of effected input channel numbers as an
+ * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
+ * the number of channels.
+ */
+extern
+void qsSetMaxReadThreshold(size_t len, uint32_t *inputChannelNums);
+
+
+/** Set the minimum buffer read threshold
+ *
+ * qsSetMinReadThreshold() may only be called in filters start() function.
+ *
+ * \para This reading filter will not read any data until this threshold,
+ * len bytes, is met; so we will not call the filter input() function
+ * until this threshold is met.
+ *
+ * \para inputChannelNums a list of effected input channel numbers as an
+ * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
+ * the number of channels.
+ */
+extern
+void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
+
+
+/** Set the maximum buffer read size passed to input()
+ *
+ * Filters may may request that an input channel not input past a set
+ * amount.  This is not required to be set because an input channels
+ * buffer advancement may be set to any amount that is less than of equal
+ * to the amount sent in the call to the corresponding filters input()
+ * call via the qsAdvanceInput() function.
+ *
+ * qsSetMaxReadSize() may only be called in filters start() function.
+ *
+ * \para len This reading filter will not read more than len bytes, if
+ * this is set.  The filter sets this so that the stream running does not
+ * call input() with more data than this.  This is a convenience, so the
+ * filter does not need to tell the stream running to not advance the
+ * buffer so far at every input() call had the input length exceeded this
+ * number.
+ *
+ * \para inputChannelNums a list of effected input channel numbers as an
+ * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
+ * the number of channels.
+ */ 
+extern
+void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
 
 
 /** Create an output buffer that is associated with the listed channels
+ * 
+ * The total amount of memory allocated for this ring buffer depends on
+ * maxWrite, and other parameters set by other filters that may be
+ * accessing this buffer down stream.
+ *
+ * \para maxWriteLen this filter promises to write at most maxWriteLen
+ * bytes to this output channel.  If the filter writes more than that
+ * memory may be corrupted.
  *
  * \para outputChannelNums is a pointer to an array of output channel
  * numbers.
  */
 extern
-void qsBufferCreate(uint32_t *outputChannelNums);
+void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
 
 
 
 /** Initialize simple help and argument parsing object
+ *
+ * A very simple command line option parser which parses "--" prefixed
+ * command line options.  The --help option is built in and calls the
+ * help() function that was set by the filter.
  *
  * \para opts a pointer to a stack or heap allocated struct QsOpts.
  * This memory is used for state in the object, but the user manages this
@@ -251,6 +354,12 @@ void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
 /** Initialize simple help and argument parsing object
  *
  * \para opts should have been previously passed to qsOptInit().
+ * \para optName is the name of the argument that was passed with the form
+ * --name VAL.  optName should not start with "--", that gets added.
+ *  \para defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ *  \return the float value that the last option with this name was given
+ *  in the command line, or defaultVal if this option was not given.
  */
 extern
 float qsOptsGetFloat(struct QsOpts *opts, const char *optName,
@@ -300,7 +409,7 @@ int qsOptsGetInt(struct QsOpts *opts, const char *optName,
  *
  *  \see input()
  */
-static inline bool qsFlowIsLastPackage(uint32_t state) {
+static inline bool qsIsLastPackage(uint32_t state) {
     return _QS_LASTPACKAGE && state;
 };
 

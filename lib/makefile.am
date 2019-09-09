@@ -15,7 +15,7 @@ libquickstream_la_SOURCES =\
  debug.h\
  filterList.h\
  GetPath.h\
- qsapp.h
+ qs.h
 libquickstream_la_LDFLAGS = -lpthread -ldl -lrt -export-symbols-regex '^qs'
 
 pkgconfigdir   = $(libdir)/pkgconfig
