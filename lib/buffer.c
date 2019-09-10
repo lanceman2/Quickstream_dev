@@ -80,7 +80,8 @@ static inline void _qsBufferCreate(struct QsFilter *f, size_t maxWriteLen,
             outputChannelNums[i] = i;
         // QS_ARRAYTERM  (-1) terminated array.
         outputChannelNums[i] = QS_ARRAYTERM;
-    }
+    } else if(*outputChannelNums == QS_ARRAYTERM)
+        return;
 
     uint32_t i = 0;
     uint32_t j = outputChannelNums[0];
@@ -91,9 +92,13 @@ static inline void _qsBufferCreate(struct QsFilter *f, size_t maxWriteLen,
     DASSERT(output->writer == 0, "");
 
     // We allocate one writer for all output channels.
-    struct QsWriter *writer = calloc(1, sizeof(*output->writer));
+    struct QsWriter *writer = calloc(1, sizeof(*writer));
     ASSERT(writer, "calloc(1,%zu) failed", sizeof(*output->writer));
     output->writer = writer;
+    writer->maxWrite = maxWriteLen;
+    struct QsBuffer *buffer = calloc(1, sizeof(*buffer));
+    ASSERT(buffer, "calloc(1,%zu) failed", sizeof(*buffer)); 
+    writer->buffer = buffer;
 
     // Calculate the size of the ring buffer based on the reading filter
     // promises in the largest of the outputs maxReadThreshold.
@@ -118,11 +123,28 @@ static inline void _qsBufferCreate(struct QsFilter *f, size_t maxWriteLen,
 
         // Goto next channel number.
         j = outputChannelNums[++i];
+
+        DASSERT(i>2*1024, "too many output channels listed");
     }
 
     // Now maxReadThreshold is the maximum of all outputs.
+    buffer->overhangLength = maxReadThreshold;
+    if(buffer->overhangLength < writer->maxWrite)
+        buffer->overhangLength = writer->maxWrite;
+    buffer->mapLength = 2*buffer->overhangLength;
 
+    // This will make mapLength, and overhang at multiples of a pagesize
+    buffer->mem = makeRingBuffer(&buffer->mapLength, &buffer->overhangLength);
 
+    writer->writePtr = buffer->mem;
+
+    // We need to set the readPtr for all outputs
+    j = 0;
+    for(i=0; j != QS_ARRAYTERM; ++i) {
+        j = outputChannelNums[i];
+        // Read starts at the starting memory address.
+        f->outputs[j].readPtr = buffer->mem;
+    }
 }
 
 
