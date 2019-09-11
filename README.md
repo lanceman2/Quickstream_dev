@@ -244,9 +244,6 @@ buffers, it may modify an input buffer and send it through to an output
 without copying any data were by eliminating an expensive copy
 operation.
 
-quickstream inter-filter shared buffers are circular and lock free.
-This imposes some
-
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
 pattern more so than a particular software development frame-work; as
