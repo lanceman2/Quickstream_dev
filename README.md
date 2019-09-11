@@ -18,7 +18,8 @@ then it's previous generation.
 
 It's not functional yet.  Currently it's got most of directory structure
 laid out, build system, and components figured out.  The thing of interest
-now for you may be this README.md file.
+now for you may be this README.md file.  Current development is on Debian
+9 and Ubuntu 18.04 systems.
 
 
 ## Building and Installing with GNU Autotools
