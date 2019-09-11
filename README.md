@@ -504,7 +504,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
     the same way as in the installed files as with the files in the
     source,
   - we use the compilers relative linking options to link and run
-    programs, and
+    programs (libtool may not do this), and
   - you can move the whole encapsulated installation (top install
     directory) and everything runs the same.
 - Environment variables allow users to tell quickstream programs where to
@@ -526,3 +526,13 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   method and run *./configure* and *make dist*.
 - Files in the source are located in the same relative path of files that
   they are most directly related to in the installed paths.
+- All filter modules do not share the global variable space that came from
+  the module.  Particular filter modules may be loaded more than once.
+  Most module loading systems do not consider this case, but with simple
+  filters there is a good chance you may want to load a filter more than
+  once.  As a result of this he filter module writer may choose to
+  dynamically create objects, or make them statically.  In either case the
+  data in the modules stays accessible only in that module.  Modules that
+  wish to shared variables with other modules may do so by using other
+  non-filter DSOs (dynamic shared objects), basically any other library
+  than itself.
