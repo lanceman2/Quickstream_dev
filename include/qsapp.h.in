@@ -129,10 +129,10 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app);
  *
  * By default the stream does not allow loops in the filter stream graph.
  *
- * \para stream is the stream that we are allowing or disallowing loops
+ * \param stream is the stream that we are allowing or disallowing loops
  * in.
  *
- * \para doAllow Pass the doAllow value of true to set allowing loops in
+ * \param doAllow Pass the doAllow value of true to set allowing loops in
  * the stream graph.  Pass in doAllow value of false to not allow loops in the
  * stream graph.
  */

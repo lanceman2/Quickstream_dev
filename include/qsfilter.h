@@ -68,7 +68,7 @@ struct QsOpts;
  * When help() is called additional generic text will be added to the
  * output file that describes all quickstream filters.
  *
- * \para file output file to fprintf() to.
+ * \param file output file to fprintf() to.
  *
  */
 void help(FILE *file);
@@ -78,13 +78,13 @@ void help(FILE *file);
  *
  * input() is how the filters receive input from upstream filters.
  *
- * \para buffer is a pointer to the current data being passed in from an
+ * \param buffer is a pointer to the current data being passed in from an
  * upstream filter, or 0 is this is a source filters.
  *
- * \para len the length of the data pasted in bytes.  len is 0 if this is
+ * \param len the length of the data pasted in bytes.  len is 0 if this is
  * a source feed.
  *
- * \para inputChannelNum the channel designation for this input. A
+ * \param inputChannelNum the channel designation for this input. A
  * transmitting (or feeder) filter is a filter that is outputting to a
  * receiver.  The receiver filter is the filter that has it's input()
  * function called.  For a given filter the input channels are numbered
@@ -92,7 +92,7 @@ void help(FILE *file);
  * be more than one input to a given receiver filter from a given
  * transmitter filter.
  *
- * \para flowState should be considered an opaque data type that is passed
+ * \param flowState should be considered an opaque data type that is passed
  * in to the filter input() to let the filter know stuff about the state
  * of the stream flow.  inline functions provide ways to interpret this so
  * called state.  See qsFlowIsLastPackage().
@@ -115,9 +115,9 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
  * This function, if present, is called only once just after the filter
  * is loaded.
  *
- * \para argc the number of strings pointed to by argv
+ * \param argc the number of strings pointed to by argv
  *
- * \para argv an array of pointers to the string arguments.  The user
+ * \param argv an array of pointers to the string arguments.  The user
  * should not write to this memory.
  *
  * \return 0 on success
@@ -195,7 +195,7 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
  * function there will be no output from the filter in the given input()
  * call.
  *
- * \para outputChannelNum the associated output channel.  If the output
+ * \param outputChannelNum the associated output channel.  If the output
  * channel is sharing a buffer between other output channels from this
  * filter then the value of outputChannelNum may be any of the output
  * channel numbers that are in the output channel shared buffer group.
@@ -210,11 +210,11 @@ void *qsGetBuffer(uint32_t outputChannelNum);
  *
  * qsGetBuffer() must be called before qsOutput().
  *
- * \para outputChannelNum is the associated output channel.  If the buffer
+ * \param outputChannelNum is the associated output channel.  If the buffer
  * of this output channel is shared between other output channels than
  * all the sharing output channels will also be used.
  *
- * \para len the length in bytes to advance the output buffer.  len may be
+ * \param len the length in bytes to advance the output buffer.  len may be
  * 0 to cause the corresponding output filters input() functions to be
  * called with an input length of 0.  Setting len to QS_NONE to stop the
  * corresponding output filters input() functions from being called.
@@ -246,7 +246,7 @@ void qsOutput(size_t len, uint32_t outputChannelNum);
  * accessible, and when input() is called again for another channel, the
  * filter will now have access to both channel's buffers.
  *
- * \para len advance the current input buffer len bytes.  len can be less
+ * \param len advance the current input buffer len bytes.  len can be less
  * than or equal to the length in bytes that was passed to the input()
  * call.
  */
@@ -258,11 +258,11 @@ void qsAdvanceInput(size_t len, uint32_t inputChannelNum);
  *
  * qsSetMaxReadThreshold() may only be called in filters start() function.
  *
- * \para len This reading filter promises to read any data at or above
+ * \param len This reading filter promises to read any data at or above
  * this threshold; so we will keep calling the filter input() function
  * until the amount that can be read is less than this threshold.
  *
- * \para inputChannelNums a list of effected input channel numbers as an
+ * \param inputChannelNums a list of effected input channel numbers as an
  * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
  * the number of channels.
  */
@@ -274,11 +274,11 @@ void qsSetMaxReadThreshold(size_t len, uint32_t *inputChannelNums);
  *
  * qsSetMinReadThreshold() may only be called in filters start() function.
  *
- * \para This reading filter will not read any data until this threshold,
+ * \param This reading filter will not read any data until this threshold,
  * len bytes, is met; so we will not call the filter input() function
  * until this threshold is met.
  *
- * \para inputChannelNums a list of effected input channel numbers as an
+ * \param inputChannelNums a list of effected input channel numbers as an
  * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
  * the number of channels.
  */
@@ -296,14 +296,14 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  *
  * qsSetMaxReadSize() may only be called in filters start() function.
  *
- * \para len This reading filter will not read more than len bytes, if
+ * \param len This reading filter will not read more than len bytes, if
  * this is set.  The filter sets this so that the stream running does not
  * call input() with more data than this.  This is a convenience, so the
  * filter does not need to tell the stream running to not advance the
  * buffer so far at every input() call had the input length exceeded this
  * number.
  *
- * \para inputChannelNums a list of effected input channel numbers as an
+ * \param inputChannelNums a list of effected input channel numbers as an
  * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
  * the number of channels.
  */ 
@@ -326,11 +326,11 @@ void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
  * maxWrite, and other parameters set by other filters that may be
  * accessing this buffer down stream.
  *
- * \para maxWriteLen this filter promises to write at most maxWriteLen
+ * \param maxWriteLen this filter promises to write at most maxWriteLen
  * bytes to this output channel.  If the filter writes more than that
  * memory may be corrupted.
  *
- * \para outputChannelNums is a pointer to an array of output channel
+ * \param outputChannelNums is a pointer to an array of output channel
  * numbers which is terminated with a value QS_ARRAYTERM.
  */
 extern
@@ -344,7 +344,7 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
  * command line options.  The --help option is built in and calls the
  * help() function that was set by the filter.
  *
- * \para opts a pointer to a stack or heap allocated struct QsOpts.
+ * \param opts a pointer to a stack or heap allocated struct QsOpts.
  * This memory is used for state in the object, but the user manages this
  * memory, and so there is no destructor function for the struct QsOpt.
  * struct QsOpt should be considered opaque by the user of this
@@ -353,19 +353,19 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
  * argc and argv can and will likely be the values that have been passed
  * to the filter construct() function.
  *
- * \para argc the number of string arguments that argv points to.
+ * \param argc the number of string arguments that argv points to.
  *
- * \para argv is the array of string arguments.
+ * \param argv is the array of string arguments.
  */
 extern
 void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
 
 /** Initialize simple help and argument parsing object
  *
- * \para opts should have been previously passed to qsOptInit().
- * \para optName is the name of the argument that was passed with the form
+ * \param opts should have been previously passed to qsOptInit().
+ * \param optName is the name of the argument that was passed with the form
  * --name VAL.  optName should not start with "--", that gets added.
- *  \para defaultVal is the value that is returned if this argument option
+ *  \param defaultVal is the value that is returned if this argument option
  *  was no given in the filter arguments.
  *  \return the float value that the last option with this name was given
  *  in the command line, or defaultVal if this option was not given.
