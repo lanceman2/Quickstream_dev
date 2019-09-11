@@ -7,6 +7,21 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
+quickstream is the next generation of a stream flow graph API that we
+wrote a year or more ago.  The old stream flow graph API was the subset of
+larger project, with a larger scope.  I consider quickstream a smaller
+more refined spin-off project.  I hope to give quickstream more polish
+then it's previous generation.
+
+
+# Development Status
+
+quickstream is not yet fit for any use yet.  It's not functional yet.
+Currently it got most of directory structure laid out, and the build
+structure and components figured out.   The thing to look at is this
+README.md file which farther along reads like the draft of the
+quickstream white paper but degenerates into a develop notes.
+
 
 ## Building and Installing with GNU Autotools
 
