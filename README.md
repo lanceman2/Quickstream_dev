@@ -16,11 +16,9 @@ then it's previous generation.
 
 # Development Status
 
-quickstream is not yet fit for any use yet.  It's not functional yet.
-Currently it got most of directory structure laid out, and the build
-structure and components figured out.   The thing to look at is this
-README.md file which farther along reads like the draft of the
-quickstream white paper but degenerates into a develop notes.
+It's not functional yet.  Currently it's got most of directory structure
+laid out, build system, and components figured out.  The thing of interest
+now for you may be this README.md file.
 
 
 ## Building and Installing with GNU Autotools
@@ -219,7 +217,7 @@ pipe-line, may be run in separate processes, or separate threads in the
 same process, or modules may be run together in a single thread.   The way
 processes and threads are distributed across the filter modules in the
 running flow stream is not necessarily constrained in any way.  The stream
-can be any general directed graph without cycles.
+can be any general directed graph without (or with) cycles.
 
 It's faster because the data flowing between the modules is passed through
 shared memory and not a kernel buffer, as in UNIX file streams.  In a UNIX
