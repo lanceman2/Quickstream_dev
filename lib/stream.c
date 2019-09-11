@@ -545,19 +545,6 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *           Stage: Add default output buffer configuration
-     *********************************************************************/
-
-    for(uint32_t i=0; i<s->numSources; ++i) {
-        // It easier to now because the f->outputs are more setup now.
-        AllocateRingBuffers(s->sources[i]);
-
-    }
-
-
-
-
-    /**********************************************************************
      *            Stage: Allocate flow buffers
      *********************************************************************/
 
@@ -567,6 +554,7 @@ int qsStreamStart(struct QsStream *s) {
     // the stream:
     for(uint32_t i=0; i<s->numSources; ++i)
         // It easier to now because the f->outputs are more setup now.
+        // If not we setup buffering connectivity defaults.
         AllocateRingBuffers(s->sources[i]);
 
 
