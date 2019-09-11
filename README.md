@@ -469,7 +469,7 @@ and run-time based on stream flow measures, and so it can be adaptive and
 can be programmed to be self optimizing at run-time.  Most of the other
 stream frame-works just can't do that, they only have one thread and
 process running scheme that is hard coded, like one thread per filter, or
-one process per filter, which of a very simple filter makes no sense.
+one process per filter which for simple filters would be suboptimal.
 
 You can change the filter stream topology on the fly.  Loading and
 unloading filters and reconnecting filters at run-time.
