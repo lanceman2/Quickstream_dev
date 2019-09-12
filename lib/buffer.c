@@ -31,6 +31,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
     DASSERT(outputs, "");
 
     // At this point all the filter start() functions have been called.
+    //
     // So they made their buffer configuration requests, setting stuff
     // like (writer) maxWrite and (reader) maxReadThreshold, or they are
     // the default values for these buffer parameters.
@@ -39,8 +40,9 @@ void _AllocateRingBuffers(struct QsFilter *f) {
     // connectivity.  Any filter->outputs[] struct without a writer will
     // will use a shared writer that will be created here.
 
-    // This will be the allocated writer if we find any outputs that do
-    // not have buffers and writers.
+    // defaultWriter will be the allocated writer if we find any outputs
+    // that do not have buffers and writers.
+    //
     struct QsWriter *defaultWriter = 0;
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
@@ -56,26 +58,47 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         }
     }
 
+    // Now all ouputs have writers.
+
     // We need to find outputs grouped by sharing the same writer,
     // including the one we just created above.  For each writer we
     // allocate what is needed to complete the struct qsOutput data
-    // structure.
-    
-
+    // structure and it's pointers to other data like QSWriter and
+    // QsBuffer.
+    //
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         
         struct QsWriter *writer = outputs[i].writer;
 
         if(writer->buffer)
-            // This writer already has a buffer.
+            // This writer already has a buffer and therefore should be
+            // all set to go.
             continue;
+
+        struct QsBuffer *buffer = calloc(1, sizeof(*buffer));
+        ASSERT(buffer, "calloc(1,%zu) failed", sizeof(*buffer));
+
+        writer->buffer = buffer;
+        DASSERT(writer->maxWrite, "maxWrite cannot be 0");
+        // The overhang length will be the largest of any single write or
+        // read operation.
+        buffer->overhangLength = writer->maxWrite;
+        buffer->mapLength = writer->maxWrite;
+
+        size_t maxReadLength = 0;
  
+        // Get the buffer size parameters.
+        //
+
         for(uint32_t j=0; j<f->numOutputs; ++j) {
 
-            
+            if(outputs[j].writer == writer) {
 
+                DASSERT(outputs[j].maxReadThreshold, "");
 
-
+                if(maxReadLength < outputs[j].maxReadThreshold)
+                    maxReadLength = outputs[j].maxReadThreshold;
+            }
         }
     }
 }
