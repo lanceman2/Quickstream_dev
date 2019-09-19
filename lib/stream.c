@@ -280,6 +280,7 @@ void FreeRunResources(struct QsStream *s) {
     DASSERT(s->app, "");
 
     for(int32_t i=0; i<s->numConnections; ++i) {
+        // These can handle being called more than once per filter.
         FreeFilterRunResources(s->from[i]);
         FreeFilterRunResources(s->to[i]);
     }
@@ -438,10 +439,10 @@ int qsStreamStart(struct QsStream *s) {
     // like: -1, -2, -3, -4, ...
 
     /**********************************************************************
-     *            Stage: lazy cleanup
+     *            Stage: lazy cleanup ??
      *********************************************************************/
 
-    FreeRunResources(s);
+    //FreeRunResources(s);
 
 
     /**********************************************************************
@@ -591,7 +592,7 @@ int qsStreamStart(struct QsStream *s) {
      *            Stage: cleanup later
      *********************************************************************/
 
-    //FreeRunResources(s);
+    FreeRunResources(s);
 
 
 
