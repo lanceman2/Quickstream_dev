@@ -58,7 +58,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         }
     }
 
-    // Now all ouputs have writers.
+    // Now all outputs have writers.
 
     // We need to find outputs grouped by sharing the same writer,
     // including the one we just created above.  For each writer we
@@ -67,7 +67,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
     // QsBuffer.
     //
     for(uint32_t i=0; i<f->numOutputs; ++i) {
-        
+
         struct QsWriter *writer = outputs[i].writer;
 
         if(writer->buffer)
@@ -89,7 +89,6 @@ void _AllocateRingBuffers(struct QsFilter *f) {
  
         // Get the buffer size parameters.
         //
-
         for(uint32_t j=0; j<f->numOutputs; ++j) {
 
             if(outputs[j].writer == writer) {
@@ -100,6 +99,22 @@ void _AllocateRingBuffers(struct QsFilter *f) {
                     maxReadLength = outputs[j].maxReadThreshold;
             }
         }
+        // Now we have the max Read Length
+        //
+        // The size of the overhang is the largest single read or write
+        // operation.
+        //
+        if(maxReadLength > writer->maxWrite)
+            buffer->overhangLength = maxReadLength;
+        else
+            buffer->overhangLength = writer->maxWrite;
+
+        buffer->mapLength = writer->maxWrite + maxReadLength;
+
+        // makeRingBuffer() will make mapLength and overhangLength be the
+        // next multiple of the system pagesize (currently 4*1024) in
+        // bytes.
+        buffer->mem = makeRingBuffer(&buffer->mapLength, &buffer->overhangLength);
     }
 }
 
@@ -126,12 +141,32 @@ void AllocateRingBuffers(struct QsFilter *f) {
 
 // Note this does not recurse.
 //
+// This frees the writer and buffer structs, and ringBuffer memory
+// mappings.
+//
+// The QsOutput outputs are freed just after this call.
+//
 void FreeRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
-    DASSERT(f->numOutputs, "");
+    struct QsOutput *outputs = f->outputs;
+    uint32_t numOutputs = f->numOutputs;
+    DASSERT(numOutputs, "");
+    DASSERT(outputs, "");
+
+    for(uint32_t i=0; i<numOutputs; ++i) {
 
 
+        for(uint32_t j=0; j<numOutputs; ++j) {
+
+            
+
+
+        }
+
+
+
+    }
 
 }
 

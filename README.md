@@ -90,25 +90,25 @@ other compression format versions of tarball files.
 
 ## Building and Installing with quickbuild
 
-The quickstream developers build system.  Without some care the quickbuild
-build system and the GNU autotools build system will conflict with each
-other.  So why we have two build systems?:
+quickbuild is the quickstream developers build system.  Without some care
+the quickbuild build system and the GNU autotools build system will
+conflict with each other.  So why do we have two build systems?:
 
 GNU autotools does not allow you to load dynamic shared object (DSO)
 plugin modules without installing them first, whereby making a much longer
 compile and test cycle.  The same, more-so, can be said of CMake.  As a
 code developer we just want to quickly compile source and run it from the
-source directory, without installing anything.
+source directory, without installing anything.  Imposing this requirement
+on this project has the added benefit of forcing the source code to have
+the same directory structure as the installed files, whereby making is
+very easy to understand the file structure of the source code.
 
 The use of quickbuild is for quickstream developers, not users.
 quickbuild is just some "GNU make" make files and some bash scripts.  We
 added these make files named "Makefile" and other files so that we could
 develop, compile and run programs without being forced to install files.
 We use "makefile" as the make file for GNU autotools generated make files,
-which overrides "Makefile".
-
-The quickbuild make files tend to be much smaller than the GNU autotools
-generated make files.  
+which overrides "Makefile" at least for GNU make.
 
 
 ### quickbuild quick and easy
@@ -132,7 +132,7 @@ change directory to the top source directory and then run:
 
 which will download the file *quickbuild.make*.
 
-Now there are no more downloads needed.  Now run:
+Now there are no more file downloads needed.  Now run:
 
   *echo "PREFIX = MY_PREFIX" > config.make*
 
@@ -142,7 +142,7 @@ where ``MY_PREFIX`` is the top installation directory, like for example
   *make*
 
 to generate (compile) files in the source directory.
-Then run:
+Then, at your option, run:
 
   *make install*
 
@@ -154,8 +154,8 @@ skip making the *config.make* file and in place of running *make install*
 you can run *make install PREFIX=MY_PREFIX*.
 
 For debugging and development additional configuration options can be
-added to the *config.make* files as C preprocessor flags when compiling
-are for example:
+added to the *config.make* files as C preprocessor (CPP) flags when
+compiling are for example:
 
   - *CPPFLAGS = -DDEBUG*
   - *CPPFLAGS = -DDEBUG -DSPEW_LEVEL_DEBUG*
@@ -164,7 +164,7 @@ are for example:
   - *CPPFLAGS = -DSPEW_LEVEL_WARN*
   - *CFLAGS = -g -Wall -Werror*
 
-See file *lib/debug.h* for how these CPP (C preprocessor) macro flags are
+See file *lib/debug.h* for how these CPP macro flags are
 used.
 
 If you wish to remove all files that are generated from the build scripts
@@ -333,7 +333,7 @@ except that sources are no longer being feed.
   outside the module dynamic share object (DSO), which would make filter
   module management a much larger thing, like most other stream toolkits.
   We keep it simple at the quickstream programming level.
-- **start**: the filters start functions are called. filters will see how
+- **start**: the filters start functions are called. Filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
   stream when it is in the start state.
