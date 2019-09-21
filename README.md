@@ -29,7 +29,7 @@ build system.
 
 If you got the source from a repository run
 
-    *./bootstrap*
+    ./bootstrap
 
 to add the GNU autotools build files to the source.
 
@@ -39,16 +39,16 @@ top source directory and do not run bootstrap.
 
 Then from the top source directory run
 
-  *./configure --prefix=/usr/local/PLACE_TO_INSTALL*
+    ./configure --prefix=/usr/local/PLACE_TO_INSTALL
 
 where you replace */usr/local/PLACE_TO_INSTALL* with a directory where you
 will like to have the *quickstream* software package installed.  Then run
 
-  *make*
+    make
 
 to build the code.  Then run
 
-  *make install*
+    make install
 
 to install the stream software package in the prefix directory that you
 set above.
