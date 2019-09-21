@@ -29,7 +29,9 @@ build system.
 
 If you got the source from a repository run
 
-    ./bootstrap
+```console
+./bootstrap
+```
 
 to add the GNU autotools build files to the source.
 
@@ -39,16 +41,22 @@ top source directory and do not run bootstrap.
 
 Then from the top source directory run
 
-    ./configure --prefix=/usr/local/PLACE_TO_INSTALL
+```console
+./configure --prefix=/usr/local/PLACE_TO_INSTALL
+```
 
 where you replace */usr/local/PLACE_TO_INSTALL* with a directory where you
 will like to have the *quickstream* software package installed.  Then run
 
-    make
+```console
+make
+```
 
 to build the code.  Then run
 
-    make install
+```console
+make install
+```
 
 to install the stream software package in the prefix directory that you
 set above.
@@ -67,22 +75,30 @@ make a tarball release, after you finish testing and editing, edit
 RELEASE.bash changing the version numbers and so on, then you can run a
 sequence of programs something like the following:
 
-  *./RepoClean*
+```console
+./RepoClean
+```
 
 then make sure that the files that remain are what you want, if not you
 may need to edit *RepoClean*.  After you're confident that is doing what
 you want run:
 
-  *./bootstrap*
+```console
+./bootstrap
+```
 
 which will generate many files needed for a tarball release.  Then run:
 
-  *./configure*
+```console
+./configure
+```
 
 which the is famous GNU autotools generated *configure* script for this
 package.  Then run:
 
-  *make dist*
+```console
+make dist
+```
 
 which should generate the tarball file *quickstream-0.0.1.tar.gz* and
 other compression format versions of tarball files.
@@ -115,9 +131,13 @@ which overrides "Makefile" at least for GNU make.
 
 Run:
 
-  *make*
+```console
+make
+```
 
-  *make install PREFIX=MY_PREFIX*
+```console
+make install PREFIX=MY_PREFIX
+```
 
 where MY_PREFIX is the top installation directory.  That's it,
 if you have the needed dependences it should be installed.
@@ -128,23 +148,31 @@ if you have the needed dependences it should be installed.
 If you got the quickstream source from a repository, or a tarball,
 change directory to the top source directory and then run:
 
-  *./quickbuild*
+```console
+./quickbuild
+```
 
 which will download the file *quickbuild.make*.
 
 Now there are no more file downloads needed.  Now run:
 
-  *echo "PREFIX = MY_PREFIX" > config.make*
+```console
+echo "PREFIX = MY_PREFIX" > config.make
+```
 
 where ``MY_PREFIX`` is the top installation directory, like for example
 */usr/local/encap/quickstream*.  Then run:
 
-  *make*
+```console
+make
+```
 
 to generate (compile) files in the source directory.
 Then, at your option, run:
 
-  *make install*
+```console
+make install
+```
 
 to install files into the prefix directory you defined.
 
@@ -157,12 +185,14 @@ For debugging and development additional configuration options can be
 added to the *config.make* files as C preprocessor (CPP) flags when
 compiling are for example:
 
-  - *CPPFLAGS = -DDEBUG*
-  - *CPPFLAGS = -DDEBUG -DSPEW_LEVEL_DEBUG*
-  - *CPPFLAGS = -DSPEW_LEVEL_INFO*
-  - *CPPFLAGS = "-DDEBUG -DSPEW_LEVEL_NOTICE"*
-  - *CPPFLAGS = -DSPEW_LEVEL_WARN*
-  - *CFLAGS = -g -Wall -Werror*
+```shell
+CPPFLAGS = -DDEBUG
+CPPFLAGS = -DDEBUG -DSPEW_LEVEL_DEBUG
+CPPFLAGS = -DSPEW_LEVEL_INFO
+CPPFLAGS = "-DDEBUG -DSPEW_LEVEL_NOTICE"
+CPPFLAGS = -DSPEW_LEVEL_WARN
+CFLAGS = -g -Wall -Werror
+```
 
 See file *lib/debug.h* for how these CPP macro flags are
 used.
@@ -276,11 +306,13 @@ APIs.
 ## Prerequisite packages
 Building and installing quickstream requires the following debian package
 prerequisites:
-- build-essential
-- graphviz-dev
-- imagemagick
-- doxygen
 
+```shell
+build-essential
+graphviz-dev
+imagemagick
+doxygen
+```
 
 ## Terminology
 
@@ -442,16 +474,20 @@ things.  We study them and learn.
 Summary: Run faster with less system resources.  Be simple.
 
 In principle it should be able to run fast.  We have no controlling task
-manager thread that synchronizes the running processes and/or threads.
-All filters keep processing input until they are blocked by a slower
-down-stream filter (clogged), or they are waiting for input from an
-up-stream filter (throttled).  The clogging and throttling of the stream
-flows is determined to the current inter-filter buffering parameters.
+manager thread that synchronizes the running processes and/or threads.  We
+let the operating system do its' thing, and try not to interfere with a
+task managing code.  If any task management is needed we let it happen
+in a higher layer.  All filters keep processing input until they are
+blocked by a slower down-stream filter (clogged), or they are waiting for
+input from an up-stream filter (throttled).  The amount of "queuing"
+between modules (filters) can be varied depending on how much latency is
+tolerable. In general the clogging and throttling of the stream flows is
+determined by the current inter-filter buffering parameters.
 
 Simple filters can share the same thread, and whereby use less system
 resources, and thereby run the stream faster by avoiding thread context
 switches using less time and memory than running filters in separate
-threads (or processes).  When filter gets more complex we can let the
+threads (or processes).  When a filter gets more complex we can let the
 filter run in it's own thread (or process).  Shared memory is clearly the
 fastest inter-thread and inter-process communication mechanism, and we use
 shared memory with a consistent lock-less circular buffer.  Memory is not
@@ -462,9 +498,15 @@ across from one filter to another can be completely avoided using a
 pass-through buffer.
 
 It's simple.  There is no learning curve.  There's just less there.  There
-is only one interface for a given quickstream primitive functionality.
+is only one interface for a given quickstream primitive functionality.  No
+guessing which class to inherit.  No built-in inter-filter data typing.
+We provide just a modular streaming paradigm without a particular end
+application use case.  The idea of inter-module data types is not
+introduced, that would limit it's use, and can be considered at a higher
+software interface layer.  So we keep inter-module data typing outside the
+scope of quickstream.
 
-The stream may repartition its process and threading scheme at launch-time
+The stream may repartition its' process and threading scheme at launch-time
 and run-time based on stream flow measures, and so it can be adaptive and
 can be programmed to be self optimizing at run-time.  Most of the other
 stream frame-works just can't do that, they only have one thread and
@@ -509,9 +551,10 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
     directory) and everything runs the same.
 - Environment variables allow users to tell quickstream programs where to
   find users files that are not in the quickstream source code.
-- The installation prefix directory is not used in an quickstream code,
+- The installation prefix directory is not used in the quickstream code,
   only relative paths are needed for running quickstream files to find
-  themselves.
+  themselves.  One needs to worry about package installation schemes that
+  brake the encapsulation of the installed files.
 - C++ code can link with quickstream.
 - The public interfaces are object oriented in a C programming sense.
 - The private code is slightly more integrated than the public interfaces
@@ -530,9 +573,24 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   the module.  Particular filter modules may be loaded more than once.
   Most module loading systems do not consider this case, but with simple
   filters there is a good chance you may want to load a filter more than
-  once.  As a result of this he filter module writer may choose to
-  dynamically create objects, or make them statically.  In either case the
-  data in the modules stays accessible only in that module.  Modules that
-  wish to shared variables with other modules may do so by using other
-  non-filter DSOs (dynamic shared objects), basically any other library
-  than itself.
+  once, with the same filter plugin in different positions in the stream.
+  As a result of considering this case, the filter module writer may
+  choose to dynamically create objects, or make them statically.  In
+  either case the data in the modules stays accessible only in that
+  module.  Modules that wish to share variables with other modules may do
+  so by using other non-filter DSOs (dynamic shared objects), basically
+  any other library than filter DSO.
+
+
+## Driving questions
+
+- Is this quickstream idea really like a layer in a protocol stack that
+  can be built upon?
+
+    * Sometimes we need to care about the underlying workings that
+      facilitate an abstraction layer because we have a need for speed.
+      - It would appear that current software development trends frowns
+        upon this idea.
+
+- It looks like a kernel hack is not needed, or is there?
+
