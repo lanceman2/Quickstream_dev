@@ -4,13 +4,19 @@
  * and is kept with the lib/libquickstream.so source code.
  */
 
-// This file is the guts of quickstream libquickstream API.  By
-// understanding each data member in these data structures you can get a
-// clear understanding of the insides of quickstream, and code it.  But
-// it's likely that you will need to "scope the code" in app.c,
-// filter.c, stream.c, thread.c, and process.c to get there.
+
+// This file is the guts of quickstream.  By understanding each data
+// member in these data structures you can get a clear understanding of
+// the insides of quickstream, and code it.  Easier said than done...
 
 
+
+// App (QsApp) is the top level quickstream object.  It's a container for
+// filters and streams.  Perhaps there should only be one app in a
+// program, but we do not impose that.  There is no compelling reason to
+// limit the number apps that a program can have.  App is used to create
+// filters by loading module plugins.  App is used to create streams.
+//
 struct QsApp {
 
     // List of filters.  Head of a singly linked list.
@@ -50,6 +56,10 @@ struct QsProcess {
 
 
 
+// Stream (QsStream) is the thing the manages a group of filters and their
+// flow state.  Since streams can add and remove filters when it is not
+// flowing the stream needs app to be a list of loaded filters for it.
+//
 struct QsStream {
 
     struct QsApp *app;
@@ -79,6 +89,15 @@ struct QsStream {
 };
 
 
+// The filter (QsFilter) is loaded by app as a module DSO (dynamic shared
+// object) plugin.  The filter after be loaded is added to a only one
+// stream at a time.  If the filter is added to another stream, it will be
+// removed from the previous stream; so ya, a filter can be only in one
+// stream at a time.  When finished with a filter, the filter is unloaded
+// by its' app.  quickstream users can write filters using
+// include/qsfilter.h.  The quickstream software package also comes with a
+// large selection of filters.
+//
 struct QsFilter {
 
     void *dlhandle; // from dlopen()
@@ -139,7 +158,7 @@ struct QsFilter {
 #define _QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
 
 
-struct QsOutput {  // reader
+struct QsOutput {  // points to reader filters
 
     // The "reading filter" (or access filter) that sees this output as
     // input.
@@ -154,7 +173,7 @@ struct QsOutput {  // reader
     // between many outputs in one filter, hence this is just a pointer
     // and a single writer that may be used for more than one output.
     //
-    // TODO: "passthrough buffers" in which the buffer can be shared
+    // TODO: "pass-through buffers" in which the buffer can be shared
     // for multiple filter levels, that is a filter can read the buffer
     // and then treat it like it is the writer to the next filter.
     // The passing filter can't change the size of the buffer, but it
@@ -169,6 +188,7 @@ struct QsOutput {  // reader
 
     // All these limits may be set in the reading filters start()
     // function.
+    //
     // Sizes in bytes that may be set at filter start():
     size_t
         maxReadThreshold, // This reading filter promises to read
@@ -189,10 +209,12 @@ struct QsOutput {  // reader
 };
 
 
-struct QsWriter {
+struct QsWriter {  // all outputs need a writer
 
-    size_t maxWrite; // maximum the writer can write.  If it write more
-    // than this then the memory could be corrupted.
+    // There can be many outputs pointing to each writer.
+
+    size_t maxWrite; // maximum the writer can write.  If it writes more
+    // than this then the memory could be overrun.
 
     // QsBuffer may be shared by other QsWriter's, if the buffer is shared
     // it's a pass-through buffer, and it should be also written to in an
@@ -201,25 +223,33 @@ struct QsWriter {
 
     // This is the last place a writing filter wrote to in this memory.
     uint8_t *writePtr;
+
+    uint32_t refCount; // Number of outputs pointing to this.
 };
 
 
-struct QsBuffer {
+struct QsBuffer {  // all writers need a buffer
 
-    // Their can be many outputs and filters accessing this memory, unlike
-    // GNU radio.
+    // Their can be many writers pointing to this buffer.
 
     uint8_t *mem; // Pointer to start of mmap()ed memory.
 
     // These two parameters make it a circular buffer or ring buffer.  See
     // makeRingBuffer.c.
     size_t mapLength, overhangLength;
+
+    uint32_t refCount; // Number of writers pointing to this.
 };
 
 
+
 // The current filter that is having its' input() called in this thread.
+//
+// TODO: If an app makes a lot of threads that are not related to
+// quickstream, this could be wasteful, so we may want to allocate this.
 extern
 __thread struct QsFilter *_qsInputFilter;
+
 
 
 // The filter that is having start() called.
@@ -238,7 +268,7 @@ void AllocateRingBuffers(struct QsFilter *f);
 
 
 extern
-void FreeRingBuffers(struct QsFilter *f);
+void FreeRingBuffersAndWriters(struct QsFilter *f);
 
 extern
 int stream_run_0p_0t(struct QsStream *s);

@@ -67,7 +67,7 @@
 // sweat it because the kernel will be caching these pages for us anyway,
 // so the cost gets smaller when we cycle the starting and stopping.
 //
-// The most expensive stream tartup cost will be fork() and
+// The most expensive stream startup cost will be fork() and
 // pthread_create().  Do we need process and thread pools?
 //
 

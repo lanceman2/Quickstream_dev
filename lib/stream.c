@@ -258,7 +258,7 @@ static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
     if(f->numOutputs) {
-        FreeRingBuffers(f);
+        FreeRingBuffersAndWriters(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
 #endif
@@ -439,14 +439,14 @@ int qsStreamStart(struct QsStream *s) {
     // like: -1, -2, -3, -4, ...
 
     /**********************************************************************
-     *            Stage: lazy cleanup ??
+     *      Stage: lazy cleanup ??
      *********************************************************************/
 
     //FreeRunResources(s);
 
 
     /**********************************************************************
-     *            Stage: Find source filters
+     *      Stage: Find source filters
      *********************************************************************/
 
     DASSERT(s->numSources == 0,"");
@@ -493,7 +493,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: Check flows for loops, if we can't have them
+     *      Stage: Check flows for loops, if we can't have them
      *********************************************************************/
 
     if(!(s->flags && _QS_STREAM_ALLOWLOOPS))
@@ -513,7 +513,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: Set up filter connections in the filter structs
+     *      Stage: Set up filter output connections in the filter structs
      *********************************************************************/
 
     for(uint32_t i=0; i<s->numSources; ++i)
@@ -521,11 +521,11 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: call all stream's filter start() if present
+     *      Stage: call all stream's filter start() if present
      *********************************************************************/
 
     // By using the app list of filters we do not call any filter start()
-    // more than once, but is the order in which we call them okay?
+    // more than once, (TODO) but is the order in which we call them okay?
     //
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->start) {
@@ -546,13 +546,13 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: Allocate flow buffers
+     *     Stage: Allocate flow buffers
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten
-    // from the filters' start() function. Now we can allocated the memory
-    // that is the conveyor belt between filters.  We follow every path in
-    // the stream:
+    // from the filters' start() function.  Now we can allocated the
+    // memory that is the conveyor belt between filters.  We follow every
+    // path in the stream:
     for(uint32_t i=0; i<s->numSources; ++i)
         // It easier to now because the f->outputs are more setup now.
         // If not we setup buffering connectivity defaults.
@@ -560,7 +560,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: flow
+     *     Stage: flow
      *********************************************************************/
 
     NOTICE("RUNNING");
@@ -570,7 +570,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: flush?
+     *     Stage: flush?
      *********************************************************************/
 
 
@@ -580,7 +580,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: call all stream's filter stop() if present
+     *     Stage: call all stream's filter stop() if present
      *********************************************************************/
 
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
@@ -589,7 +589,7 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *            Stage: cleanup later
+     *     Stage: cleanup
      *********************************************************************/
 
     FreeRunResources(s);

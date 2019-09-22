@@ -55,10 +55,15 @@ void _AllocateRingBuffers(struct QsFilter *f) {
                 defaultWriter->maxWrite = QS_DEFAULTWRITELENGTH;
             }
             output->writer = defaultWriter;
+            ++output->writer->refCount;
         }
     }
 
     // Now all outputs have writers.
+    //
+    // Now we have no buffers.
+
+    // TODO: pass-through buffers...
 
     // We need to find outputs grouped by sharing the same writer,
     // including the one we just created above.  For each writer we
@@ -72,13 +77,16 @@ void _AllocateRingBuffers(struct QsFilter *f) {
 
         if(writer->buffer)
             // This writer already has a buffer and therefore should be
-            // all set to go.
+            // all set to go.  TODO: pass-through buffers...
             continue;
 
         struct QsBuffer *buffer = calloc(1, sizeof(*buffer));
         ASSERT(buffer, "calloc(1,%zu) failed", sizeof(*buffer));
 
         writer->buffer = buffer;
+        //TODO: pass-through buffers with need this refCount
+        // For now there is one writer per buffer.
+        ++buffer->refCount;
         DASSERT(writer->maxWrite, "maxWrite cannot be 0");
         // The overhang length will be the largest of any single write or
         // read operation.
@@ -125,11 +133,16 @@ void _AllocateRingBuffers(struct QsFilter *f) {
 void AllocateRingBuffers(struct QsFilter *f) {
 
     DASSERT(f, "");
+    DASSERT(f->stream, "");
 
-    if(f->numOutputs == 0 || f->outputs[0].readPtr)
+    if(f->numOutputs == 0 || f->outputs[0].readPtr) {
         // It should be that there are no outputs or all the outputs in
-        // this filter are already setup.
+        // this filter are already setup because there are loops in the
+        // stream flow.
+        DASSERT(f->numOutputs == 0 || f->stream->flags & _QS_STREAM_ALLOWLOOPS,
+                "Found loops in the flow when there should be none.");
         return;
+    }
 
     _AllocateRingBuffers(f);
 
@@ -139,35 +152,83 @@ void AllocateRingBuffers(struct QsFilter *f) {
 }
 
 
+static inline void FreeBuffer(struct QsBuffer *buffer) {
+
+    DASSERT(buffer->mem, "");
+    freeRingBuffer(buffer->mem, buffer->mapLength, buffer->overhangLength);
+#ifdef DEBUG
+    memset(buffer, 0, sizeof(*buffer));
+#endif
+    free(buffer);
+}
+
+
+static inline void FreeWriter(struct QsWriter *writer) {
+
+    DASSERT(writer, "");
+    DASSERT(writer->refCount == 0, "");
+    DASSERT(writer->buffer, "");
+    DASSERT(writer->buffer->refCount, "");
+
+    --writer->buffer->refCount;
+
+    if(writer->buffer->refCount == 0)
+        // No more writers are using this buffer.
+        FreeBuffer(writer->buffer);
+
+#ifdef DEBUG
+    memset(writer, 0, sizeof(*writer));
+#endif
+    free(writer);
+}
+
+
 // Note this does not recurse.
 //
+// This gets called by every filter in the stream.
+//
 // This frees the writer and buffer structs, and ringBuffer memory
-// mappings.
+// mappings, via static functions above.
 //
-// The QsOutput outputs are freed just after this call.
+// The QsOutput structs are freed just after this call.
 //
-void FreeRingBuffers(struct QsFilter *f) {
+// We must free in this order (which is the reverse of allocation order):
+//
+//    1. struct QsBuffer with its' mapping
+//    2. struct QsWriter
+//    3. struct QsOutput (after this call)
+//
+// because they are pointing to each other in reverse of that order and
+// they all can share children between siblings.  Sharing children: that
+// is a QsOutput can point to the same QsWriter as another QsOutput
+// (intra-filter shared buffer output), in the same as a QsWriter can
+// point to the same QsBuffer (for inter-filter pass-through buffer).
+//
+// We did not bother with pointers that point the other direction because
+// they are not needed at run-time.  This causes extra looping code, but
+// not at the steady flow state run-time.
+//
+void FreeRingBuffersAndWriters(struct QsFilter *f) {
 
     DASSERT(f, "");
+    DASSERT(f->stream, "");
     struct QsOutput *outputs = f->outputs;
     uint32_t numOutputs = f->numOutputs;
     DASSERT(numOutputs, "");
     DASSERT(outputs, "");
 
-    for(uint32_t i=0; i<numOutputs; ++i) {
-
-
-        for(uint32_t j=0; j<numOutputs; ++j) {
-
-            
-
-
-        }
-
-
-
+    // Loop over all outputs in this filter.
+    for(uint32_t j=0; j<f->numOutputs; ++j) {
+        struct QsOutput *output = &f->outputs[j];
+        DASSERT(output, "");
+        struct QsWriter *writer = output->writer;
+        DASSERT(writer, "");
+        struct QsBuffer *buffer = writer->buffer;
+        DASSERT(buffer, "");
+        --writer->refCount;
+        if(writer->refCount == 0)
+            FreeWriter(writer);
     }
-
 }
 
 
@@ -182,9 +243,9 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
     // parameters like maxReadThreshold may not have been set by the
     // reading filter yet.
     //
-    // So we just allocate the QsWrite to mark it as part of this shared
-    // buffer group without allocating the ring buffer memory yet, since
-    // we cannot be sure of its size yet.
+    // We allocate the QsWrite to mark it as part of this shared buffer
+    // group without allocating the ring buffer memory yet, since we do
+    // not know the ring buffer size yet.
 
     DASSERT(f, "");
     DASSERT(f->outputs, "");
@@ -222,6 +283,7 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
     struct QsWriter *writer = calloc(1, sizeof(*writer));
     ASSERT(writer, "calloc(1,%zu) failed", sizeof(*output->writer));
     output->writer = writer;
+    ++writer->refCount;
     writer->maxWrite = maxWriteLen;
     // TODO: At this point the buffer could have been part of the writer
     // structure, but we do want to add the sharing of buffers between
@@ -241,6 +303,7 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
 
         // Mark this output as part of this writer group.
         output->writer = writer;
+        ++writer->refCount;
 
         // Goto next channel number.
         j = outputChannelNums[++i];
@@ -250,13 +313,12 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
 }
 
 
-
 void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 
+    // _qsStartFilter is the filter that is having start() called. 
     DASSERT(_qsStartFilter, "");
     BufferWriterCreate(_qsStartFilter, maxWriteLen, outputChannelNums);
 }
-
 
 
 // The current writer filter gets an output buffer so it may write to the
@@ -264,7 +326,6 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 void *qsGetBuffer(uint32_t outputChannelNum) {
 
     DASSERT(_qsInputFilter,"");
-
 
     return 0;
 }
@@ -276,4 +337,3 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
 
 }
-
