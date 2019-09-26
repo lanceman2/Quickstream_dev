@@ -38,9 +38,11 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     // TODO: handle the stream closing.
 
+    enum QsFilterInputReturn ret = QsFContinue;
+
     if(len != fread(buffer, 1, len, stdin)) {
 
-        if(feof(stdin)) { ; }
+        if(feof(stdin)) { ret = QsFFinished; }
 
         ERROR("fread(,,,stdin) failed");
         return -1; // error
@@ -51,7 +53,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     // This is the default after return:
     qsOutput(len, 0);
 
-    return 0; // success
+    return ret; // success
 }
 
 int start(uint32_t numInChannels, uint32_t numOutChannels) {

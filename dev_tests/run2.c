@@ -63,7 +63,7 @@ int main(void) {
 
 #endif
 
-    qsAppDisplayFlowImage(app, false);
+    qsAppDisplayFlowImage(app, 0, false);
 
     qsStreamStart(stream);
     qsStreamStart(stream);

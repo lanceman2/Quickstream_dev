@@ -68,6 +68,9 @@ struct QsStream {
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.
 
+    // keeps state that it passes to filter input()
+    uint32_t flowState;
+
     uint32_t numThreads;       // length of threads
     struct QsThread **threads; // array of threads
 

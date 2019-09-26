@@ -303,6 +303,9 @@ void FreeRunResources(struct QsStream *s) {
 static uint32_t CountFilterPath(struct QsStream *s,
         struct QsFilter *f, uint32_t loopCount, uint32_t maxCount) {
 
+//DSPEW("filter \"%s\" loopCount=%" PRIu32 " maxCount=%"
+//          PRIu32, f->name, loopCount, maxCount);
+
     if(loopCount > maxCount)
         // break the looping.  Stop recursing.  We must have already
         // started looping, because we counted more filters in the path
@@ -334,7 +337,7 @@ static uint32_t CountFilterPath(struct QsStream *s,
                 returnCount = count;
         }
 
-    //DSPEW("filter \"%s\"  returnCount=%" PRIu32, f->name, returnCount);
+//DSPEW("filter \"%s\"  returnCount=%" PRIu32, f->name, returnCount);
 
     return returnCount;
 }
@@ -500,11 +503,11 @@ int qsStreamStart(struct QsStream *s) {
         // In this case, we do not allow loops in the filter graph.
         for(uint32_t i=0; i<s->numSources; ++i) {
             if(CountFilterPath(s, s->sources[i], 0, s->numConnections) >
-                    s->numConnections) {
+                    s->numConnections + 1) {
                 ERROR("a stream has loops in it consider"
                         " calling: qsStreamAllowLoops()");
 //#ifdef DEBUG
-                qsAppDisplayFlowImage(s->app, true);
+                qsAppDisplayFlowImage(s->app, 0, true);
 //#endif
                 FreeRunResources(s);
                 return -2; // error we have loops

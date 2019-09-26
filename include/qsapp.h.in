@@ -80,6 +80,10 @@ int qsAppDestroy(struct QsApp *app);
 
 /** Add a filter module to the list of filter modules to be loaded.
  *
+ * If the filter is successfully loaded and a construct symbol is found
+ * the construct will be called as a function with some arguments.  See
+ * \ref construct().
+ *
  * \param app that was returned from a call to qsAppCreate().
  * \param fileName that refers to the plugin module file.
  * \param loadName a made-up unquie name that was refer to this
@@ -87,15 +91,14 @@ int qsAppDestroy(struct QsApp *app);
  * name generated based on fileName.
  *
  * \return 0 on success.
+ *
+ * \see qsFilterUnload().
  */
 extern
 struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName,
         const char *loadName,
         int argc, const char **argv);
-
-extern
-int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
 
 
 /** Print the help for the filter module
@@ -104,6 +107,17 @@ int qsAppPrintDotToFile(struct QsApp *app, FILE *file);
 extern
 int qsFilterPrintHelp(const char *filterName, FILE *f);
 
+
+enum QsAppPrintLevel {
+    Outline = 0,
+    Default = 0,
+    Debug = 3
+};
+
+
+extern
+int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
+        FILE *file);
 
 /**
  *
@@ -114,7 +128,8 @@ int qsFilterPrintHelp(const char *filterName, FILE *f);
  * \return 0 on success.
  */
 extern
-int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay);
+int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
+        bool waitForDisplay);
 
 
 extern
@@ -155,6 +170,11 @@ extern
 int qsStreamConnectFilters(struct QsStream *stream,
         struct QsFilter *from, struct QsFilter *to);
 
+
+// TODO: We we don't have stream start and stop functions make there just
+// be a qsStreamRun().
+
+
 /** Start the flow
  *
  * Launches threads and calls the filter callbacks ... bla bla.
@@ -185,7 +205,7 @@ int qsStreamStop(struct QsStream *stream);
 /** Create a thread object
  *
  * This does not start the thread.  It just sets up what threads
- * will be used when the stream runs.  See qsStreamStart() and
+ * will be used when the stream runs.  See \ref qsStreamStart() and
  * qsStreamStop().
  *
  * \param stream returned from qsAppStreamCreate().

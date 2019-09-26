@@ -57,7 +57,8 @@ int qsAppDestroy(struct QsApp *app) {
 }
 
 
-int qsAppPrintDotToFile(struct QsApp *app, FILE *file) {
+int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
+        FILE *file) {
 
     DASSERT(app, "");
     DASSERT(file, "");
@@ -111,7 +112,8 @@ int qsAppPrintDotToFile(struct QsApp *app, FILE *file) {
     return 0; // success
 }
 
-int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay) {
+int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
+        bool waitForDisplay) {
 
     DASSERT(app, "");
 
@@ -141,7 +143,7 @@ int qsAppDisplayFlowImage(struct QsApp *app, bool waitForDisplay) {
             return 1;
         }
 
-        if(qsAppPrintDotToFile(app, f))
+        if(qsAppPrintDotToFile(app, l, f))
             ret = 1; // failure
         fclose(f);
 

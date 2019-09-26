@@ -14,10 +14,6 @@
 
 
 
-// TODO: This function may have to be broken into 2 stages of for-loops,
-// so that we may add pass-through buffers.  One loop-stage will get the
-// buffer parameters, and the next loop-stage will do the allocation.
-//
 // This function is the part of AllocateRingBuffers() that does not call
 // itself.
 //
@@ -86,6 +82,8 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         writer->buffer = buffer;
         //TODO: pass-through buffers with need this refCount
         // For now there is one writer per buffer.
+        // THIS CODE DOES NOT SUPPORT pass-through buffers yet.
+        //
         ++buffer->refCount;
         DASSERT(writer->maxWrite, "maxWrite cannot be 0");
         // The overhang length will be the largest of any single write or
@@ -99,6 +97,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         //
         for(uint32_t j=0; j<f->numOutputs; ++j) {
 
+            // NO GOOD FOR pass-through buffers yet.
             if(outputs[j].writer == writer) {
 
                 DASSERT(outputs[j].maxReadThreshold, "");
@@ -110,7 +109,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         // Now we have the max Read Length
         //
         // The size of the overhang is the largest single read or write
-        // operation.
+        // operation.  TODO: not so for pass-through
         //
         if(maxReadLength > writer->maxWrite)
             buffer->overhangLength = maxReadLength;
@@ -123,6 +122,24 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         // next multiple of the system pagesize (currently 4*1024) in
         // bytes.
         buffer->mem = makeRingBuffer(&buffer->mapLength, &buffer->overhangLength);
+
+        // Set all the output read and write buffer mem pointers
+        //
+        for(uint32_t j=0; j<f->numOutputs; ++j) {
+
+            // All outputs that use this ring buffer:
+            if(outputs[j].writer->buffer == buffer) {
+                // Set the read pointer to the start of ring buffer memory
+                outputs[j].readPtr = buffer->mem;
+                if(outputs[j].writer->writePtr == 0)
+                    // Set the write pointer to the start of ring buffer memory
+                    outputs[j].writer->writePtr = buffer->mem;
+#ifdef DEBUG
+                else
+                    DASSERT(outputs[j].writer->writePtr == buffer->mem, "");
+#endif
+            }
+        }
     }
 }
 
@@ -160,6 +177,7 @@ static inline void FreeBuffer(struct QsBuffer *buffer) {
     memset(buffer, 0, sizeof(*buffer));
 #endif
     free(buffer);
+    DSPEW("Freed buffer");
 }
 
 
@@ -322,18 +340,41 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 
 
 // The current writer filter gets an output buffer so it may write to the
-// buffer to an output.
+// buffer to an output.  This write pointer is only accessed by this
+// filters thread.
 void *qsGetBuffer(uint32_t outputChannelNum) {
 
     DASSERT(_qsInputFilter,"");
+    DASSERT(outputChannelNum < _qsInputFilter->numOutputs, "");
 
-    return 0;
+#ifdef DEBUG
+    struct QsWriter *writer = 
+        _qsInputFilter->outputs[outputChannelNum].writer;
+    DASSERT(writer->writePtr < writer->buffer->mem +
+            writer->buffer->mapLength, "");
+    DASSERT(writer->writePtr >= writer->buffer->mem, "");
+    return writer->writePtr;
+#else
+    return _qsInputFilter->outputs[outputChannelNum].writer->writePtr;
+#endif
 }
 
 
+// Here we just advance the write pointer.  This write pointer is only
+// accessed by this filters thread.
+//
 void qsOutput(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_qsInputFilter,"");
+    struct QsWriter *writer = _qsInputFilter->outputs[outputChannelNum].writer;
+    DASSERT(writer->writePtr < writer->buffer->mem +
+            writer->buffer->mapLength, "");
+    DASSERT(writer->writePtr >= writer->buffer->mem, "");
+    DASSERT(len <= writer->maxWrite, "");
 
-
+    if(writer->writePtr + len < writer->buffer->mem +
+            writer->buffer->mapLength)
+        writer->writePtr += len;
+    else
+        writer->writePtr -= (writer->buffer->mapLength - len);
 }

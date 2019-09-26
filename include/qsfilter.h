@@ -74,6 +74,14 @@ struct QsOpts;
 void help(FILE *file);
 
 
+
+enum QsFilterInputReturn {
+
+    QsFContinue = 0,
+    QsFFinished = 1
+};
+
+
 /** Required: filter input work function
  *
  * input() is how the filters receive input from upstream filters.
@@ -95,12 +103,12 @@ void help(FILE *file);
  * \param flowState should be considered an opaque data type that is passed
  * in to the filter input() to let the filter know stuff about the state
  * of the stream flow.  inline functions provide ways to interpret this so
- * called state.  See qsFlowIsLastPackage().
+ * called state.  See \ref qsFlowIsLastPackage().
  *
  * \return The values returned from input() give the filters some control
  * over how the stream and it's flow behaves.  The return value 0 is the
  * most common return value telling the stream to continue flowing
- * normally.
+ * normally.  
  *
  * \see qsFlowIsLastPackage().
  *

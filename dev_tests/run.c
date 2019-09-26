@@ -25,93 +25,37 @@ int main(void) {
     INFO("hello quickstream version %s", QS_VERSION);
 
     struct QsApp *app = qsAppCreate();
-
-    struct QsFilter *f0, *f1, *f2;
-
-    if(!(f0 = qsAppFilterLoad(app, "tests/sleep.so", 0, 0, 0))) {
-        qsAppDestroy(app);
+    if(!app)
         return 1;
+
+    const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
+    
+    struct QsFilter *prevF = 0;
+    struct QsStream *s = qsAppStreamCreate(app);
+    if(!s) goto fail;
+
+    for(const char **n=fn; *n; ++n) {
+        struct QsFilter *f = qsAppFilterLoad(app, *n, 0, 0, 0);
+        if(!f) goto fail;
+
+        if(prevF && qsStreamConnectFilters(s, prevF, f))
+            goto fail;
+
+        prevF = f;
     }
 
-    if(!(f2 = qsAppFilterLoad(app, "stdin.so", 0, 0, 0))) {
-        qsAppDestroy(app);
-        return 1;
-    }
+    qsAppDisplayFlowImage(app, 0, false);
 
-    f1 = qsAppFilterLoad(app, "tests/sleep.so", "SLEEP", 0, 0);
-
-    if(!f1) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsFilterUnload(f2)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(!(f2 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0))) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-
-    struct QsStream *stream = qsAppStreamCreate(app);
-    if(!stream) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsStreamConnectFilters(stream, f0, f1)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsStreamConnectFilters(stream, f2, f1)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsStreamConnectFilters(stream, f2, f1)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-    if(qsStreamConnectFilters(stream, f1, f2)) {
-        qsAppDestroy(app);
-        return 1;
-    }
-
-#if 0
-    if(qsStreamStart(stream, false) >= 0)
-        qsStreamStop(stream);
-#endif
-
-    struct QsThread *t = qsStreamThreadCreate(stream);
-
-    qsThreadAddFilter(t, f1);
-
-    qsThreadDestroy(t);
-
-
-    qsAppDisplayFlowImage(app, false);
-
-    qsStreamRemoveFilter(stream, f2);
-    //qsStreamConnectFilters(stream, f2, f1);
-
-
-    qsAppDisplayFlowImage(app, false);
-
-    qsStreamDestroy(stream);
-
-    qsAppDisplayFlowImage(app, false);
-
-
+    qsStreamStart(s);
 
     qsAppDestroy(app);
 
-
     WARN("SUCCESS");
-
     return 0;
+
+fail:
+
+    qsAppDestroy(app);
+    WARN("FAILURE");
+    return 1;
 }
