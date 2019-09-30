@@ -92,6 +92,9 @@ struct QsStream {
 };
 
 
+struct QsOutput;
+
+
 // The filter (QsFilter) is loaded by app as a module DSO (dynamic shared
 // object) plugin.  The filter after be loaded is added to a only one
 // stream at a time.  If the filter is added to another stream, it will be
@@ -107,7 +110,7 @@ struct QsFilter {
 
     struct QsApp *app;       // This does not change
     struct QsStream *stream; // This stream can be changed
-    struct QsThread *thread; // thread that this filter will run in
+    struct QsThread *thread; // thread/process that this filter will run in
 
     // name never changes after filter loading/creation pointer to
     // malloc()ed memory.
@@ -119,7 +122,41 @@ struct QsFilter {
     // before we call them.
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
-    int (* input)(void *buffer, size_t len, uint32_t inputChannelNum);
+    int (* input)(void *buffer, size_t len, uint32_t inputChannelNum,
+            uint32_t flowState);
+
+
+    // sendOutput() is the filter input() wrapper function that calls the
+    // filter input() function for a filter that is at this filters
+    // output.  The output filter could be in the same thread, a different
+    // thread, or in a thread in another process.  The function that
+    // this points to is set at stream start, before the stream is
+    // flowing.  The thread and process that a filter modules input() is
+    // called in can change at each stream start.  So this pointer points
+    // to a function that causes that thread/process to call the filters
+    // input().  The len bytes is the total bytes that can be consumed.
+    // The filters input() may be called more than once.
+    //
+    // The function this point to varies depending on if the output filter
+    // is in the same thread or a different thread or different thread and
+    // process.
+    //
+    // The filters input() may be called a number of times.  The number of
+    // times depends on how much the filters can read in an input()
+    // call.
+    //
+    // This function can block if it needs to.
+    //
+    // sendOutput() returns the number of bytes consumed in the series of
+    // input() calls which should be less than or equal to len that was
+    // passed in.
+    //
+    // The returned returnFlowState is the change in the flow state due to
+    // the return values of calling the filter input().
+    //
+    size_t (*sendOutput)(struct QsOutput *output,
+            uint32_t inputChannelNum, uint32_t flowState,
+            uint32_t *returnFlowState);
 
     struct QsFilter *next; // next loaded filter in app list
 
@@ -138,7 +175,8 @@ struct QsFilter {
         uint32_t isSource;  // startup flag marking filter as a source
     } u;
 
-    //
+
+    uint32_t numInputs; // number of connected input filters
     uint32_t numOutputs; // number of connected output filters
     struct QsOutput *outputs; // array of struct QsOutput
 };
@@ -161,16 +199,25 @@ struct QsFilter {
 #define _QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
 
 
+
 struct QsOutput {  // points to reader filters
 
     // The "reading filter" (or access filter) that sees this output as
     // input.
     struct QsFilter *filter;
 
+    // The input channel number that the filter being written to sees
+    // in it's input(,,channelNum,) call.
+    uint32_t inputChannelNum;
+
+    // The number of bytes read by the filter that is having it's input()
+    // called.
+    size_t bytesRead;
+
     // Here's where it gets weird: We need a buffer and a write pointer,
     // where the buffer may be shared between outputs in the same filter
     // and shared between outputs in different adjacent filters.
-    // So we may have more than one output point to a writer.
+    // So we may have more than one output point to a given writer.
     //
     // The writer for this particular output.  This writer can be shared
     // between many outputs in one filter, hence this is just a pointer
@@ -179,10 +226,13 @@ struct QsOutput {  // points to reader filters
     // TODO: "pass-through buffers" in which the buffer can be shared
     // for multiple filter levels, that is a filter can read the buffer
     // and then treat it like it is the writer to the next filter.
-    // The passing filter can't change the size of the buffer, but it
-    // can over-write it's content if it's careful.
+    // The passing filter can't change the size of the buffer, but it can
+    // over-write it's content if it's careful.  If a filter at the same
+    // level does this then the ring buffer memory will not necessarily
+    // have what you want in its' memory.
     //
     struct QsWriter *writer;
+
 
     // read filter access pointer to the circular buffer.
     //
@@ -254,6 +304,9 @@ extern
 __thread struct QsFilter *_qsInputFilter;
 
 
+extern
+__thread struct QsOutput *_qsCurrentOutput;
+
 
 // The filter that is having start() called.
 // There is only one thread when start() is called.
@@ -285,3 +338,9 @@ extern
 void freeRingBuffer(void *x, size_t len, size_t overhang);
 
 
+extern
+void setupSendOutput(struct QsFilter *f);
+
+
+extern
+void unsetupSendOutput(struct QsFilter *f);

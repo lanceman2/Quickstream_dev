@@ -5,7 +5,7 @@ libquickstream.so_SOURCES :=\
  app.c\
  filter.c\
  stream.c\
- stream_run_0p_0t.c\
+ sendOutput.c\
  thread.c\
  debug.c\
  opts.c\

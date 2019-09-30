@@ -360,8 +360,38 @@ void *qsGetBuffer(uint32_t outputChannelNum) {
 }
 
 
+static inline size_t
+getReadLength(struct QsOutput *output) {
+
+    size_t len = output->writer->writePtr - output->readPtr;
+
+    return len;
+}
+
+
+static inline void
+advanceReadPtr(struct QsOutput *output, size_t len) {
+
+    // TODO: WRITE THIS
+    output->readPtr += 0;
+}
+
+
+static inline void
+advanceWritePtr(struct QsOutput *output, size_t len) {
+
+    // TODO: WRITE THIS
+    output->writer->writePtr += 0;
+}
+
+
+
+
+
+
+
 // Here we just advance the write pointer.  This write pointer is only
-// accessed by this filters thread.
+// accessed by this filters thread. 
 //
 void qsOutput(size_t len, uint32_t outputChannelNum) {
 
@@ -377,4 +407,42 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
         writer->writePtr += len;
     else
         writer->writePtr -= (writer->buffer->mapLength - len);
+
+
+    // Check all the outputs with this writer.
+    // TODO: Make this not check all the outputs.
+    for(uint32_t i=0; i<_qsInputFilter->numOutputs; ++i) {
+        if(_qsInputFilter->outputs[i].writer == writer) {
+
+            struct QsOutput *output = &_qsInputFilter->outputs[i];
+
+            // This is the only thread that will access readPtr(s) and
+            // writePtr.  We pass the pointer to ring buffer memory on the
+            // stack in this causeInput() function call.
+            size_t len = getReadLength(output);
+
+            if(len > output->minReadThreshold) {
+                // Stack memory to keep state.
+                uint32_t returnFlowState = _qsInputFilter->stream->flowState;
+                size_t lenConsumed =
+                    _qsInputFilter->outputs[i].filter->sendOutput(
+                            (void *) output->readPtr, len,
+                            _qsInputFilter->stream->flowState,
+                            &returnFlowState);
+                // TODO: FIX THIS flowState stuff.
+                if(returnFlowState)
+                    _qsInputFilter->stream->flowState = returnFlowState;
+                DASSERT(lenConsumed <= len, "ring buffer read overrun");
+                advanceWritePtr(output, len);
+            }
+        }
+    }
 }
+
+// NEED?   inputChannelNum ???
+//
+void qsAdvanceInput(size_t len, uint32_t inputChannelNum) {
+  
+
+}
+

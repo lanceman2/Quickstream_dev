@@ -3,7 +3,7 @@
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
-
+#include "../include/qsfilter.h"
 
 // Private interfaces.
 #include "./qs.h"
@@ -563,23 +563,58 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
+     *     Stage: un-setup the way we call filter input() from qsOutput()
+     *********************************************************************/
+
+    for(uint32_t i=0; i<s->numSources; ++i)
+        if(s->sources[i]->numOutputs)
+            setupSendOutput(s->sources[i]);
+
+
+
+    /**********************************************************************
      *     Stage: flow
      *********************************************************************/
 
     NOTICE("RUNNING");
 
-    if(s->numThreads == 0)
-        stream_run_0p_0t(s);
+    bool flowing = true;
+
+    while(flowing) {
+        for(uint32_t i=0; i<s->numSources; ++i) {
+            DASSERT(s->sources[i],"");
+            struct QsFilter *filter = s->sources[i];
+            DASSERT(filter,"");
+            DASSERT(filter->input, "");
+
+            uint32_t returnFlowState = s->flowState;
+            filter->sendOutput(0, 0, s->flowState, &returnFlowState);
+
+            switch(returnFlowState) {
+                case QsFContinue:
+                    break;
+                case QsFFinished:
+                    flowing = false;
+                    break;
+                default:
+                    WARN("filter \"%s\" input() returned "
+                            "unknown enum QsFilterInputReturn %d",
+                            s->sources[i]->name, returnFlowState);
+            }
+        }
+    }
+
+    // We are done running this stream now.
 
 
     /**********************************************************************
-     *     Stage: flush?
+     *     Stage: setup the way we call filter input() from qsOutput()
      *********************************************************************/
 
+    for(uint32_t i=0; i<s->numSources; ++i)
+        if(s->sources[i]->numOutputs)
+            unsetupSendOutput(s->sources[i]);
 
-
-
-    // We are done running this stream now.
 
 
     /**********************************************************************
