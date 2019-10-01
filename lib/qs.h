@@ -155,7 +155,8 @@ struct QsFilter {
     // the return values of calling the filter input().
     //
     size_t (*sendOutput)(struct QsFilter *filter, // this filter
-            struct QsOutput *output, uint32_t inputChannelNum);
+            struct QsOutput *output, uint32_t inputChannelNum,
+            uint32_t flowStateIn, uint32_t *flowStateReturn);
 
     struct QsFilter *next; // next loaded filter in app list
 
@@ -279,9 +280,13 @@ struct QsWriter {  // all outputs need a writer
 };
 
 
-struct QsBuffer {  // all writers need a buffer
+struct QsBuffer {  // all writers need a circular buffer
 
     // Their can be many writers pointing to this buffer.
+    //
+    // If there are writers from different and connected filters then this
+    // will be a buffer the passes through one of the filters; a
+    // pass-through buffer.
 
     uint8_t *mem; // Pointer to start of mmap()ed memory.
 

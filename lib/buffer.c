@@ -28,9 +28,9 @@ void _AllocateRingBuffers(struct QsFilter *f) {
 
     // At this point all the filter start() functions have been called.
     //
-    // So they made their buffer configuration requests, setting stuff
-    // like (writer) maxWrite and (reader) maxReadThreshold, or they are
-    // the default values for these buffer parameters.
+    // So they made their buffer configuration requests, stuff like
+    // (writer) maxWrite and (reader) maxReadThreshold has been set, or
+    // they are the default values for these buffer parameters.
 
     // At this point the filter had there chance to configure ring buffer
     // connectivity.  Any filter->outputs[] struct without a writer will
@@ -161,11 +161,22 @@ void AllocateRingBuffers(struct QsFilter *f) {
         return;
     }
 
+
     _AllocateRingBuffers(f);
 
     // Allocate for all children.
-    for(uint32_t i=0; i<f->numOutputs; ++i)
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+
+        // We reuse the target filters numInputs counter to generate input
+        // channel numbers for the target filter for this output.
+        //
+        // This gets executed once per output, so we can use it to count
+        // and number the input channel for the target filter.
+        f->outputs[i].inputChannelNum =
+                f->outputs[i].filter->u.numInputs++;
+
         AllocateRingBuffers(f->outputs[i].filter);
+    }
 }
 
 
@@ -413,7 +424,6 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
     // TODO: Make this not check all the outputs.
     for(uint32_t i=0; i<_qsInputFilter->numOutputs; ++i) {
 
-        // This 
         if(_qsInputFilter->outputs[i].writer == writer) {
 
             struct QsOutput *output = &_qsInputFilter->outputs[i];
@@ -428,9 +438,13 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
                 uint32_t returnFlowState = _qsInputFilter->stream->flowState;
                 size_t lenConsumed =
                     _qsInputFilter->outputs[i].filter->sendOutput(
-                            (void *) output->readPtr, len,
-                            _qsInputFilter->stream->flowState,
-                            &returnFlowState);
+                            _qsInputFilter->outputs[i].filter,
+                            &_qsInputFilter->outputs[i],
+                            _qsInputFilter->outputs[i].inputChannelNum
+                             uint32_t flowStateIn, uint32_t *flowStateReturn
+                            
+                            );
+
                 DASSERT(lenConsumed <= len, "ring buffer read overrun");
                 
                 // TODO: FIX THIS flowState stuff.
@@ -444,7 +458,6 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 }
 
 
-// NEED?   inputChannelNum ???
 //
 void qsAdvanceInput(size_t len, uint32_t inputChannelNum) {
 

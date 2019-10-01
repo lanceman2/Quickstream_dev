@@ -25,8 +25,8 @@ static int Run(struct QsStream *s, struct QsFilter *f) {
 //
 static size_t
 sendOutput_sameThread(struct QsFilter *filter,
-        struct QsOutput *output,
-        uint32_t inputChannelNum) {
+        struct QsOutput *output, uint32_t inputChannelNum,
+        uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     DASSERT(filter, "");
     // Source filters do not get output from another filter, so they do
@@ -45,7 +45,7 @@ sendOutput_sameThread(struct QsFilter *filter,
     size_t len = 0;
 
     if(output) {
-        HERE LANCE
+        
     }
 
     // TODO: adjust len based on output reader parameters.

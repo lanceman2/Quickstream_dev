@@ -403,6 +403,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
         f->outputs[j].filter = s->to[i];
 
+        // initialize to a known invalid value.
+        f->outputs[j].inputChannelNum = (uint32_t) -1;
+
         // Set some possibly non-zero default values:
         f->outputs[j].maxReadThreshold = _QS_DEFAULT_maxReadThreshold;
         f->outputs[j].minReadThreshold = _QS_DEFAULT_minReadThreshold;
@@ -488,7 +491,7 @@ int qsStreamStart(struct QsStream *s) {
             s->sources[j++] = s->from[i];
             // reset flag so that s->from[i]->u.numInputs == 0
             // and we use it for the number of inputs after here.
-            s->from[i]->u.isSource = 0;
+            s->from[i]->u.numInputs = 0;
         }
     }
 
@@ -539,6 +542,13 @@ int qsStreamStart(struct QsStream *s) {
             // Call a filter start() function:
             int ret = f->start(f->u.numInputs, f->numOutputs);
             _qsStartFilter = 0;
+
+            // We need to reset this counter so we may use it in
+            // AllocateRingBuffers() below.  In AllocateRingBuffers() we
+            // will use this, u.numInputs, variable to recount the inputs
+            // as we assign the QsOutput::inputChannelNum.
+            //
+            f->u.numInputs = 0;
             if(ret) {
                 // TODO: Should we call filter stop() functions?
                 //
@@ -555,7 +565,7 @@ int qsStreamStart(struct QsStream *s) {
     // Any filters' special buffer requirements should have been gotten
     // from the filters' start() function.  Now we can allocated the
     // memory that is the conveyor belt between filters.  We follow every
-    // path in the stream:
+    // path (connection) in the stream:
     for(uint32_t i=0; i<s->numSources; ++i)
         // It easier to now because the f->outputs are more setup now.
         // If not we setup buffering connectivity defaults.
@@ -604,7 +614,6 @@ int qsStreamStart(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs)
             unsetupSendOutput(s->sources[i]);
-
 
 
     /**********************************************************************
