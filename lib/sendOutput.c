@@ -24,11 +24,53 @@ static int Run(struct QsStream *s, struct QsFilter *f) {
 // Case same thread
 //
 static size_t
-sendOutput_sameThread(struct QsOutput *output, uint32_t inputChannelNum,
-        uint32_t flowState, uint32_t *returnFlowState) {
+sendOutput_sameThread(struct QsFilter *filter,
+        struct QsOutput *output,
+        uint32_t inputChannelNum) {
 
-    DASSERT(output, "");
-    DASSERT(output->filter, "");
+    DASSERT(filter, "");
+    // Source filters do not get output from another filter, so they do
+    // not have struct output set when their input() is called.
+    DASSERT(!output || output->filter == filter, "");
+    DASSERT((!output && inputChannelNum == 0) || output, "");
+
+    struct QsStream *stream = filter->stream;
+    DASSERT(stream, "");
+
+    uint32_t returnFlowState = stream->flowState;
+    
+    // TODO: MORE HERE
+
+    void *buf = 0;
+    size_t len = 0;
+
+    if(output) {
+        HERE LANCE
+    }
+
+    // TODO: adjust len based on output reader parameters.
+
+    // For this single thread case we do not need to pass the stream flow
+    // state through the call state.
+    //
+    // TODO: Follow the flow state better...  It's likely a source filter
+    // set the flow status so returning and popping the function call
+    // stack, full of input() calls with the flow state flags set will
+    // work fine, but if a non-source filter sets it, what is good than.
+
+    int ret = filter->input(buf, len, inputChannelNum, stream->flowState);
+
+    switch(ret) {
+        case QsFContinue:
+            break;
+        case QsFFinished:
+            stream->flowState |= _QS_LASTPACKAGE;
+            break;
+        default:
+            WARN("filter \"%s\" input() returned "
+                    "unknown enum QsFilterInputReturn %d",
+                    s->sources[i]->name, returnFlowState);
+    }
 
 
     return 0;

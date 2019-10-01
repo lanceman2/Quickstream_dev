@@ -154,9 +154,8 @@ struct QsFilter {
     // The returned returnFlowState is the change in the flow state due to
     // the return values of calling the filter input().
     //
-    size_t (*sendOutput)(struct QsOutput *output,
-            uint32_t inputChannelNum, uint32_t flowState,
-            uint32_t *returnFlowState);
+    size_t (*sendOutput)(struct QsFilter *filter, // this filter
+            struct QsOutput *output, uint32_t inputChannelNum);
 
     struct QsFilter *next; // next loaded filter in app list
 
@@ -176,7 +175,6 @@ struct QsFilter {
     } u;
 
 
-    uint32_t numInputs; // number of connected input filters
     uint32_t numOutputs; // number of connected output filters
     struct QsOutput *outputs; // array of struct QsOutput
 };

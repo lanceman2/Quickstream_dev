@@ -412,6 +412,8 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
     // Check all the outputs with this writer.
     // TODO: Make this not check all the outputs.
     for(uint32_t i=0; i<_qsInputFilter->numOutputs; ++i) {
+
+        // This 
         if(_qsInputFilter->outputs[i].writer == writer) {
 
             struct QsOutput *output = &_qsInputFilter->outputs[i];
@@ -429,20 +431,25 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
                             (void *) output->readPtr, len,
                             _qsInputFilter->stream->flowState,
                             &returnFlowState);
+                DASSERT(lenConsumed <= len, "ring buffer read overrun");
+                
                 // TODO: FIX THIS flowState stuff.
                 if(returnFlowState)
                     _qsInputFilter->stream->flowState = returnFlowState;
-                DASSERT(lenConsumed <= len, "ring buffer read overrun");
+
                 advanceWritePtr(output, len);
             }
         }
     }
 }
 
+
 // NEED?   inputChannelNum ???
 //
 void qsAdvanceInput(size_t len, uint32_t inputChannelNum) {
-  
 
+    DASSERT(_qsCurrentOutput, "");
+
+    advanceReadPtr(output, size_t len) 
 }
 

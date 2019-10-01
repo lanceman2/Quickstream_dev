@@ -587,20 +587,10 @@ int qsStreamStart(struct QsStream *s) {
             DASSERT(filter,"");
             DASSERT(filter->input, "");
 
-            uint32_t returnFlowState = s->flowState;
-            filter->sendOutput(0, 0, s->flowState, &returnFlowState);
+            filter->sendOutput(filter, 0, 0);
 
-            switch(returnFlowState) {
-                case QsFContinue:
-                    break;
-                case QsFFinished:
-                    flowing = false;
-                    break;
-                default:
-                    WARN("filter \"%s\" input() returned "
-                            "unknown enum QsFilterInputReturn %d",
-                            s->sources[i]->name, returnFlowState);
-            }
+            if(filter->stream->flowState)
+                flowing = false;
         }
     }
 
