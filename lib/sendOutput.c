@@ -18,9 +18,16 @@
 // the same thread, another thread/filter, or maybe another
 // process/filter.
 //
-static size_t Input(struct QsFilter *filter, struct *output,
-        uint32_t inputChannelNum,
-        uint8_t *buf, size_t totalLen,
+// output is from the feeding filter, we came only read stream run-time
+// constant parts of it like inputChannelNum, maxReadThreshold,
+// minReadThreshold, and maxReadSize; anything that needs to change in it
+// can't be changed in this function.
+//
+// Arguments are passed in the stack in this thread that is calling this,
+// but they may be gotten from and are pointers to inter-thread or
+// inter-process shared memory.
+//
+static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     // This Input() function runs in the thread that is calling the filter
@@ -33,12 +40,11 @@ static size_t Input(struct QsFilter *filter, struct *output,
     // By default if qsAdvanceInput() was not called this (Input() call)
     // will advance the readPtr.
 
-    DASSERT(filter, "");
     DASSERT(output, "");
     DASSERT(totalLen, "");
-
-    struct QsStream *stream = filter->stream;
-    DASSERT(stream, "");
+    // We call this filter input()
+    struct QsFilter *filter = output->filter;
+    DASSERT(filter, "");
 
     // TODO:  FIX THIS len
 

@@ -10,6 +10,12 @@
 // the insides of quickstream, and code it.  Easier said than done...
 
 
+// Then studying these structures one must keep in mind most data is
+// constant at stream flow-time, and just some of the data is changing
+// at stream flow-time.  When we have multiple threads accessing this
+// data we can have only certain threads make changes to certain data,
+// and avoid thread synchronization primitives, and other system calls.
+
 
 // App (QsApp) is the top level quickstream object.  It's a container for
 // filters and streams.  Perhaps there should only be one app in a
@@ -154,10 +160,8 @@ struct QsFilter {
     // The returned returnFlowState is the change in the flow state due to
     // the return values of calling the filter input().
     //
-    size_t (*sendOutput)(struct QsFilter *filter, struct *output,
-            uint32_t inputChannelNum,
-            uint8_t *buf, size_t totalLen,
-            uint32_t flowStateIn);
+    size_t (*sendOutput)(struct *output, uint8_t *buf, size_t totalLen,
+            uint32_t flowStateIn, uint32_t *flowStateReturn);
 
 
     struct QsFilter *next; // next loaded filter in app list
@@ -211,9 +215,6 @@ struct QsOutput {  // points to reader filters
     // in it's input(,,channelNum,) call.
     uint32_t inputChannelNum;
 
-    // The number of bytes read by the filter that is having it's input()
-    // called.
-    size_t bytesRead;
 
     // Here's where it gets weird: We need a buffer and a write pointer,
     // where the buffer may be shared between outputs in the same filter
