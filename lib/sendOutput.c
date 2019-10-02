@@ -11,8 +11,54 @@
 #include "./debug.h"
 
 
-#if 0
-static int Run(struct QsStream *s, struct QsFilter *f) {
+
+//
+// This is a wrapper that is called in the thread that is calling the
+// filter module input().  The caller may have caused this to be called in
+// the same thread, another thread/filter, or maybe another
+// process/filter.
+//
+static size_t Input(struct QsFilter *filter, struct *output,
+        uint32_t inputChannelNum,
+        uint8_t *buf, size_t totalLen,
+        uint32_t flowStateIn, uint32_t *flowStateReturn) {
+
+    // This Input() function runs in the thread that is calling the filter
+    // input().
+    //
+    // buf and totalLen must have been computed in the feeding filter
+    // thread.  output->readPtr can get advanced in this call in this
+    // thread, or in an qsAdvanceInput() call from this filter/thread.
+    //
+    // By default if qsAdvanceInput() was not called this (Input() call)
+    // will advance the readPtr.
+
+    DASSERT(filter, "");
+    DASSERT(output, "");
+    DASSERT(totalLen, "");
+
+    struct QsStream *stream = filter->stream;
+    DASSERT(stream, "");
+
+    // TODO:  FIX THIS len
+
+    size_t len = totalLen;
+
+    int ret = filter->input(buf, len, inputChannelNum, flowStateIn);
+
+    switch(ret) {
+        case QsFContinue:
+            break;
+        case QsFFinished:
+            *flowStateReturn |= _QS_LASTPACKAGE;
+            break;
+        default:
+            WARN("filter \"%s\" input() returned "
+                    "unknown enum QsFilterInputReturn %d",
+                    s->sources[i]->name, returnFlowState);
+    }
+
+
 
     return 0;
 
@@ -28,43 +74,28 @@ sendOutput_sameThread(struct QsFilter *filter,
         struct QsOutput *output, uint32_t inputChannelNum,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
-    DASSERT(filter, "");
-    // Source filters do not get output from another filter, so they do
-    // not have struct output set when their input() is called.
-    DASSERT(!output || output->filter == filter, "");
-    DASSERT((!output && inputChannelNum == 0) || output, "");
+    // Note: in this case we can pass the flowStateReturn directly to the
+    // filter Input() wrapper, but if it was in another thread, there's a
+    // lot more to getting that value back.
 
-    struct QsStream *stream = filter->stream;
-    DASSERT(stream, "");
+    return Input(filter, output, inputChannelNum,
+            flowStateIn, flowStateReturn);
+}
+//
+//
+static size_t
+sendOutput_sameThread_source(struct QsFilter *filter,
+        struct QsOutput *output, uint32_t inputChannelNum,
+        uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
-    uint32_t returnFlowState = stream->flowState;
-    
-    // TODO: MORE HERE
-
-    void *buf = 0;
-    size_t len = 0;
-
-    if(output) {
-        
-    }
-
-    // TODO: adjust len based on output reader parameters.
-
-    // For this single thread case we do not need to pass the stream flow
-    // state through the call state.
-    //
-    // TODO: Follow the flow state better...  It's likely a source filter
-    // set the flow status so returning and popping the function call
-    // stack, full of input() calls with the flow state flags set will
-    // work fine, but if a non-source filter sets it, what is good than.
-
-    int ret = filter->input(buf, len, inputChannelNum, stream->flowState);
+    // Input 0 bytes on channel 0 to a source filter.
+    int ret = filter->input(0, 0, 0, filter->stream->flowState);
 
     switch(ret) {
         case QsFContinue:
             break;
         case QsFFinished:
-            stream->flowState |= _QS_LASTPACKAGE;
+            *flowStateReturn |= _QS_LASTPACKAGE;
             break;
         default:
             WARN("filter \"%s\" input() returned "
@@ -72,9 +103,12 @@ sendOutput_sameThread(struct QsFilter *filter,
                     s->sources[i]->name, returnFlowState);
     }
 
-
-    return 0;
+    return 0; // The sources consume 0 bytes.
 }
+
+
+
+
 
 
 void setupSendOutput(struct QsFilter *f) {
@@ -84,6 +118,12 @@ void setupSendOutput(struct QsFilter *f) {
     DASSERT(f, "");
     DASSERT(f->numOutputs, "");
     DASSERT(f->outputs, "");
+
+    if(f->u.numInputs == 0) {
+        // This filter, f, is a source.
+        f->sendOutput = sendOutput_sameThread_source;
+    }
+
 
     if(f->outputs[0].filter->sendOutput)
         // We already setup this sendOutput() for all outputs in this
@@ -107,6 +147,7 @@ void setupSendOutput(struct QsFilter *f) {
             // Recurse.
             setupSendOutput(f->outputs[i].filter);
 }
+
 
 
 void unsetupSendOutput(struct QsFilter *f) {

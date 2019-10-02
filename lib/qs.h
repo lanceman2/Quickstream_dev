@@ -154,9 +154,11 @@ struct QsFilter {
     // The returned returnFlowState is the change in the flow state due to
     // the return values of calling the filter input().
     //
-    size_t (*sendOutput)(struct QsFilter *filter, // this filter
-            struct QsOutput *output, uint32_t inputChannelNum,
-            uint32_t flowStateIn, uint32_t *flowStateReturn);
+    size_t (*sendOutput)(struct QsFilter *filter, struct *output,
+            uint32_t inputChannelNum,
+            uint8_t *buf, size_t totalLen,
+            uint32_t flowStateIn);
+
 
     struct QsFilter *next; // next loaded filter in app list
 
@@ -299,20 +301,32 @@ struct QsBuffer {  // all writers need a circular buffer
 
 
 
-// The current filter that is having its' input() called in this thread.
 //
 // TODO: If an app makes a lot of threads that are not related to
 // quickstream, this could be wasteful, so we may want to allocate this.
+// Maybe these can be part of QsThread.
+//
+//
+// The current filter that is having its' input() called in this thread.
 extern
-__thread struct QsFilter *_qsInputFilter;
-
-
+__thread struct QsFilter *_filter;
+//
+// The current output that corresponds with the filter who's input() is
+// being called.
 extern
-__thread struct QsOutput *_qsCurrentOutput;
+__thread struct QsOutput *_output;
+//
+// The flowState that corresponds with the filter who's input() is
+// being called.
+extern
+__thread uint32_t _flowState;
+//
 
 
-// The filter that is having start() called.
-// There is only one thread when start() is called.
+
+
+// The filter that is having start() called.  There is only one thread
+// when start() is called.  This may be using in stream stop too.
 extern
 struct QsFilter *_qsStartFilter;
 

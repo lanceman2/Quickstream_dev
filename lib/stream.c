@@ -590,6 +590,8 @@ int qsStreamStart(struct QsStream *s) {
 
     bool flowing = true;
 
+    uint32_t flowState = 0;
+
     while(flowing) {
         for(uint32_t i=0; i<s->numSources; ++i) {
             DASSERT(s->sources[i],"");
@@ -597,10 +599,13 @@ int qsStreamStart(struct QsStream *s) {
             DASSERT(filter,"");
             DASSERT(filter->input, "");
 
-            filter->sendOutput(filter, 0, 0);
+            uint32_t flowStateReturn = flowState;
+            filter->sendOutput(filter, 0, 0, flowState, &flowStateReturn);
 
-            if(filter->stream->flowState)
+            if(flowStateReturn) {
                 flowing = false;
+                flowState = flowStateReturn;
+            }
         }
     }
 
