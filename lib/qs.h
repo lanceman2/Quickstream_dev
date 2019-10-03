@@ -74,9 +74,6 @@ struct QsStream {
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.
 
-    // keeps state that it passes to filter input()
-    uint32_t flowState;
-
     uint32_t numThreads;       // length of threads
     struct QsThread **threads; // array of threads
 
@@ -207,6 +204,9 @@ struct QsFilter {
 
 struct QsOutput {  // points to reader filters
 
+    // readPtr and writer->writePtr are the two only values in this struct
+    // that can change while the stream is in the flowing state.
+
     // The "reading filter" (or access filter) that sees this output as
     // input.
     struct QsFilter *filter;
@@ -233,10 +233,18 @@ struct QsOutput {  // points to reader filters
     // level does this then the ring buffer memory will not necessarily
     // have what you want in its' memory.
     //
+    // ** Only the filter (and it's thread) that has a pointer to this
+    // output can read and write to the writePtr in this writer, at flow
+    // time.
+    // **
+    // 
     struct QsWriter *writer;
 
 
     // read filter access pointer to the circular buffer.
+    //
+    // ** Only the filter (and it's thread) that has a pointer to this
+    // output can read and write this pointer, at flow time. **
     //
     uint8_t *readPtr;
 
@@ -308,14 +316,19 @@ struct QsBuffer {  // all writers need a circular buffer
 // Maybe these can be part of QsThread.
 //
 //
-// The current filter that is having its' input() called in this thread.
+// The current thread that corresponds with the filter who's input() is
+// being called now.
 extern
-__thread struct QsFilter *_filter;
-//
-// The current output that corresponds with the filter who's input() is
-// being called.
-extern
-__thread struct QsOutput *_output;
+__thread struct QsInput {
+
+    struct QsOutput *output;
+    size_t len;
+    bool advanceInput_wasCalled;
+
+} _input;
+
+
+
 //
 // The flowState that corresponds with the filter who's input() is
 // being called.

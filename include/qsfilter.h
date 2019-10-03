@@ -247,19 +247,12 @@ void qsOutput(size_t len, uint32_t outputChannelNum);
  * This has no effect on output from the current filter.  This only
  * effects the current input channel number that passed to input();
  *
- * It may be that you need a filter to read more than one input buffer
- * (input channel) in the same input() call.  You can do that just by
- * saving the buffer pointer and length of one of the input channels,
- * calling qsAdvanceInput(0, N) which keeps the buffer for the channel
- * accessible, and when input() is called again for another channel, the
- * filter will now have access to both channel's buffers.
- *
  * \param len advance the current input buffer len bytes.  len can be less
  * than or equal to the length in bytes that was passed to the input()
  * call.
  */
 extern
-void qsAdvanceInput(size_t len, uint32_t inputChannelNum);
+void qsAdvanceInput(size_t len);
 
 
 /** Set the maximum buffer read threshold

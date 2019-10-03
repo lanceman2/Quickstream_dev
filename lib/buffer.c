@@ -459,10 +459,20 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
 
 //
-void qsAdvanceInput(size_t len, uint32_t inputChannelNum) {
+void qsAdvanceInput(size_t len) {
 
-    DASSERT(_qsCurrentOutput, "");
+    DASSERT(_input.output, "");
+    DASSERT(len <= _input.len, "");
 
-    advanceReadPtr(output, size_t len) 
+    // We cannot necessarily advance the output->readPtr because only the
+    // thread of the filter that owns the output can do that.  Remember
+    // there is a lock-less circular buffer.  We just need to keep a
+    // record of how much was consumed and let the thread of the filter
+    // that owns the output advance the readPtr later.  There's not a lot
+    // of waste in doing it this way even when there are not multiple
+    // threads.
+
+    _input.len -= len;
+    _input.advanceInput_wasCalled = true;
 }
 

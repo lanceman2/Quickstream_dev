@@ -34,42 +34,66 @@ static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
     // input().
     //
     // buf and totalLen must have been computed in the feeding filter
-    // thread.  output->readPtr can get advanced in this call in this
-    // thread, or in an qsAdvanceInput() call from this filter/thread.
+    // thread.
     //
-    // By default if qsAdvanceInput() was not called this (Input() call)
-    // will advance the readPtr.
 
     DASSERT(output, "");
     DASSERT(totalLen, "");
     // We call this filter input()
     struct QsFilter *filter = output->filter;
     DASSERT(filter, "");
+    // We Assume that the minimum threshold was met.
+    DASSERT(totalLen >= output->minReadThreshold, "");
 
-    // TODO:  FIX THIS len
+    // _input is the threads object state holder that is accessed in
+    // qsAdvanceInput() which may be called in filter->input().
+    //
+    size_t remainingLen = totalLen;
+ 
+    do {
 
-    size_t len = totalLen;
+        size_t len = remainingLen;
 
-    int ret = filter->input(buf, len, inputChannelNum, flowStateIn);
+        if(len > output->maxReadSize)
+            len = output->maxReadSize;
 
-    switch(ret) {
-        case QsFContinue:
-            break;
-        case QsFFinished:
-            *flowStateReturn |= _QS_LASTPACKAGE;
-            break;
-        default:
-            WARN("filter \"%s\" input() returned "
+        // _input is the threads object state holder that is accessed in
+        // qsAdvanceInput() which may be called in filter->input().
+        //
+        _input.len = len;
+        _input.advanceInput_wasCalled = false;
+
+        int ret = filter->input(buf, len, inputChannelNum, flowStateIn);
+
+        switch(ret) {
+            case QsFContinue:
+                break;
+            case QsFFinished:
+                flowStateIn |= _QS_LASTPACKAGE;
+                break;
+            default:
+                WARN("filter \"%s\" input() returned "
                     "unknown enum QsFilterInputReturn %d",
                     s->sources[i]->name, returnFlowState);
-    }
+        }
+
+        if(!_input.advanceInput_wasCalled)
+            // By default we advance the buffer all the way.
+            qsAdvanceInput(len);
+
+        // Advance the buffer and find the remaining length.
+        buf += _input.len;
+        remainingLen -= (len - _input.len);
+
+    } while(remainingLen >= output->maxReadThreshold);
 
 
 
-    return 0;
+    // Get this value returned to the calling function.
+    *flowStateReturn = flowStateIn;
 
+    return totalLen - remainingLen;
 }
-#endif
 
 
 
@@ -95,19 +119,21 @@ sendOutput_sameThread_source(struct QsFilter *filter,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     // Input 0 bytes on channel 0 to a source filter.
-    int ret = filter->input(0, 0, 0, filter->stream->flowState);
+    int ret = filter->input(0, 0, 0, flowStateIn);
 
     switch(ret) {
         case QsFContinue:
             break;
         case QsFFinished:
-            *flowStateReturn |= _QS_LASTPACKAGE;
+            flowStateIn |= _QS_LASTPACKAGE;
             break;
         default:
             WARN("filter \"%s\" input() returned "
                     "unknown enum QsFilterInputReturn %d",
                     s->sources[i]->name, returnFlowState);
     }
+
+    *flowStateReturn = flowStateIn;
 
     return 0; // The sources consume 0 bytes.
 }
