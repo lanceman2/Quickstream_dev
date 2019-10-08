@@ -1,5 +1,6 @@
 #include <string.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include "./qs.h"
 #include "./debug.h"

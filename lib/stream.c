@@ -17,6 +17,9 @@
 //#define SPEW(fmt, ... ) /* empty macro */
 
 
+__thread struct QsInput _input;
+
+
 
 // The filter that is having start() called.
 // There is only one thread when start() is called.
@@ -600,7 +603,7 @@ int qsStreamStart(struct QsStream *s) {
             DASSERT(filter->input, "");
 
             uint32_t flowStateReturn = flowState;
-            filter->sendOutput(filter, 0, 0, flowState, &flowStateReturn);
+            filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
 
             if(flowStateReturn) {
                 flowing = false;

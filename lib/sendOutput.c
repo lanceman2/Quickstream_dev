@@ -27,7 +27,7 @@
 // but they may be gotten from and are pointers to inter-thread or
 // inter-process shared memory.
 //
-static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
+static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     // This Input() function runs in the thread that is calling the filter
@@ -49,6 +49,8 @@ static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
     // qsAdvanceInput() which may be called in filter->input().
     //
     size_t remainingLen = totalLen;
+
+    _input.filter = filter;
  
     do {
 
@@ -58,12 +60,14 @@ static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
             len = output->maxReadSize;
 
         // _input is the threads object state holder that is accessed in
-        // qsAdvanceInput() which may be called in filter->input().
+        // qsAdvanceInput(), qsGetBuffer(), and qsOutput(), which may be
+        // called in filter->input().
         //
         _input.len = len;
         _input.advanceInput_wasCalled = false;
+        _input.flowState = flowStateIn;
 
-        int ret = filter->input(buf, len, inputChannelNum, flowStateIn);
+        int ret = filter->input(buf, len, output->inputChannelNum, flowStateIn);
 
         switch(ret) {
             case QsFContinue:
@@ -74,7 +78,7 @@ static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
             default:
                 WARN("filter \"%s\" input() returned "
                     "unknown enum QsFilterInputReturn %d",
-                    s->sources[i]->name, returnFlowState);
+                    filter->name, ret);
         }
 
         if(!_input.advanceInput_wasCalled)
@@ -101,22 +105,25 @@ static size_t Input(struct *output, uint8_t *buf, size_t totalLen,
 //
 static size_t
 sendOutput_sameThread(struct QsFilter *filter,
-        struct QsOutput *output, uint32_t inputChannelNum,
+        struct QsOutput *output, uint8_t *buf, size_t totalLen,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     // Note: in this case we can pass the flowStateReturn directly to the
     // filter Input() wrapper, but if it was in another thread, there's a
-    // lot more to getting that value back.
+    // lot more to getting values to and back from Input().
 
-    return Input(filter, output, inputChannelNum,
-            flowStateIn, flowStateReturn);
+    return Input(output, buf, totalLen, flowStateIn, flowStateReturn) ;
 }
 //
 //
 static size_t
 sendOutput_sameThread_source(struct QsFilter *filter,
-        struct QsOutput *output, uint32_t inputChannelNum,
+        struct QsOutput *output, uint8_t *buf, size_t totalLen,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
+
+    DASSERT(buf == 0, "");
+    DASSERT(totalLen == 0, "");
+    DASSERT(output == 0, "");
 
     // Input 0 bytes on channel 0 to a source filter.
     int ret = filter->input(0, 0, 0, flowStateIn);
@@ -130,7 +137,7 @@ sendOutput_sameThread_source(struct QsFilter *filter,
         default:
             WARN("filter \"%s\" input() returned "
                     "unknown enum QsFilterInputReturn %d",
-                    s->sources[i]->name, returnFlowState);
+                    filter->name, ret);
     }
 
     *flowStateReturn = flowStateIn;
@@ -209,6 +216,4 @@ void unsetupSendOutput(struct QsFilter *f) {
             // Recurse.
             unsetupSendOutput(f->outputs[i].filter);
 }
-
-
 

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -355,18 +356,18 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 // filters thread.
 void *qsGetBuffer(uint32_t outputChannelNum) {
 
-    DASSERT(_qsInputFilter,"");
-    DASSERT(outputChannelNum < _qsInputFilter->numOutputs, "");
+    DASSERT(_input.filter,"");
+    DASSERT(outputChannelNum < _input.filter->numOutputs, "");
 
 #ifdef DEBUG
     struct QsWriter *writer = 
-        _qsInputFilter->outputs[outputChannelNum].writer;
+        _input.filter->outputs[outputChannelNum].writer;
     DASSERT(writer->writePtr < writer->buffer->mem +
             writer->buffer->mapLength, "");
     DASSERT(writer->writePtr >= writer->buffer->mem, "");
     return writer->writePtr;
 #else
-    return _qsInputFilter->outputs[outputChannelNum].writer->writePtr;
+    return _input.filter->outputs[outputChannelNum].writer->writePtr;
 #endif
 }
 
@@ -397,17 +398,13 @@ advanceWritePtr(struct QsOutput *output, size_t len) {
 
 
 
-
-
-
-
 // Here we just advance the write pointer.  This write pointer is only
 // accessed by this filters thread. 
 //
 void qsOutput(size_t len, uint32_t outputChannelNum) {
 
-    DASSERT(_qsInputFilter,"");
-    struct QsWriter *writer = _qsInputFilter->outputs[outputChannelNum].writer;
+    DASSERT(_input.filter,"");
+    struct QsWriter *writer = _input.filter->outputs[outputChannelNum].writer;
     DASSERT(writer->writePtr < writer->buffer->mem +
             writer->buffer->mapLength, "");
     DASSERT(writer->writePtr >= writer->buffer->mem, "");
@@ -422,11 +419,11 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
     // Check all the outputs with this writer.
     // TODO: Make this not check all the outputs.
-    for(uint32_t i=0; i<_qsInputFilter->numOutputs; ++i) {
+    for(uint32_t i=0; i<_input.filter->numOutputs; ++i) {
 
-        if(_qsInputFilter->outputs[i].writer == writer) {
+        if(_input.filter->outputs[i].writer == writer) {
 
-            struct QsOutput *output = &_qsInputFilter->outputs[i];
+            struct QsOutput *output = &_input.filter->outputs[i];
 
             // This is the only thread that will access readPtr(s) and
             // writePtr.  We pass the pointer to ring buffer memory on the
@@ -435,21 +432,24 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
             if(len > output->minReadThreshold) {
                 // Stack memory to keep state.
-                uint32_t returnFlowState = _qsInputFilter->stream->flowState;
+                uint32_t returnFlowState = _input.flowState;
                 size_t lenConsumed =
-                    _qsInputFilter->outputs[i].filter->sendOutput(
-                            _qsInputFilter->outputs[i].filter,
-                            &_qsInputFilter->outputs[i],
-                            _qsInputFilter->outputs[i].inputChannelNum
-                             uint32_t flowStateIn, uint32_t *flowStateReturn
-                            
-                            );
+                    _input.filter->outputs[i].filter->sendOutput(
+                            _input.filter->outputs[i].filter,
+                            &_input.filter->outputs[i],
+                            _input.filter->outputs[i].readPtr,
+                            len,
+                            _input.flowState, &returnFlowState
+                    );
+
+                // TODO: WTF to do with returnFlowState
+                // We never get it in the multi-threaded case.
 
                 DASSERT(lenConsumed <= len, "ring buffer read overrun");
-                
+
                 // TODO: FIX THIS flowState stuff.
                 if(returnFlowState)
-                    _qsInputFilter->stream->flowState = returnFlowState;
+                    _input.flowState = returnFlowState;
 
                 advanceWritePtr(output, len);
             }
@@ -461,7 +461,6 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 //
 void qsAdvanceInput(size_t len) {
 
-    DASSERT(_input.output, "");
     DASSERT(len <= _input.len, "");
 
     // We cannot necessarily advance the output->readPtr because only the

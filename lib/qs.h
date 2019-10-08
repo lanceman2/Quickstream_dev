@@ -157,7 +157,8 @@ struct QsFilter {
     // The returned returnFlowState is the change in the flow state due to
     // the return values of calling the filter input().
     //
-    size_t (*sendOutput)(struct *output, uint8_t *buf, size_t totalLen,
+    size_t (*sendOutput)(struct QsFilter *filter/*this filter*/,
+            struct QsOutput *output, uint8_t *buf, size_t totalLen,
             uint32_t flowStateIn, uint32_t *flowStateReturn);
 
 
@@ -321,9 +322,10 @@ struct QsBuffer {  // all writers need a circular buffer
 extern
 __thread struct QsInput {
 
-    struct QsOutput *output;
     size_t len;
     bool advanceInput_wasCalled;
+    struct QsFilter *filter;
+    uint32_t flowState;
 
 } _input;
 
