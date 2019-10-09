@@ -14,12 +14,25 @@ more refined spin-off project.  I hope to give quickstream more polish
 then it's previous generation.
 
 
-# Development Status
+## Development Status
 
 It's not functional yet.  Currently it's got most of directory structure
 laid out, build system, and components figured out.  The thing of interest
 now for you may be this README.md file.  Current development is on Debian
 9 and Ubuntu 18.04 systems.
+
+
+## Prerequisite packages
+
+Building and installing quickstream requires the following debian package
+prerequisites:
+
+```shell
+build-essential
+graphviz
+imagemagick
+doxygen
+```
 
 
 ## Building and Installing with GNU Autotools
@@ -186,12 +199,12 @@ added to the *config.make* files as C preprocessor (CPP) flags when
 compiling are for example:
 
 ```shell
-CPPFLAGS = -DDEBUG
-CPPFLAGS = -DDEBUG -DSPEW_LEVEL_DEBUG
-CPPFLAGS = -DSPEW_LEVEL_INFO
-CPPFLAGS = "-DDEBUG -DSPEW_LEVEL_NOTICE"
-CPPFLAGS = -DSPEW_LEVEL_WARN
-CFLAGS = -g -Wall -Werror
+CPPFLAGS := -DDEBUG
+CPPFLAGS := -DDEBUG -DSPEW_LEVEL_DEBUG
+CPPFLAGS := -DSPEW_LEVEL_INFO
+CPPFLAGS := "-DDEBUG -DSPEW_LEVEL_NOTICE"
+CPPFLAGS := -DSPEW_LEVEL_WARN
+CFLAGS := -g -Wall -Werror
 ```
 
 See file *lib/debug.h* for how these CPP macro flags are
@@ -302,17 +315,6 @@ It's like the other UNIX abstractions like sockets, file streams, and
 pipes, in that the type of data is of no concern in this quickstream
 APIs.
 
-
-## Prerequisite packages
-Building and installing quickstream requires the following debian package
-prerequisites:
-
-```shell
-build-essential
-graphviz-dev
-imagemagick
-doxygen
-```
 
 ## Terminology
 
@@ -592,5 +594,5 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
       - It would appear that current software development trends frowns
         upon this idea.
 
-- It looks like a kernel hack is not needed, or is there?
+- It looks like a kernel hack is not needed, or is it?
 
