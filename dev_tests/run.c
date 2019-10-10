@@ -45,8 +45,11 @@ int main(void) {
     }
 
     qsStreamPrestart(s);
-    //qsAppDisplayFlowImage(app, 0, false);
-    qsStreamStart(s);
+    
+    qsAppPrintDotToFile(app, QsPrintDebug, stdout);
+    qsAppDisplayFlowImage(app, QsPrintDebug, false);
+
+    //qsStreamStart(s);
 
     qsAppDestroy(app);
 

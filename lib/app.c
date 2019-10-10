@@ -57,6 +57,67 @@ int qsAppDestroy(struct QsApp *app) {
 }
 
 
+static inline void
+PrintStreamOutline(struct QsStream *s,
+        uint32_t sNum /*stream number*/,
+        uint32_t clusterNum,
+        FILE *file) {
+
+    fprintf(file, "\n"
+            "  subgraph cluster_%" PRIu32 " {\n"
+            "    label=\"stream %" PRIu32 "\";\n\n",
+            clusterNum, sNum);
+    for(uint32_t i=0; i<s->numConnections; ++i) {
+        DASSERT(s->from[i], "");
+        DASSERT(s->from[i]->name, "");
+        DASSERT(s->to[i], "");
+        DASSERT(s->to[i]->name, "");
+        fprintf(file, "    \"%s\" -> \"%s\";\n",
+                s->from[i]->name, s->to[i]->name);
+    }
+    fprintf(file, "  }\n");
+}
+
+static void
+PrintStreamFilter(struct QsFilter *filter, uint32_t clusterNum,
+        FILE *file) {
+
+    fprintf(file, "\n"
+        "  subgraph cluster_%" PRIu32 " {\n"
+        "    label=\"%s\";\n\n",
+        clusterNum, filter->name);
+
+    for(uint32_t i=0; i<filter->numOutputs; ++i) {
+
+        fprintf(file, "    node [shape=\"box\", label=\"%" PRIu32 "\"]; "
+                "%s_output_%" PRIu32 " \n" , i, filter->name, i);
+    }
+
+    fprintf(file, "   }\n");
+}
+
+
+static inline void
+PrintStreamDetail(struct QsStream *s,
+        uint32_t sNum /*stream number*/,
+        uint32_t clusterNum,
+        FILE *file) {
+
+    DASSERT(s->sources, "");
+
+    fprintf(file, "\n"
+            "  subgraph cluster_%" PRIu32 " {\n"
+            "    label=\"stream %" PRIu32 "\";\n\n",
+            clusterNum++, sNum);
+
+
+    for(uint32_t i=0; i<s->numSources; ++i)
+        PrintStreamFilter(s->sources[i], clusterNum++, file);
+
+    fprintf(file, "  }\n");
+}
+
+
 int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         FILE *file) {
 
@@ -79,7 +140,7 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
                 "  subgraph cluster_%" PRIu32 " {\n"
                 "    label=\" unconnected filters \";\n\n",
                 clusterNum++);
-        
+
         for(struct QsFilter *f=app->filters; f; f=f->next)
             if(!f->stream)
                 fprintf(file, "    \"%s\";\n", f->name);
@@ -87,24 +148,13 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         fprintf(file, "  }\n");
     }
 
-
     uint32_t sNum = 0; // stream counter
 
     for(struct QsStream *s = app->streams; s; s = s->next) {
-        fprintf(file, "\n"
-                "  subgraph cluster_%" PRIu32 " {\n"
-                "    label=\"stream %" PRIu32 "\";\n\n",
-                clusterNum++, sNum);
-        for(uint32_t i=0; i<s->numConnections; ++i) {
-            DASSERT(s->from[i], "");
-            DASSERT(s->from[i]->name, "");
-            DASSERT(s->to[i], "");
-            DASSERT(s->to[i]->name, "");
-            fprintf(file, "    \"%s\" -> \"%s\";\n",
-                    s->from[i]->name, s->to[i]->name);
-        }
-        fprintf(file, "  }\n");
-        ++sNum;
+        if(l == QsPrintOutline || !s->sources)
+            PrintStreamOutline(s, sNum++, clusterNum++, file);
+        else
+            PrintStreamDetail(s, sNum++, clusterNum++, file);
     }
 
     fprintf(file, "}\n");

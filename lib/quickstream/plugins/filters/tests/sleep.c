@@ -13,7 +13,8 @@ static int count = 0;
 
 // TODO: Add command line options.
 
-static unsigned int usecs = 200000; // 1 micro second = 1s/1,000,000
+//static unsigned int usecs = 200000; // 1 micro second = 1s/1,000,000
+static unsigned int usecs = 0; // 1 micro second = 1s/1,000,000
 
 
 void help(FILE *f) {
@@ -41,7 +42,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     DASSERT(len, "");
 
     // The filter module's stupid action, sleep.
-    usleep(usecs);
+    if(usecs)
+        usleep(usecs);
 
     // For output buffering.  By this module using default buffering this
     // will be all the output buffers for all output channels.
@@ -55,7 +57,6 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     }
 
     // TODO: change this to a pass-through.
-    DSPEW("count=%d len=%zu", count++, len);
 
     memcpy(oBuffer, buffer, len);
 

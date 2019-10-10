@@ -26,7 +26,8 @@
  *
  * - **Qs stream**  a directed graph of filters,
  *                  a mapping of filters to threads,
- *                  a mapping of threads to processes
+ *                  a mapping of threads to processes, and
+ *                  an interface to run the stream
  *
  * - **Qs filter**  a filter module plugin from a dynamic shared object
  *                  file
@@ -109,9 +110,9 @@ int qsFilterPrintHelp(const char *filterName, FILE *f);
 
 
 enum QsAppPrintLevel {
-    Outline = 0,
-    Default = 0,
-    Debug = 3
+    QsPrintOutline = 0,
+    QsPrintDefault = 0,
+    QsPrintDebug = 3
 };
 
 

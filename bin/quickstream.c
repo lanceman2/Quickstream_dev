@@ -92,7 +92,7 @@ int main(void) {
     }
 
 
-    qsAppDisplayFlowImage(app, Outline, false);
+    qsAppDisplayFlowImage(app, QsPrintOutline, false);
 
     if(qsStreamStart(stream)) {
         const char *err = qsError();

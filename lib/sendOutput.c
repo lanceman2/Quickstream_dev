@@ -91,10 +91,7 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
         buf += dif;
         remainingLen -= dif;
 
-    DSPEW("remainingLen = %zu  totalLen=%zu", remainingLen, totalLen);
- 
     } while(remainingLen >= output->maxReadThreshold);
-
 
 
     // Get this value returned to the calling function.
@@ -113,8 +110,6 @@ sendOutput_sameThread(struct QsFilter *filter,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     DASSERT(output, "");
-
-DSPEW("totalLen=%zu", totalLen);
 
     // Note: in this case we can pass the flowStateReturn directly to the
     // filter Input() wrapper, but if it was in another thread, there's a

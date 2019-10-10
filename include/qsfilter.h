@@ -218,9 +218,8 @@ void *qsGetBuffer(uint32_t outputChannelNum);
  *
  * qsGetBuffer() must be called before qsOutput().
  *
- * \param outputChannelNum is the associated output channel.  If the buffer
- * of this output channel is shared between other output channels than
- * all the sharing output channels will also be used.
+ * qsOutput() must be called in a filter module input() function in order
+ * to have output to another filter module.
  *
  * \param len the length in bytes to advance the output buffer.  len may be
  * 0 to cause the corresponding output filters input() functions to be
@@ -229,6 +228,10 @@ void *qsGetBuffer(uint32_t outputChannelNum);
  * Passing a len value of 0 will still trigger a call the listed output
  * filters input() function with an input length of 0, like it was a
  * source filter.
+ *
+ * \param outputChannelNum is the associated output channel.  If the buffer
+ * of this output channel is shared between other output channels than
+ * all the sharing output channels will also be used.
  */
 extern
 void qsOutput(size_t len, uint32_t outputChannelNum);

@@ -13,8 +13,6 @@ void help(FILE *f) {
 int input(void *buffer, size_t len, uint32_t inputChannelNum,
         uint32_t flowState) {
 
-    DSPEW();
-
     // For output buffering.
     buffer = qsGetBuffer(0);
     len = QS_DEFAULTWRITELENGTH;
