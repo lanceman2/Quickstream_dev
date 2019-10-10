@@ -112,6 +112,7 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
     return 0; // success
 }
 
+
 int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
         bool waitForDisplay) {
 

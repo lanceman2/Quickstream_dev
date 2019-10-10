@@ -53,10 +53,9 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
     _input.filter = filter;
  
     do {
-
         size_t len = remainingLen;
 
-        if(len > output->maxReadSize)
+        if(output->maxReadSize && len > output->maxReadSize)
             len = output->maxReadSize;
 
         // _input is the threads object state holder that is accessed in
@@ -85,10 +84,15 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
             // By default we advance the buffer all the way.
             qsAdvanceInput(len);
 
-        // Advance the buffer and find the remaining length.
-        buf += _input.len;
-        remainingLen -= (len - _input.len);
+        DASSERT(len >= _input.len, "");
 
+        // Advance the buffer and find the remaining length.
+        size_t dif = len - _input.len;
+        buf += dif;
+        remainingLen -= dif;
+
+    DSPEW("remainingLen = %zu  totalLen=%zu", remainingLen, totalLen);
+ 
     } while(remainingLen >= output->maxReadThreshold);
 
 
@@ -101,21 +105,53 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
 
 
 
-// Case same thread
+// Case same thread, not a source filter.
 //
 static size_t
 sendOutput_sameThread(struct QsFilter *filter,
         struct QsOutput *output, uint8_t *buf, size_t totalLen,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
+    DASSERT(output, "");
+
+DSPEW("totalLen=%zu", totalLen);
+
     // Note: in this case we can pass the flowStateReturn directly to the
     // filter Input() wrapper, but if it was in another thread, there's a
     // lot more to getting values to and back from Input().
 
-    return Input(output, buf, totalLen, flowStateIn, flowStateReturn) ;
+    // Save _input state on the stack in this function call.
+    //
+    // TODO: We could have passed this data as an argument to Input()
+    // and that would have the same effect, it would be an argument on the
+    // stack and not just a static definition on the stack in this
+    // particular call of this function.
+    //
+    // TODO: This is a waste of time if there will be no more Input()
+    // calls added to this stack.  But predicting filter input() calls may
+    // not be that easy.
+    //
+    struct QsInput saveInputState;
+    memcpy(&saveInputState, &_input, sizeof(saveInputState));
+
+    // put another filter input() call on the stack.
+    size_t ret = Input(output, buf, totalLen, flowStateIn, flowStateReturn);
+
+    // Now the variable _input is changed from other calls to other filter
+    // input() calls.
+    //
+    // Restore _input state from stack saveInputState because the Input()
+    // call may have called a stack of Input() -> input() calls.  This
+    // will let the filters input() call that is currently on the stack be
+    // able to call  qsOutput(), qsAdvanceInput(), and qsGetBuffer().
+    //
+    memcpy(&_input, &saveInputState, sizeof(saveInputState));
+
+    return ret;
 }
 //
-//
+// This is only called for filter that is a source filter.
+// The output is not from another filter so output=0.
 static size_t
 sendOutput_sameThread_source(struct QsFilter *filter,
         struct QsOutput *output, uint8_t *buf, size_t totalLen,
@@ -125,8 +161,19 @@ sendOutput_sameThread_source(struct QsFilter *filter,
     DASSERT(totalLen == 0, "");
     DASSERT(output == 0, "");
 
+    _input.filter = filter;
+    _input.len = 0;
+    _input.advanceInput_wasCalled = false;
+    _input.flowState = flowStateIn;
+
+    // For this case we do not need to store _input state like in
+    // sendOutput_sameThread().
+
     // Input 0 bytes on channel 0 to a source filter.
     int ret = filter->input(0, 0, 0, flowStateIn);
+
+    // At this point there are no filter input() calls on the stack.
+    // Ya, single threaded.
 
     switch(ret) {
         case QsFContinue:

@@ -372,28 +372,38 @@ void *qsGetBuffer(uint32_t outputChannelNum) {
 }
 
 
-static inline size_t
-getReadLength(struct QsOutput *output) {
+static inline void
+advanceWritePtr(struct QsOutput *output, size_t len) {
 
-    size_t len = output->writer->writePtr - output->readPtr;
+    // We are in the correct thread to do this.
+    struct QsWriter *writer = output->writer;
+    struct QsBuffer *buffer = writer->buffer;
 
-    return len;
+    DASSERT(len <= buffer->overhangLength,
+            "len=%zu > buffer->overhangLength=%zu",
+            len, buffer->overhangLength);
+
+    if(writer->writePtr + len < buffer->mem + buffer->mapLength)
+        writer->writePtr += len;
+    else
+        writer->writePtr += len - buffer->mapLength;
 }
 
 
 static inline void
 advanceReadPtr(struct QsOutput *output, size_t len) {
 
-    // TODO: WRITE THIS
-    output->readPtr += 0;
-}
+    // We are in the correct thread to do this.
+    struct QsBuffer *buffer = output->writer->buffer;
 
+    DASSERT(len <= buffer->overhangLength,
+            "len=%zu > buffer->overhangLength=%zu",
+            len, buffer->overhangLength);
 
-static inline void
-advanceWritePtr(struct QsOutput *output, size_t len) {
-
-    // TODO: WRITE THIS
-    output->writer->writePtr += 0;
+    if(output->readPtr + len < buffer->mem + buffer->mapLength)
+        output->readPtr += len;
+    else
+        output->readPtr += len - buffer->mapLength;
 }
 
 
@@ -403,18 +413,14 @@ advanceWritePtr(struct QsOutput *output, size_t len) {
 //
 void qsOutput(size_t len, uint32_t outputChannelNum) {
 
+    DASSERT(len, "");
+
     DASSERT(_input.filter,"");
     struct QsWriter *writer = _input.filter->outputs[outputChannelNum].writer;
     DASSERT(writer->writePtr < writer->buffer->mem +
             writer->buffer->mapLength, "");
     DASSERT(writer->writePtr >= writer->buffer->mem, "");
     DASSERT(len <= writer->maxWrite, "");
-
-    if(writer->writePtr + len < writer->buffer->mem +
-            writer->buffer->mapLength)
-        writer->writePtr += len;
-    else
-        writer->writePtr -= (writer->buffer->mapLength - len);
 
 
     // Check all the outputs with this writer.
@@ -428,7 +434,6 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
             // This is the only thread that will access readPtr(s) and
             // writePtr.  We pass the pointer to ring buffer memory on the
             // stack in this causeInput() function call.
-            size_t len = getReadLength(output);
 
             if(len > output->minReadThreshold) {
                 // Stack memory to keep state.
@@ -447,11 +452,14 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
                 DASSERT(lenConsumed <= len, "ring buffer read overrun");
 
+                advanceWritePtr(output, len);
+
+                if(lenConsumed)
+                    advanceReadPtr(output, lenConsumed);
+
                 // TODO: FIX THIS flowState stuff.
                 if(returnFlowState)
                     _input.flowState = returnFlowState;
-
-                advanceWritePtr(output, len);
             }
         }
     }
@@ -461,7 +469,8 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 //
 void qsAdvanceInput(size_t len) {
 
-    DASSERT(len <= _input.len, "");
+    // We cannot let the filter module corrupt the circular buffer.
+    ASSERT(len <= _input.len, "");
 
     // We cannot necessarily advance the output->readPtr because only the
     // thread of the filter that owns the output can do that.  Remember

@@ -13,6 +13,8 @@ void help(FILE *f) {
 int input(void *buffer, size_t len, uint32_t inputChannelNum,
         uint32_t flowState) {
 
+    DSPEW();
+
     // For output buffering.
     buffer = qsGetBuffer(0);
     len = QS_DEFAULTWRITELENGTH;
@@ -21,18 +23,13 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     enum QsFilterInputReturn ret = QsFContinue;
 
-    if(len != fread(buffer, 1, len, stdin)) {
+    size_t rd = fread(buffer, 1, len, stdin);
 
-        if(feof(stdin)) { ret = QsFFinished; }
-
-        ERROR("fread(,,,stdin) failed");
-        return -1; // error
-    }
+    if(feof(stdin)) { ret = QsFFinished; }
 
     // Output to all output channels
-    //
-    // This is the default after return:
-    qsOutput(len, 0);
+    if(rd)
+        qsOutput(rd, 0);
 
     return ret; // success
 }

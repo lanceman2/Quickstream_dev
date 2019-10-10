@@ -13,12 +13,13 @@ static int count = 0;
 
 // TODO: Add command line options.
 
-static unsigned int usecs = 1000000; // 1 micro second = 1s/1,000,000
+static unsigned int usecs = 200000; // 1 micro second = 1s/1,000,000
 
 
 void help(FILE *f) {
     fprintf(f, "the test filter module that sleeps\n");
 }
+
 
 int construct(int argc, const char **argv) {
 
@@ -26,14 +27,18 @@ int construct(int argc, const char **argv) {
     return 0; // success
 }
 
+
 int destroy(void) {
 
     DSPEW("count=%d", count++);
     return 0; // success
 }
 
+
 int input(void *buffer, size_t len, uint32_t inputChannelNum,
         uint32_t flowState) {
+
+    DASSERT(len, "");
 
     // The filter module's stupid action, sleep.
     usleep(usecs);
@@ -44,16 +49,21 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     // Input and output must be the same length so we use the lesser of
     // the two lengths.
-    if(QS_DEFAULTWRITELENGTH < len)
+    if(QS_DEFAULTWRITELENGTH < len) {
         len = QS_DEFAULTWRITELENGTH;
+        qsAdvanceInput(len);
+    }
+
+    // TODO: change this to a pass-through.
+    DSPEW("count=%d len=%zu", count++, len);
 
     memcpy(oBuffer, buffer, len);
-    qsAdvanceInput(len);
+
     qsOutput(len, 0);
 
-    DSPEW("count=%d", count++);
     return 0; // success
 }
+
 
 int start(uint32_t numInChannels, uint32_t numOutChannels) {
 
@@ -67,6 +77,7 @@ int start(uint32_t numInChannels, uint32_t numOutChannels) {
 
     return 0; // success
 }
+
 
 int stop(uint32_t numInChannels, uint32_t numOutChannels) {
 

@@ -44,8 +44,8 @@ int main(void) {
         prevF = f;
     }
 
-    qsAppDisplayFlowImage(app, 0, false);
-
+    qsStreamPrestart(s);
+    //qsAppDisplayFlowImage(app, 0, false);
     qsStreamStart(s);
 
     qsAppDestroy(app);

@@ -431,7 +431,78 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 }
 
 
+
 int qsStreamStart(struct QsStream *s) {
+
+    DASSERT(s, "");
+    DASSERT(s->app, "");
+
+    if(!s->sources) {
+        int ret = qsStreamPrestart(s);
+        if(ret) return ret;
+    }
+
+
+    /**********************************************************************
+     *     Stage: flow
+     *********************************************************************/
+
+    NOTICE("RUNNING");
+
+    bool flowing = true;
+
+    uint32_t flowState = 0;
+
+    while(flowing) {
+        for(uint32_t i=0; i<s->numSources; ++i) {
+            DASSERT(s->sources[i],"");
+            struct QsFilter *filter = s->sources[i];
+            DASSERT(filter,"");
+            DASSERT(filter->input, "");
+
+            uint32_t flowStateReturn = flowState;
+            filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
+
+            if(flowStateReturn) {
+                flowing = false;
+                flowState = flowStateReturn;
+            }
+        }
+    }
+
+    // We are done running this stream now.
+
+
+    /**********************************************************************
+     *     Stage: setup the way we call filter input() from qsOutput()
+     *********************************************************************/
+
+    for(uint32_t i=0; i<s->numSources; ++i)
+        if(s->sources[i]->numOutputs)
+            unsetupSendOutput(s->sources[i]);
+
+    /**********************************************************************
+     *     Stage: call all stream's filter stop() if present
+     *********************************************************************/
+
+    for(struct QsFilter *f = s->app->filters; f; f = f->next)
+        if(f->stream == s && f->stop)
+            f->stop(f->u.numInputs, f->numOutputs);
+
+
+    /**********************************************************************
+     *     Stage: cleanup
+     *********************************************************************/
+
+    FreeRunResources(s);
+
+
+    return 0; // success ??
+}
+
+
+
+int qsStreamPrestart(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
@@ -448,7 +519,7 @@ int qsStreamStart(struct QsStream *s) {
     // like: -1, -2, -3, -4, ...
 
     /**********************************************************************
-     *      Stage: lazy cleanup ??
+     *      Stage: lazy cleanup from last run??
      *********************************************************************/
 
     //FreeRunResources(s);
@@ -576,68 +647,12 @@ int qsStreamStart(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: un-setup the way we call filter input() from qsOutput()
-     *********************************************************************/
-
-    for(uint32_t i=0; i<s->numSources; ++i)
-        if(s->sources[i]->numOutputs)
-            setupSendOutput(s->sources[i]);
-
-
-
-    /**********************************************************************
-     *     Stage: flow
-     *********************************************************************/
-
-    NOTICE("RUNNING");
-
-    bool flowing = true;
-
-    uint32_t flowState = 0;
-
-    while(flowing) {
-        for(uint32_t i=0; i<s->numSources; ++i) {
-            DASSERT(s->sources[i],"");
-            struct QsFilter *filter = s->sources[i];
-            DASSERT(filter,"");
-            DASSERT(filter->input, "");
-
-            uint32_t flowStateReturn = flowState;
-            filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
-
-            if(flowStateReturn) {
-                flowing = false;
-                flowState = flowStateReturn;
-            }
-        }
-    }
-
-    // We are done running this stream now.
-
-
-    /**********************************************************************
      *     Stage: setup the way we call filter input() from qsOutput()
      *********************************************************************/
 
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs)
-            unsetupSendOutput(s->sources[i]);
-
-
-    /**********************************************************************
-     *     Stage: call all stream's filter stop() if present
-     *********************************************************************/
-
-    for(struct QsFilter *f = s->app->filters; f; f = f->next)
-        if(f->stream == s && f->stop)
-            f->stop(f->u.numInputs, f->numOutputs);
-
-
-    /**********************************************************************
-     *     Stage: cleanup
-     *********************************************************************/
-
-    FreeRunResources(s);
+            setupSendOutput(s->sources[i]);
 
 
 

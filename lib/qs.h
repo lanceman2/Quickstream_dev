@@ -79,6 +79,9 @@ struct QsStream {
 
     // The array list of sources is created at start:
     uint32_t numSources;       // length of sources
+    // We also use sources==0 (or source != 0) as a flag that shows that
+    // the stream flow-time resources have not been allocated yet (or
+    // not), in place of introducing another flag.
     struct QsFilter **sources; // array of filter sources
 
     // This list of filter connections is not used while the stream is
@@ -324,7 +327,7 @@ __thread struct QsInput {
 
     size_t len;
     bool advanceInput_wasCalled;
-    struct QsFilter *filter;
+    struct QsFilter *filter; // filter module having input() called.
     uint32_t flowState;
 
 } _input;
