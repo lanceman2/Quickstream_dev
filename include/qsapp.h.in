@@ -171,6 +171,7 @@ int qsStreamConnectFilters(struct QsStream *stream,
         struct QsFilter *from, struct QsFilter *to);
 
 
+
 // TODO: We we don't have stream start and stop functions make there just
 // be a qsStreamRun().
 
@@ -181,15 +182,42 @@ int qsStreamConnectFilters(struct QsStream *stream,
  *
  * When properly run, qsStreamStop() will be called after this.
  *
+ * If you calling qsStreamStart() after a failed call to
+ * qsStreamPrestart() will cause qsStreamPrestart() to be called again,
+ * and it will likely fail again.
+ *
  * \param stream the stream object that has the filters that are
  * connected.
- *
- * \param autoStop if set call qsStreamStop() before returning.
  *
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
 int qsStreamStart(struct QsStream *stream);
+
+
+/** Prestart the flow
+ *
+ * Allocate resources for the stream to flow.
+ *
+ * qsStreamStart() will call qsStreamPrestart() if the user does not call
+ * qsStreamPrestart() before  qsStreamStart().  qsStreamPrestart() will
+ * setup the resources needed to start the stream flow, but it will not
+ * start the flow.  This qsStreamPrestart() may be helpful to debugging
+ * your stream.  One could call qsAppDisplayFlowImage() after a call to
+ * qsStreamPrestart() to have a look at the streams while they are setup,
+ * but before they are running.  You can call qsAppDisplayFlowImage()
+ * after the stream is running, but calling qsStreamPrestart() and then
+ * qsAppDisplayFlowImage() will produce the same image without running the
+ * stream.
+ *
+ * \param stream the stream object that has the filters that are
+ * connected.
+ *
+ * \return 0 if the stream runs and non-zero on error.
+ */
+extern
+int qsStreamPrestart(struct QsStream *stream);
+
 
 
 /** Stop the flow
