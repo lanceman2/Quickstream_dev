@@ -82,18 +82,40 @@ static void
 PrintStreamFilter(struct QsFilter *filter, uint32_t clusterNum,
         FILE *file) {
 
+    filter->mark = false; // Mark this filter as done.
+
     fprintf(file, "\n"
-        "  subgraph cluster_%" PRIu32 " {\n"
-        "    label=\"%s\";\n\n",
+        "    subgraph cluster_%" PRIu32 " {\n"
+        "        label=\"%s\";\n\n",
         clusterNum, filter->name);
+
+    fprintf(file, "        \"%s\";\n", filter->name);
 
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
 
-        fprintf(file, "    node [shape=\"box\", label=\"%" PRIu32 "\"]; "
-                "%s_output_%" PRIu32 " \n" , i, filter->name, i);
+        fprintf(file, "        node [shape=\"box\", label=\"%" PRIu32 "\"]; "
+                "\"%s_output_%" PRIu32 "\"; \n" , i, filter->name, i);
     }
 
-    fprintf(file, "   }\n");
+    fprintf(file, "     }\n");
+
+
+    // Recurse
+    for(uint32_t i=0; i<filter->numOutputs; ++i)
+        // Skip unmarked filters.
+        if(filter->outputs[i].filter->mark)
+            // Recurse
+            PrintStreamFilter(filter->outputs[i].filter,
+                    ++clusterNum, file);
+
+}
+
+// This just print the connections from the output to the filter.
+static inline void
+PrintStreamConnection(struct QsFilter *filter, FILE *file) {
+
+
+
 }
 
 
@@ -123,6 +145,8 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
 
     DASSERT(app, "");
     DASSERT(file, "");
+
+    AppSetFilterMarks(app, true);
 
     fprintf(file, "digraph {\n"
         "  label=\"quickstream app\";\n");

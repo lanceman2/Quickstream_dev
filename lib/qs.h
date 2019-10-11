@@ -185,6 +185,15 @@ struct QsFilter {
 
     uint32_t numOutputs; // number of connected output filters
     struct QsOutput *outputs; // array of struct QsOutput
+
+
+    // TODO: It'd be nice not to have this extra data.
+    //
+    // mark is extra data in this struct so that we can save a marker
+    // as we look through the filters in the graph, because if the graph
+    // has cycles in it, it's not easy to look at each filter just once
+    // without a marker to mark a filter as looked at.
+    bool mark;
 };
 
 
@@ -380,3 +389,11 @@ void setupSendOutput(struct QsFilter *f);
 
 extern
 void unsetupSendOutput(struct QsFilter *f);
+
+
+// Set filter->mark = val for every filter in the app.
+static inline
+void AppSetFilterMarks(struct QsApp *app, bool val) {
+    for(struct QsFilter *f=app->filters; f; f=f->next)
+        f->mark = val;
+}
