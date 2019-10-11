@@ -78,11 +78,12 @@ PrintStreamOutline(struct QsStream *s,
     fprintf(file, "  }\n");
 }
 
+
 static void
-PrintStreamFilter(struct QsFilter *filter, uint32_t clusterNum,
+PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
         FILE *file) {
 
-    filter->mark = false; // Mark this filter as done.
+    filter->mark = false; // Mark this filter looked at.
 
     fprintf(file, "\n"
         "    subgraph cluster_%" PRIu32 " {\n"
@@ -91,11 +92,9 @@ PrintStreamFilter(struct QsFilter *filter, uint32_t clusterNum,
 
     fprintf(file, "        \"%s\";\n", filter->name);
 
-    for(uint32_t i=0; i<filter->numOutputs; ++i) {
-
+    for(uint32_t i=0; i<filter->numOutputs; ++i)
         fprintf(file, "        node [shape=\"box\", label=\"%" PRIu32 "\"]; "
                 "\"%s_output_%" PRIu32 "\"; \n" , i, filter->name, i);
-    }
 
     fprintf(file, "     }\n");
 
@@ -105,17 +104,28 @@ PrintStreamFilter(struct QsFilter *filter, uint32_t clusterNum,
         // Skip unmarked filters.
         if(filter->outputs[i].filter->mark)
             // Recurse
-            PrintStreamFilter(filter->outputs[i].filter,
+            PrintStreamFilter1(filter->outputs[i].filter,
                     ++clusterNum, file);
 
 }
 
+
 // This just print the connections from the output to the filter.
 static inline void
-PrintStreamConnection(struct QsFilter *filter, FILE *file) {
+PrintStreamFilter2(struct QsFilter *filter, FILE *file) {
 
+    filter->mark = false; // Mark this filter looked at.
 
+    for(uint32_t i=0; i<filter->numOutputs; ++i)
+        fprintf(file, "        \"%s_output_%" PRIu32 "\" -> \"%s\"; \n",
+                filter->name, i, filter->outputs[i].filter->name);
 
+    // Recurse
+    for(uint32_t i=0; i<filter->numOutputs; ++i)
+        // Skip unmarked filters.
+        if(filter->outputs[i].filter->mark)
+            // Recurse
+            PrintStreamFilter2(filter->outputs[i].filter, file);
 }
 
 
@@ -127,14 +137,27 @@ PrintStreamDetail(struct QsStream *s,
 
     DASSERT(s->sources, "");
 
+    // TODO: add an image of the buffers so we may see how they are
+    // shared.
+
     fprintf(file, "\n"
             "  subgraph cluster_%" PRIu32 " {\n"
             "    label=\"stream %" PRIu32 "\";\n\n",
             clusterNum++, sNum);
 
+    // We do this in 2 passes:
 
+    /////////// pass 1
+    // Mark all the filters as needing to be looked at.
+    StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
-        PrintStreamFilter(s->sources[i], clusterNum++, file);
+        PrintStreamFilter1(s->sources[i], clusterNum++, file);
+
+    /////////// pass 2
+    // Mark all the filters as needing to be looked at.
+    StreamSetFilterMarks(s, true);
+    for(uint32_t i=0; i<s->numSources; ++i)
+        PrintStreamFilter2(s->sources[i], file);
 
     fprintf(file, "  }\n");
 }
@@ -146,7 +169,6 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
     DASSERT(app, "");
     DASSERT(file, "");
 
-    AppSetFilterMarks(app, true);
 
     fprintf(file, "digraph {\n"
         "  label=\"quickstream app\";\n");

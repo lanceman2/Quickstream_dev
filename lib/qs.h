@@ -391,9 +391,32 @@ extern
 void unsetupSendOutput(struct QsFilter *f);
 
 
+#if 0 // Not needed yet.
 // Set filter->mark = val for every filter in the app.
 static inline
 void AppSetFilterMarks(struct QsApp *app, bool val) {
     for(struct QsFilter *f=app->filters; f; f=f->next)
         f->mark = val;
+}
+#endif
+// Set filter->mark = val for every filter in just this stream.
+static inline
+void StreamSetFilterMarks(struct QsStream *s, bool val) {
+
+    if(s->numSources) {
+        // Stream has data structures build for running the flow.
+        for(uint32_t i=0; i<s->numSources; ++i)
+            s->sources[i]->mark = val;
+        for(uint32_t i=0; i<s->numConnections; ++i)
+            s->to[i]->mark = val;
+        return;
+    }
+
+    // Case where the stream is not setup to flow yet, so we have not
+    // found the source filters (sources) yet.  The filters are just
+    // listed in the stream connection arrays, to[], and from[].
+    for(uint32_t i=0; i<s->numConnections; ++i) {
+        s->to[i]->mark = val;
+        s->from[i]->mark = val;
+    }
 }
