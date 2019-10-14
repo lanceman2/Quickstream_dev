@@ -65,13 +65,12 @@ int usage(const char *argv0) {
         "\n"
         "\n"
         "  -f|--filter FILENAME [ args .. ]  load filter module with filename\n"
-        "                                    FILENAME.  All filter modules\n"
-        "               loaded from the same module file as another loaded\n"
-        "               filter, an independent instance of the filter will be\n"
-        "               created and the filters will not share addresses and\n"
-        "               variables.  Optional arguments passed in square brackets\n"
-        "               (with spaces around the brackets) are passed to the module\n"
-        "               construct() function.\n"
+        "                                    FILENAME.  An independent instance\n"
+        "               of the filter will be created for each time a filter is\n"
+        "               loaded and the filters will not share virtual addresses\n"
+        "               and variables.  Optional arguments passed in square\n"
+        "               brackets (with spaces around the brackets) are passed to\n"
+        "               the module construct() function.\n"
         "\n"
         "\n"
         "   -h|--help   print this help to stderr and exit.\n"
@@ -83,10 +82,6 @@ int usage(const char *argv0) {
 
     return 1; // non-zero error code
 }
-
-
-extern
-int parseArgs(int argc, char * const* argv);
 
 
 
@@ -135,7 +130,6 @@ int main(int argc, char **argv) {
             case 'c':
                 if(!filters) return usage(argv[0]);
                 DSPEW("option %c|%s = %s", c, long_options[i].name, optarg);
-
                 break;
 
             case 'f': // Load filter module
@@ -192,7 +186,7 @@ int main(int argc, char **argv) {
 
     DSPEW("Done parsing command-line arguments");
 
-    
+
 
 
     WARN("SUCCESS");

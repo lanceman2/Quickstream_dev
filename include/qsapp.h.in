@@ -197,20 +197,32 @@ int qsStreamConnectFilters(struct QsStream *stream,
 
 
 
-/** Run the stream flow with one feed to each source filter.
+/** Run the stream flow with one feed input() call to each source filter
+ * in this stream.
+ *
+ * Run one loop.
+ *
+ * This call may block, waiting for flow congestion, or a filter in a
+ * blocking input call.
  *
  * \param stream the stream object that has the filters that are
- * connected and qsStreamStart() was called for this stream.
+ * connected and qsStreamLaunch() was called for this stream.
  *
  * \return 0 to signal that the stream can continue running, and
  * non-zero when \todo bla bla bla.
  */
 extern
-int qsStreamLoop(struct QsStream *s) 
+uint32_t qsStreamFlow(struct QsStream *stream);
 
 
 /** Launch threads and processes if they are needed, and get ready to
- * start the flow.
+ * run the flow.
+ *
+ * Before returning, put the thread and processes in a blocking call
+ * waiting for the flow.
+ *
+ * qsStreamLaunch() is called before qsStreamFlow().  Usually
+ * qsStreamLaunch() is called once before many calls to qsStreamFlow().
  *
  * \param stream the stream object that has the filters that are
  * connected.
@@ -218,22 +230,26 @@ int qsStreamLoop(struct QsStream *s)
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
-int qsStreamStart(struct QsStream *stream);
+int qsStreamLaunch(struct QsStream *stream);
 
 
-/** Prestart the flow
+/** Make ready the stream.
  *
- * Allocate resources for the stream to flow.
+ * Allocate resources for the stream to flow, but not the threads and
+ * processes.
  *
- * qsStreamPrestart() will
- * setup the resources needed to start the stream flow, but it will not
- * start the flow.  This qsStreamPrestart() may be helpful to debugging
- * your stream.  One could call qsAppDisplayFlowImage() after a call to
+ * qsStreamReady() will call all the filter start() functions and setup
+ * the resources needed to start the stream flow, but it will not begin
+ * the filter input() calls.  qsStreamLaunch() must be called after
+ * qsStreamReady() in order to launch threads and processes if they are
+ * needed.
+ *
+ * One could call qsAppDisplayFlowImage() after a call to
  * qsStreamPrestart() to have a look at the streams while they are setup,
  * but before they are running.  You can call qsAppDisplayFlowImage()
- * after the stream is running, but calling qsStreamPrestart() and then
- * qsAppDisplayFlowImage() will produce the same image without running the
- * stream.
+ * after the stream is running, but calling qsStreamStart() and then
+ * qsAppDisplayFlowImage() will produce the same image without calling any
+ * filter input() calls.
  *
  * \param stream the stream object that has the filters that are
  * connected.
@@ -241,7 +257,7 @@ int qsStreamStart(struct QsStream *stream);
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
-int qsStreamPrestart(struct QsStream *stream);
+int qsStreamReady(struct QsStream *stream);
 
 
 
@@ -258,8 +274,8 @@ int qsStreamStop(struct QsStream *stream);
 /** Create a thread object
  *
  * This does not start the thread.  It just sets up what threads
- * will be used when the stream runs.  See \ref qsStreamStart() and
- * qsStreamStop().
+ * will be used when the stream runs.  See \ref qsStreamReady() and
+ * \ref qsStreamStop().
  *
  * \param stream returned from qsAppStreamCreate().
  *

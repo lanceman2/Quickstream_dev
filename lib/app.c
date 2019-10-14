@@ -93,7 +93,8 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
     fprintf(file, "      \"%s\" [label=\"input()\"];\n", filter->name);
 
     for(uint32_t i=0; i<filter->numOutputs; ++i)
-        fprintf(file, "      node [shape=\"box\", label=\"output %" PRIu32 "\"]; "
+        fprintf(file, "      node [shape=\"box\", "
+                "label=\"output %" PRIu32 "\"]; "
                 "\"%s_output_%" PRIu32 "\"; \n" , i, filter->name, i);
 
     fprintf(file, "    }\n");

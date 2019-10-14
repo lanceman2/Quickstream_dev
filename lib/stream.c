@@ -346,30 +346,6 @@ static uint32_t CountFilterPath(struct QsStream *s,
 }
 
 
-int qsStreamStop(struct QsStream *s) {
-
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-
-    if(s->numSources == 0)
-        // The stream was not in a flow state, and none of the filter
-        // callbacks where called.
-        return 0;
-
-
-    DASSERT(s->numSources, "");
-    DASSERT(s->sources, "");
-
-
-    /**********************************************************************
-     *            Stage: free extra run data
-     *********************************************************************/
-    FreeRunResources(s);
-
-    return 0;
-}
-
-
 static
 void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
@@ -431,45 +407,53 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 }
 
 
-int qsStreamLoop(struct QsStream *s) {
+// Do one source feed loop.
+uint32_t qsStreamFlow(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
     ASSERT(!s->sources, "qsStreamPrestart() must be called before this");
+
+    uint32_t flowState = 0;
 
     for(uint32_t i=0; i<s->numSources; ++i) {
         DASSERT(s->sources[i],"");
         struct QsFilter *filter = s->sources[i];
         DASSERT(filter,"");
         DASSERT(filter->input, "");
-
         uint32_t flowStateReturn = flowState;
         filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
 
-        if(flowStateReturn) {
-            flowing = false;
+        if(flowStateReturn)
             flowState = flowStateReturn;
-        }
     }
-    return 0;
+
+    return flowState;
 }
 
 
-int qsStreamStart(struct QsStream *stream) {
+int qsStreamLaunch(struct QsStream *s) {
+
+    // Make other threads and processes.  Put the thread and processes
+    // in a blocking call waiting for the flow.
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    ASSERT(!s->sources, "qsStreamPrestart() must be called before this");
+    ASSERT(!s->sources, "qsStreamPrestart() must be successfully"
+            " called before this");
 
     // TODO: for the single thread case this does nothing.
 
     return 0;
 }
 
-int qsStreamStop(struct QsStream *stream);
+int qsStreamStop(struct QsStream *s) {
+
+    DASSERT(s->sources, "");
 
     if(!s->sources) {
-        WARN("stream is not setup");
+        // The setup of the stream failed and the user ignored it.
+        WARN("The stream is not setup");
         return -1;
     }
 
@@ -503,7 +487,7 @@ int qsStreamStop(struct QsStream *stream);
 
 
 
-int qsStreamPrestart(struct QsStream *s) {
+int qsStreamReady(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
@@ -511,8 +495,7 @@ int qsStreamPrestart(struct QsStream *s) {
     ///////////////////////////////////////////////////////////////////////
     //                                                                   //
     //  This has a few stages in which we go through the lists, check    //
-    //  things out, set things up, launch processes, launch threads,     //
-    //  and then let the stream flow through the filters.                //
+    //  things out, set things up.                                       //
     //                                                                   // 
     ///////////////////////////////////////////////////////////////////////
 
