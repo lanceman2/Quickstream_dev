@@ -431,46 +431,47 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 }
 
 
-
-int qsStreamStart(struct QsStream *s) {
+int qsStreamLoop(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
+    ASSERT(!s->sources, "qsStreamPrestart() must be called before this");
 
-    if(!s->sources) {
-        int ret = qsStreamPrestart(s);
-        if(ret) return ret;
-    }
+    for(uint32_t i=0; i<s->numSources; ++i) {
+        DASSERT(s->sources[i],"");
+        struct QsFilter *filter = s->sources[i];
+        DASSERT(filter,"");
+        DASSERT(filter->input, "");
 
+        uint32_t flowStateReturn = flowState;
+        filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
 
-    /**********************************************************************
-     *     Stage: flow
-     *********************************************************************/
-
-    NOTICE("RUNNING");
-
-    bool flowing = true;
-
-    uint32_t flowState = 0;
-
-    while(flowing) {
-        for(uint32_t i=0; i<s->numSources; ++i) {
-            DASSERT(s->sources[i],"");
-            struct QsFilter *filter = s->sources[i];
-            DASSERT(filter,"");
-            DASSERT(filter->input, "");
-
-            uint32_t flowStateReturn = flowState;
-            filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
-
-            if(flowStateReturn) {
-                flowing = false;
-                flowState = flowStateReturn;
-            }
+        if(flowStateReturn) {
+            flowing = false;
+            flowState = flowStateReturn;
         }
     }
+    return 0;
+}
 
-    // We are done running this stream now.
+
+int qsStreamStart(struct QsStream *stream) {
+
+    DASSERT(s, "");
+    DASSERT(s->app, "");
+    ASSERT(!s->sources, "qsStreamPrestart() must be called before this");
+
+    // TODO: for the single thread case this does nothing.
+
+    return 0;
+}
+
+int qsStreamStop(struct QsStream *stream);
+
+    if(!s->sources) {
+        WARN("stream is not setup");
+        return -1;
+    }
 
 
     /**********************************************************************
@@ -607,15 +608,23 @@ int qsStreamPrestart(struct QsStream *s) {
     // By using the app list of filters we do not call any filter start()
     // more than once, (TODO) but is the order in which we call them okay?
     //
-    for(struct QsFilter *f = s->app->filters; f; f = f->next)
-        if(f->stream == s && f->start) {
-            // We mark which filter we are calling the start() for so that
-            // if the filter start() calls any filter API function to get
-            // resources we know what filter these resources belong to.
-            _qsStartFilter = f;
-            // Call a filter start() function:
-            int ret = f->start(f->u.numInputs, f->numOutputs);
-            _qsStartFilter = 0;
+    for(struct QsFilter *f = s->app->filters; f; f = f->next) {
+        if(f->stream == s) {
+            if(f->start) {
+                // We mark which filter we are calling the start() for so that
+                // if the filter start() calls any filter API function to get
+                // resources we know what filter these resources belong to.
+                _qsStartFilter = f;
+                // Call a filter start() function:
+                int ret = f->start(f->u.numInputs, f->numOutputs);
+                _qsStartFilter = 0;
+                if(ret) {
+                    // TODO: Should we call filter stop() functions?
+                    //
+                    ERROR("filter \"%s\" start()=%d failed", f->name, ret);
+                    return -3; // We're screwed.
+                }
+            }
 
             // We need to reset this counter so we may use it in
             // AllocateRingBuffers() below.  In AllocateRingBuffers() we
@@ -623,13 +632,8 @@ int qsStreamPrestart(struct QsStream *s) {
             // as we assign the QsOutput::inputChannelNum.
             //
             f->u.numInputs = 0;
-            if(ret) {
-                // TODO: Should we call filter stop() functions?
-                //
-                ERROR("filter \"%s\" start()=%d failed", f->name, ret);
-                return -3;
-            }
         }
+    }
 
 
     /**********************************************************************

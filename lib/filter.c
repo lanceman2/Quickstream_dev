@@ -228,16 +228,22 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         goto cleanup;
     }
 
+
     dlerror(); // clear error
     // "help()" is not optional.
     dlsym(handle, "help");
     err = dlerror();
     if(err) {
+#ifdef QS_FILTER_REQUIRE_HELP
         // We must have a help() function.
         ERROR("no help() provided: dlsym(\"help\") error: %s", err);
         goto cleanup;
+#else
+        WARN("Filter \"%s\" module from file=\"%s\" does not provide a "
+                "help() function.",
+                f->name, path);
+#endif
     }
-
 
     if(construct) construct();
 

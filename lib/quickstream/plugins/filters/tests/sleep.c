@@ -16,10 +16,12 @@ static int count = 0;
 //static unsigned int usecs = 200000; // 1 micro second = 1s/1,000,000
 static unsigned int usecs = 0; // 1 micro second = 1s/1,000,000
 
-
+#if 0
 void help(FILE *f) {
     fprintf(f, "the test filter module that sleeps\n");
+
 }
+#endif
 
 
 int construct(int argc, const char **argv) {

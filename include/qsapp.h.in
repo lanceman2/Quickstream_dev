@@ -90,6 +90,9 @@ int qsAppDestroy(struct QsApp *app);
  * \param loadName a made-up unquie name that was refer to this
  * loaded plugin module.  loadName=0 maybe passed in to have the
  * name generated based on fileName.
+ * \param argc is the number of string argument in argv.
+ * \param argv is 0 or a pointer to an array of strings.  Do not count
+ * on argv being 0 (null) terminated.
  *
  * \return 0 on success.
  *
@@ -111,17 +114,30 @@ int qsFilterPrintHelp(const char *filterName, FILE *f);
 
 enum QsAppPrintLevel {
     QsPrintOutline = 0,
-    QsPrintDefault = 0,
     QsPrintDebug = 3
 };
 
+
+/** Print a vizgraph dot image file the represents the stream graphs.
+ *
+ *
+ * \seealso
+ */
 
 extern
 int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         FILE *file);
 
-/**
+
+/** Display an image of the flow graphs.
  *
+ * This will fork and run the imagemagick "display" program.  This calls
+ * qsAppPrintDotToFile().
+ *
+ * \param app an app object that was returned from qsAppCreate().
+ *
+ * \param l the level of detail to print.  \ref QsPrintOutline to print
+ * just an outline and \ref QsPrintDebug to print more inner details.
  *
  * \param waitForDisplay if set this will not return until the
  * display program exits.
@@ -133,6 +149,13 @@ int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
         bool waitForDisplay);
 
 
+/** Unload a filter module and cleanup it's resources.
+ *
+ * qsFilterUnload() will also remove the filter from any stream it has
+ * been added to.
+ *
+ * /return 0 on success.
+ */
 extern
 int qsFilterUnload(struct QsFilter *filter);
 
@@ -160,7 +183,8 @@ int qsStreamDestroy(struct QsStream *stream);
 
 /** Remove a filter and it's connections from a stream
  *
- * This does not unload the filter module plugin.
+ * This does not unload the filter module plugin.  Use qsFilterUnload() to
+ * unload and cleanup filter module resources.  
  *
  * \return 0 if the filter was found and removed, and non-zero otherwise.
  */
@@ -173,19 +197,20 @@ int qsStreamConnectFilters(struct QsStream *stream,
 
 
 
-// TODO: We we don't have stream start and stop functions make there just
-// be a qsStreamRun().
+/** Run the stream flow with one feed to each source filter.
+ *
+ * \param stream the stream object that has the filters that are
+ * connected and qsStreamStart() was called for this stream.
+ *
+ * \return 0 to signal that the stream can continue running, and
+ * non-zero when \todo bla bla bla.
+ */
+extern
+int qsStreamLoop(struct QsStream *s) 
 
 
-/** Start the flow
- *
- * Launches threads and calls the filter callbacks ... bla bla.
- *
- * When properly run, qsStreamStop() will be called after this.
- *
- * If you calling qsStreamStart() after a failed call to
- * qsStreamPrestart() will cause qsStreamPrestart() to be called again,
- * and it will likely fail again.
+/** Launch threads and processes if they are needed, and get ready to
+ * start the flow.
  *
  * \param stream the stream object that has the filters that are
  * connected.
@@ -200,8 +225,7 @@ int qsStreamStart(struct QsStream *stream);
  *
  * Allocate resources for the stream to flow.
  *
- * qsStreamStart() will call qsStreamPrestart() if the user does not call
- * qsStreamPrestart() before  qsStreamStart().  qsStreamPrestart() will
+ * qsStreamPrestart() will
  * setup the resources needed to start the stream flow, but it will not
  * start the flow.  This qsStreamPrestart() may be helpful to debugging
  * your stream.  One could call qsAppDisplayFlowImage() after a call to

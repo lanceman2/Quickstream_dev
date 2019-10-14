@@ -404,7 +404,7 @@ static inline
 void StreamSetFilterMarks(struct QsStream *s, bool val) {
 
     if(s->numSources) {
-        // Stream has data structures build for running the flow.
+        // Case stream has data structures build for running the flow.
         for(uint32_t i=0; i<s->numSources; ++i)
             s->sources[i]->mark = val;
         for(uint32_t i=0; i<s->numConnections; ++i)
