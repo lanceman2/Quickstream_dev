@@ -44,7 +44,7 @@ int main(void) {
         prevF = f;
     }
 
-    qsStreamPrestart(s);
+    qsStreamReady(s);
     
     qsAppPrintDotToFile(app, QsPrintDebug, stdout);
     qsAppDisplayFlowImage(app, QsPrintDebug, false);

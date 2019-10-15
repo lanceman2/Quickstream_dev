@@ -247,7 +247,7 @@ int qsStreamLaunch(struct QsStream *stream);
  * One could call qsAppDisplayFlowImage() after a call to
  * qsStreamPrestart() to have a look at the streams while they are setup,
  * but before they are running.  You can call qsAppDisplayFlowImage()
- * after the stream is running, but calling qsStreamStart() and then
+ * after the stream is running, but calling qsStreamReady() and then
  * qsAppDisplayFlowImage() will produce the same image without calling any
  * filter input() calls.
  *

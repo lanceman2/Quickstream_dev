@@ -63,15 +63,14 @@ int main(void) {
 
 #endif
 
+    qsStreamReady(stream);
+
     qsAppDisplayFlowImage(app, 0, false);
 
-    qsStreamStart(stream);
-    qsStreamStart(stream);
-    qsStreamStart(stream);
-    qsStreamStart(stream);
-    qsStreamStart(stream);
+    qsStreamLaunch(stream);
 
-    qsStreamStart(stream);
+
+    qsStreamFlow(stream);
 
 
 
