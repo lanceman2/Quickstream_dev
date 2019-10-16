@@ -48,9 +48,9 @@ int usage(const char *argv0) {
         "  so the order of command-line arguments is very important.  You cannot\n"
         "  call --connect before you load any filters.\n"
         "\n"
-        "------------------------------------------------------------------\n"
+        "----------------------------------------------------------------------\n"
         "                            OPTIONS\n"
-        "------------------------------------------------------------------\n"
+        "----------------------------------------------------------------------\n"
         "\n"
         "  -c|--connect SEQUENCE   connect loaded filters in a stream.\n"
         "                          Loaded filters are numbered starting at\n"
@@ -62,6 +62,9 @@ int usage(const char *argv0) {
         "               filter 2 to filter 4, where filter 0 is the first\n"
         "               loaded filter, filter 1 is the second loaded filter,\n"
         "               and so on.\n"
+        "\n"
+        "\n"
+        "  -d|--display  display a dot graph of the stream before running it.\n"
         "\n"
         "\n"
         "  -f|--filter FILENAME [ args .. ]  load filter module with filename\n"
@@ -95,8 +98,8 @@ int main(int argc, char **argv) {
     struct QsStream *stream = 0;
     int numFilters = 0;
     struct QsFilter **filters = 0;
+    bool gotConnection = false;
 
-    DSPEW("app=%p stream=%p filters=%p", app, stream, filters);
     optind = 1;
 
     while(1) {
@@ -105,6 +108,7 @@ int main(int argc, char **argv) {
         optarg = 0;
         static const struct option long_options[] = {
             {"connect", false/*require arg*/,0,  'c'  },
+            {"display", false/*require arg*/,0,  'd'  },
             {"filter",  true/*require arg*/, 0,  'f'  },
             {"help",    false,               0,  'h'  },
             {"verbose", false,               0,  'v'  },
@@ -128,10 +132,61 @@ int main(int argc, char **argv) {
                 return 0;
 
             case 'c':
-                if(!filters) return usage(argv[0]);
+                if(numFilters < 2) return usage(argv[0]);
+
+                // Example:
+                //
+                //   --connection "0 1 1 2"
+                //
+                //           filter connections ==> (0) -> (1) -> (2)
+                //
+        
+                if(!optarg) {
+                    // There is no connection list, so by default we
+                    // connect filters in the order they are loaded.
+                    for(int i=1; i<numFilters; ++i) {
+                        qsStreamConnectFilters(stream, filters[i-1], filters[i]);
+                    }
+                    break;
+                }
+                char *endptr = 0;
+                for(char *str = optarg; *str && endptr != str;) {
+                    long from = strtol(str, &endptr, 10);
+                    if(endptr == str) {
+                        break;
+                    }
+                    str = endptr+1;
+                    long to = strtol(str, &endptr, 10);
+                    if(endptr == str) {
+                        break;
+                    }
+                    str = endptr+1;
+                    // Check values read.
+                    if(from < 0 || to < 0 || from >= numFilters || to >= numFilters) {
+                        fprintf(stderr, "Bad --connect args: \"%s\" value out of range\n\n", optarg);
+                        return usage(argv[0]);
+                    }
+
+                    fprintf(stderr, "connecting: %ld -> %ld\n", from, to);
+
+                    if(qsStreamConnectFilters(stream, filters[from], filters[to])) {
+                        return 1; // failed
+                    }
+                    gotConnection = true;
+                }
+
                 DSPEW("option %c|%s = %s", c, long_options[i].name, optarg);
                 break;
 
+            case 'd':
+                // display a dot graph
+                if(!app) break; // nothing to display yet.
+#ifdef DEBUG
+                qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
+#else
+                qsAppDisplayFlowImage(app, QSPrintOutline, true/*waitForDisplay*/);
+#endif
+                break;
             case 'f': // Load filter module
                 if(!optarg) return usage(argv[0]);
                 filters = realloc(filters, sizeof(*filters)*(++numFilters));
@@ -146,7 +201,6 @@ int main(int argc, char **argv) {
                 char *name = 0;
                 int fargc = 0;
                 char **fargv = 0;
-                DSPEW(" optind=%d", optind);
                 if(optind < argc && strcmp(argv[optind], "[") == 0) {
                     fargv = &argv[++optind];
                     while(optind < argc && strcmp(argv[optind], "]")) {
@@ -165,10 +219,10 @@ int main(int argc, char **argv) {
                     }
                     if(strcmp(argv[optind], "]") == 0) ++optind;
                 }
-                printf("Got filter args[%d]= [", fargc);
+                fprintf(stderr, "Got filter args[%d]= [", fargc);
                 for(int j=0; j<fargc; ++j)
-                    printf("%s ", fargv[j]);
-                printf("]\n");
+                    fprintf(stderr, "%s ", fargv[j]);
+                fprintf(stderr, "]\n");
                 filters[numFilters-1] = qsAppFilterLoad(app,
                         optarg, name, fargc, (const char **) fargv);
                 if(!filters[numFilters-1]) return 1; // error
@@ -186,7 +240,14 @@ int main(int argc, char **argv) {
 
     DSPEW("Done parsing command-line arguments");
 
-    
+    if(!gotConnection) {
+        // There is no connection list, so by default we
+        // connect filters in the order they are loaded.
+        for(int i=1; i<numFilters; ++i) {
+            qsStreamConnectFilters(stream, filters[i-1], filters[i]);
+        }
+    }
+
 
 
     WARN("SUCCESS");

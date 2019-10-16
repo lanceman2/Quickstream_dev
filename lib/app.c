@@ -252,7 +252,7 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
     uint32_t sNum = 0; // stream counter
 
     for(struct QsStream *s = app->streams; s; s = s->next) {
-        if(l == QsPrintOutline || !s->sources)
+        if(l == QSPrintOutline || !s->sources)
             PrintStreamOutline(s, sNum++, clusterNum++, file);
         else
             PrintStreamDetail(s, sNum++, clusterNum++, file);
