@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -euo pipefail
+shopt -s nullglob
+
+cd $(dirname ${BASH_SOURCE[0]})
+
+tests=([0-9][0-9][0-9]*)
+num=${#tests[@]}
+i=1
+pass=0
+fail=0
+
+echo "===================================="
+for test in "${tests[@]}" ; do
+    echo -n " === [ $i / $num ] === $test === "
+    if ./$test ; then
+        let pass=$pass+1
+        echo "PASSED"
+    else
+        let fail=$fail+1
+        echo "FAILED"
+    fi
+
+    let i=$i+1
+done
+echo "===================================="
+echo -e "   [ $pass / $num ] PASSED"
+echo -e "   [ $fail / $num ] FAILED"
+
+[ $fail = 0 ] || exit 1
+
