@@ -13,30 +13,42 @@
  * make quickstream programs that load quickstream filter modules,
  * assemble these filters into flow graphs, and run the flow graphs.
  *
- * You can do the same with the program \ref quickstream_program.
+ * You can do the most of the same thing with the program \ref
+ * quickstream_program.  \ref quickstream_program with the name
+ * quickstream is written with this API.
  *
+ * The following terms/words are used in function names and other things:
  *
- * The following terms are used in function names:
+ * - **qs**     the prefix for all functions in this API.  Other
+ *              programming things may have a different case like
+ *              \e Qs or \e QS.
  *
- * API objects
+ * - **app**    a collection of loaded filter module plugins,
+ *              a collection of streams, and
+ *              an application container for all that is quickstream
  *
- * - **Qs app**     a collection of loaded filter module plugins,
- *                  a collection of streams
- *                  an application container for all that is quickstream
+ * - **stream** a directed graph of interconnected filters,
+ *              a mapping of filters to threads,
+ *              a mapping of threads to processes, and
+ *              an interface to run the stream
  *
- * - **Qs stream**  a directed graph of filters,
- *                  a mapping of filters to threads,
- *                  a mapping of threads to processes, and
- *                  an interface to run the stream
+ * - **filter** a filter module plugin from a dynamic shared object
+ *              file
  *
- * - **Qs filter**  a filter module plugin from a dynamic shared object
- *                  file
+ * - **process** an operating system process
  *
- * - **Qs process** an operating system process
+ * - **thread**  an operating system thread (pthread)
  *
- * - **Qs thread**  an operating system thread (pthread)
+ * - **source** \anchor source  filters are filters that do not
+ *               have connections to them, but may have connections from
+ *               them.  Sources are where the flow starts.
  *
- */ 
+ * quickstream functions that do not return an structure pointer, tend to
+ * return an int with a value 0 for the common success case.  int return
+ * values greater than zero tend to be common none error selective cases
+ * and negative return values tend to be selective error cases.
+ * Enumerations are provided to interpret them.
+ */
 
 
 /** quickstream release version number
@@ -112,16 +124,25 @@ extern
 int qsFilterPrintHelp(const char *filterName, FILE *f);
 
 
+/** Print viscosity
+*/
 enum QsAppPrintLevel {
-    QsPrintOutline = 0,
-    QsPrintDebug = 3
+    QSPrintOutline = 0,
+    QSPrintDebug = 3
 };
 
 
 /** Print a vizgraph dot image file the represents the stream graphs.
  *
+ * \param app an app object that was returned from qsAppCreate().
  *
- * \seealso
+ * \param l one of \ref QsAppPrintLevel
+ *
+ * \param file a standard C library buffered stream file to print to.
+ *
+ * \return 0 on success.
+ *
+ * \sa QsAppPrintLevel
  */
 
 extern
@@ -160,6 +181,12 @@ extern
 int qsFilterUnload(struct QsFilter *filter);
 
 
+/** Create a stream runner object.
+ *
+ * \param app the app that was returned from qsAppCreate().
+ *
+ * \return a pointer to a stream.
+ */
 extern
 struct QsStream *qsAppStreamCreate(struct QsApp *app);
 
@@ -178,27 +205,47 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app);
 extern
 void qsStreamAllowLoops(struct QsStream *stream, bool doAllow);
 
+
+/** Destroy a stream.
+ *
+ * This will not unload the filters that are in the stream.
+ *
+ * /param stream to destroy.
+ *
+ * /return 0 on success.
+ */
 extern
 int qsStreamDestroy(struct QsStream *stream);
 
 /** Remove a filter and it's connections from a stream
  *
  * This does not unload the filter module plugin.  Use qsFilterUnload() to
- * unload and cleanup filter module resources.  
+ * unload and cleanup filter module resources.
  *
  * \return 0 if the filter was found and removed, and non-zero otherwise.
  */
 extern
 int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
 
+
+/** Connect two filters in the stream.
+ *
+ * \param stream a stream object returned from \ref qsAppStreamCreate().
+ *
+ * \param from filter module that we connect from.
+ *
+ * \param to filter module that we connect to.
+ *
+ * \return 0 on success, ... \todo
+ */
 extern
 int qsStreamConnectFilters(struct QsStream *stream,
         struct QsFilter *from, struct QsFilter *to);
 
 
 
-/** Run the stream flow with one feed input() call to each source filter
- * in this stream.
+/** Run the stream flow with one feed input() call to each
+ * \ref source filter in this stream.
  *
  * Run one loop.
  *
@@ -263,8 +310,11 @@ int qsStreamReady(struct QsStream *stream);
 
 /** Stop the flow
  *
- * For a given stream qsStreamStop() be called after qsStreamStart().
+ * For a given stream qsStreamStop() be called after qsStreamReady() and
+ * any number of calls to qsStreamFlow().
  *
+ *
+ * \return 0
  */
 extern
 int qsStreamStop(struct QsStream *stream);

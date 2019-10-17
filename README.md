@@ -373,7 +373,7 @@ except that sources are no longer being feed.
   stream when it is in the start state.
 - **flow**: the filters feed each other and the number of threads and
   processes running depends on the thread and process partitioning scheme
-  that is being used.  A long running program that keeps busy will pend
+  that is being used.  A long running program that keeps busy will spend
   most of its time in the *flow* state.
 - **flush**: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
@@ -394,9 +394,12 @@ and go from pause to exit.
 
 A module reads input and writes outputs in the stream.  The number of
 input channels and the number of output channels may be from zero to any
-integer.  filters do not know if they are running as a single thread by
+integer.  Filters do not know if they are running as a single thread by
 themselves or they are sharing their thread execution with other filters.
-From the quickstream user filters just provide executable object code.
+From the quickstream user, the filters just provide executable object
+code in the form of C functions.  The filters just read input and write
+output.  At the quickstream level the filters don't know what filters
+they are reading and writing to.
 
 
 ### Controller
@@ -417,16 +420,18 @@ Channel is a connection to a filter from another filter.  For a given
 filter running in a stream at a particular time, there are input channels
 and output channels.  For that filter running in a given cycle the input
 and output channels are numbered from 0 to N-1, where N is the number of
-input or output channels.
+input or output channels.  The filters may decide how many input and
+output channels they will work with.
 
 
 ### Source
 
 A filter with no inputs is a source filter.  It may get "input" from
-something other than the stream, like a file, or a socket, but those
-kinds of inputs are external from the quickstream, that is they do get
-any input from the quickstream circular buffer.  So in a more global sense
-that may not be sources, but with respect to quickstream they are sources.
+something other than the stream, like a file, or a socket, but those kinds
+of inputs are external from the quickstream, that is they do not get any
+input from the quickstream buffering system.  So in a more global sense
+they may not be sources with data input, but with respect to quickstream
+they are sources which have no data input.
 
 
 ### Sink
@@ -434,9 +439,10 @@ that may not be sources, but with respect to quickstream they are sources.
 A filter with no outputs is a sink filter.  It may write "output" to
 something other than the stream, like a file, a socket, or display device,
 but those kinds of outputs are external from the quickstream, that is they
-do not read a quickstream circular buffer using the quickstream API.  In a
-more global sense that may not be sinks, but with respect to quickstream
-they are sinks.
+do not read from quickstream buffering system using the quickstream API.
+In a more global sense that may not be sinks and they may produce output,
+but with respect to quickstream they are sinks and they produce no
+quickstream output channels.
 
 
 ## Interfaces
@@ -446,11 +452,12 @@ utility programs.  Both APIs in use the libquickstream library.  The main
 parts are:
 
 - a filter API **qsfilter.h**: which is used to build a quickstream filter
-  dynamic shared object filter modules.
+  dynamic shared object filter modules using predeclared functions, one
+  required and other optional functions.
 - a stream program API **qsapp.h**: which is used to build programs that run
   a quickstream with said filters.
-- the program **quickstream**: which uses *qsapp.h* to run a quickstream with said
-  filters.
+- the program **quickstream**: which uses *qsapp.h* and libquickstream
+  library to run a quickstream flow graph with said filters.
 
 
 ## OS (operating system) Ports
@@ -461,8 +468,8 @@ Debian 9 and Ubuntu 18.04
 ## Similar Software Projects
 
 Most other stream flow like software projects have a much more particular
-scope of usage than quickstream.  These software packages to similar
-things.  We study them and learn.
+scope of usage than quickstream.  These software packages present a lot of
+the same ideas.  We study them and learn.
 
 - **GNUradio** https://www.gnuradio.org/
 - **gstreamer** https://gstreamer.freedesktop.org/
@@ -486,7 +493,7 @@ between modules (filters) can be varied depending on how much latency is
 tolerable. In general the clogging and throttling of the stream flows is
 determined by the current inter-filter buffering parameters.
 
-Simple filters can share the same thread, and whereby use less system
+"Simple" filters can share the same thread, and whereby use less system
 resources, and thereby run the stream faster by avoiding thread context
 switches using less time and memory than running filters in separate
 threads (or processes).  When a filter gets more complex we can let the
@@ -513,7 +520,7 @@ and run-time based on stream flow measures, and so it can be adaptive and
 can be programmed to be self optimizing at run-time.  Most of the other
 stream frame-works just can't do that, they only have one thread and
 process running scheme that is hard coded, like one thread per filter, or
-one process per filter which for simple filters would be suboptimal.
+one process per filter which for "simple" filters would be suboptimal.
 
 You can change the filter stream topology on the fly.  Loading and
 unloading filters and reconnecting filters at run-time.
@@ -569,6 +576,9 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   in a while.
 - If you wish to make a tarball release use the GNU autotool building
   method and run *./configure* and *make dist*.
+- There will be no downloading of files in the build step.  Downloading
+  may happen in the bootstrap step.  In building from a tarball release
+  there will be no downloads.
 - Files in the source are located in the same relative path of files that
   they are most directly related to in the installed paths.
 - All filter modules do not share the global variable space that came from
@@ -581,10 +591,12 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   either case the data in the modules stays accessible only in that
   module.  Modules that wish to share variables with other modules may do
   so by using other non-filter DSOs (dynamic shared objects), basically
-  any other library than filter DSO.
+  any other library than the filter DSO.
 
 
-## Driving questions
+## Driving concerns
+
+- Simplicity and performance.
 
 - Is this quickstream idea really like a layer in a protocol stack that
   can be built upon?
@@ -594,5 +606,9 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
       - It would appear that current software development trends frowns
         upon this idea.
 
-- It looks like a kernel hack is not needed, or is it?
+- Bench marking with other streaming APIs; without which we quickstream
+  will die of obscurity.
+
+- It looks like a kernel hack is not needed, or is it?  mmap(2) does what
+  we need.
 
