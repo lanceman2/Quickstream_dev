@@ -1,0 +1,2 @@
+This directory is for non-interactive tests.  Just run ./run_tests to run
+all the tests in this directory.
