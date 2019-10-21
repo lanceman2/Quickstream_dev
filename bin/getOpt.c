@@ -2,6 +2,7 @@
 #include "getOpt.h"
 #include "../lib/debug.h"
 
+
 int getOpt(int argc, const char * const *argv, int *i,
         const struct opts *options/*array of options*/,
         const char **arg/*points to next possible arg*/) {
@@ -10,7 +11,7 @@ int getOpt(int argc, const char * const *argv, int *i,
 
     const char *str = argv[*i];
 
-    if(arg)
+    if(*arg)
         str = *arg; // The user left this unused.
 
     if(str == argv[*i]) {
@@ -63,10 +64,17 @@ int getOpt(int argc, const char * const *argv, int *i,
                 // example:  -acl
                 //            ^
                 *arg = str+1;
-            else
-                // example:  -acl
+            else if(*i+1 < argc && *argv[*i+1] != '-')
+                // example:  -acl foo
                 //              ^
                 *arg = argv[++(*i)];
+            else {
+                // example:  -acl -foo
+                //              ^ 
+                *arg = 0;
+                if(*i < argc)
+                    ++(*i);
+            }
 
             return o->shortOpt;
         }

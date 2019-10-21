@@ -46,8 +46,8 @@ int main(void) {
 
     qsStreamReady(s);
     
-    qsAppPrintDotToFile(app, QsPrintDebug, stdout);
-    qsAppDisplayFlowImage(app, QsPrintDebug, false);
+    qsAppPrintDotToFile(app, QSPrintDebug, stdout);
+    qsAppDisplayFlowImage(app, QSPrintDebug, false);
 
     //qsStreamStart(s);
 
