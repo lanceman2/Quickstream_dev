@@ -65,10 +65,10 @@ int usage(const char *argv0) {
         "     --filter stdin\n"
         "     --filter=stdin\n"
         "\n"
-        "  -filter stdin\n"
-        "  and\n"
-        "  -filter=stding\n"
-        "  or not valid options.\n"
+        "     -filter stdin\n"
+        "   and\n"
+        "     -filter=stding\n"
+        "   or not valid options.\n"
         "\n"
         "----------------------------------------------------------------------\n"
         "                            OPTIONS\n"
@@ -157,7 +157,12 @@ int main(int argc, const char * const *argv) {
                 return 0;
 
             case 'c':
-                if(numFilters < 2) return usage(argv[0]);
+                if(numFilters < 2) {
+                    fprintf(stderr, "Got --connect "
+                            "option with %d filter(s) loaded\n",
+                            numFilters);
+                    return usage(argv[0]);
+                }
 
                 // Example:
                 //
@@ -166,11 +171,11 @@ int main(int argc, const char * const *argv) {
                 //           filter connections ==> (0) -> (1) -> (2)
                 //
         
-                if(!arg) {
+                if(!arg || arg[0] < '0' || arg[0] > '9') {
                     // There is no connection list, so by default we
                     // connect filters in the order they are loaded.
                     for(int i=1; i<numFilters; ++i) {
-                        fprintf(stderr, " ---        --- connecting: %d -> %d\n", i-1, i);
+                        fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
                         qsStreamConnectFilters(stream, filters[i-1], filters[i]);
                     }
                     break;
@@ -179,28 +184,30 @@ int main(int argc, const char * const *argv) {
                 for(const char *str = arg; *str && endptr != str;) {
                     long from = strtol(str, &endptr, 10);
                     if(endptr == str) {
-                        fprintf(stderr, "Bad --connect args: \"%s\" value "
-                                "out of range\n\n", str);
+                        fprintf(stderr, "Bad --connect \"%s\" values "
+                                "out of range\n\n", arg);
                         return usage(argv[0]);
                     }
                     str = endptr;
                     long to = strtol(str, &endptr, 10);
                     if(endptr == str) {
-                        fprintf(stderr, "Bad --connect args: \"%s\" value "
-                                "out of range\n\n", str);
+                        fprintf(stderr, "Bad --connect \"%s\" values "
+                                "out of range\n\n", arg);
                         return usage(argv[0]);
                     }
                     str = endptr;
                     // Check values read.
-                    if(from < 0 || to < 0 || from >= numFilters || to >= numFilters) {
-                        fprintf(stderr, "Bad --connect args: \"%s\" value "
+                    if(from < 0 || to < 0 || from >= numFilters
+                            || to >= numFilters) {
+                        fprintf(stderr, "Bad --connect \"%s\" values "
                                 "out of range\n\n", arg);
                         return usage(argv[0]);
                     }
 
-                    fprintf(stderr, "  ** connecting: %ld -> %ld\n", from, to);
+                    fprintf(stderr, "connecting: %ld -> %ld\n", from, to);
 
-                    if(qsStreamConnectFilters(stream, filters[from], filters[to])) {
+                    if(qsStreamConnectFilters(stream, filters[from],
+                                filters[to])) {
                         return 1; // failed
                     }
                     gotConnection = true;
@@ -218,9 +225,9 @@ int main(int argc, const char * const *argv) {
                 // display a dot graph
                 if(!app) break; // nothing to display yet.
 #ifdef DEBUG
-                qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
+                qsAppDisplayFlowImage(app, QSPrintDebug, false/*waitForDisplay*/);
 #else
-                qsAppDisplayFlowImage(app, QSPrintOutline, true/*waitForDisplay*/);
+                qsAppDisplayFlowImage(app, QSPrintOutline, false/*waitForDisplay*/);
 #endif
                 break;
             case 'f': // Load filter module
@@ -238,15 +245,21 @@ int main(int argc, const char * const *argv) {
                     ASSERT(stream, "");
                 }
                 const char *name = 0;
-                int fargc = 0;
-                const char * const *fargv = 0;
-                if(i < argc && strcmp(argv[i], "[") == 0) {
+
+                // example:
+                //  --filter stdin [ --name stdinput --bufferSize 5012 ]
+                //
+                int fargc = 0; // 4
+                const char * const *fargv = 0; // points to --name
+
+                if(i+1 < argc && strcmp(argv[i+1], "[") == 0) {
+                    ++i;
                     fargv = &argv[++i];
-                    while(optind < argc && strcmp(argv[i], "]")) {
-                        if(strcmp(argv[optind],"--name") == 0) {
+                    while(i < argc && strcmp(argv[i], "]")) {
+                        if(strcmp(argv[i],"--name") == 0) {
                             ++i;
                             ++fargc;
-                            if(optind < argc && strcmp(argv[optind], "]")) {
+                            if(i < argc && strcmp(argv[i], "]")) {
                                 name = argv[i];
                                 ++i;
                                 ++fargc;
@@ -257,7 +270,9 @@ int main(int argc, const char * const *argv) {
                         }
                     }
                     if(strcmp(argv[i], "]") == 0) ++i;
-                }
+                } else
+                    ++i;
+
                 fprintf(stderr, "Got filter args[%d]= [", fargc);
                 for(int j=0; j<fargc; ++j)
                     fprintf(stderr, "%s ", fargv[j]);
@@ -268,7 +283,6 @@ int main(int argc, const char * const *argv) {
 
                 // next
                 arg = 0;
-                ++i;
 
                 break;
 
@@ -290,7 +304,6 @@ int main(int argc, const char * const *argv) {
             qsStreamConnectFilters(stream, filters[i-1], filters[i]);
         }
     }
-
 
 
     WARN("SUCCESS");

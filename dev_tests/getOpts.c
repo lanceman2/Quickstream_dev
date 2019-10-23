@@ -113,6 +113,7 @@ int main(int argc, const char * const *argv) {
                                 "out of range\n\n", str);
                         return usage(argv[0]);
                     }
+                    fprintf(stderr, "str=\"%s\"\n", str);
                     str = endptr;
                     long to = strtol(str, &endptr, 10);
                     if(endptr == str) {
