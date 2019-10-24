@@ -45,13 +45,13 @@ int usage(const char *argv0) {
         "    Run a quickstream flow graph.\n"
         "\n"
         "    What filter modules to run with are given in command-line options.\n"
-        "  This program takes action after each command-line argument it parsed,\n"
+        "  This program takes action after each command-line argument it parses,\n"
         "  so the order of command-line arguments is very important.  A connect\n"
         "  option, --connect, before you load any filters will have no effect.\n"
         "\n"
         "    All command line options require an preceding option flag.  All\n"
         "  command line options with no arguments may be given in any of two\n"
-        "  forms.  The two option forms below are equivalent:\n"
+        "  forms.  The two argument option forms below are equivalent:\n"
         "\n"
         "     -d\n"
         "     --display\n"
@@ -124,6 +124,7 @@ int main(int argc, const char * const *argv) {
     int numFilters = 0;
     struct QsFilter **filters = 0;
     bool gotConnection = false;
+    bool verbose = false;
 
     int i = 1;
     const char *arg = 0;
@@ -155,6 +156,9 @@ int main(int argc, const char * const *argv) {
             case 'V':
                 printf("%s\n", QS_VERSION);
                 return 0;
+            case 'v':
+                verbose = true;
+                break;
 
             case 'c':
                 if(numFilters < 2) {
@@ -224,11 +228,7 @@ int main(int argc, const char * const *argv) {
             case 'd':
                 // display a dot graph
                 if(!app) break; // nothing to display yet.
-#ifdef DEBUG
-                qsAppDisplayFlowImage(app, QSPrintDebug, false/*waitForDisplay*/);
-#else
-                qsAppDisplayFlowImage(app, QSPrintOutline, false/*waitForDisplay*/);
-#endif
+                qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
                 break;
             case 'f': // Load filter module
                 if(!arg) {
@@ -272,11 +272,13 @@ int main(int argc, const char * const *argv) {
                     if(strcmp(argv[i], "]") == 0) ++i;
                 } else
                     ++i;
-
-                fprintf(stderr, "Got filter args[%d]= [", fargc);
-                for(int j=0; j<fargc; ++j)
-                    fprintf(stderr, "%s ", fargv[j]);
-                fprintf(stderr, "]\n");
+                if(verbose) {
+                    fprintf(stderr, "Got filter args[%d]= [", fargc);
+                    for(int j=0; j<fargc; ++j)
+                        fprintf(stderr, "%s ", fargv[j]);
+                    fprintf(stderr, "]\n");
+                }
+                
                 filters[numFilters-1] = qsAppFilterLoad(app,
                         arg, name, fargc, (const char **) fargv);
                 if(!filters[numFilters-1]) return 1; // error
