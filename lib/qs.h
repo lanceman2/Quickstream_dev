@@ -56,9 +56,17 @@ struct QsProcess {
 
 // bit Flags for the stream
 //
-#define _QS_STREAM_ALLOWLOOPS     (01)
+// this is a stream configuration option bit flag
+#define _QS_STREAM_ALLOWLOOPS        (01)
 
-#define _QS_STREAM_DEFAULTFLAGS   (0)
+// set if qsStreamLaunch() was called successfully
+// unset in qsStreamStop()
+//
+// this is a stream state bit flag
+#define _QS_STREAM_LAUNCHED          (02)
+
+// This is the value of the stream flag when the stream is first created.
+#define _QS_STREAM_DEFAULTFLAGS      (0)
 
 
 
@@ -94,7 +102,7 @@ struct QsStream {
     struct QsFilter **from; // array of filter pointers
     struct QsFilter **to;   // array of filter pointers
 
-    struct QsStream *next; // next stream in app list
+    struct QsStream *next; // next stream in app list of streams
 };
 
 

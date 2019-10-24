@@ -147,7 +147,7 @@ int constructor(int argc, const char **argv);
 int destructor(void);
 
 
-/** Optional start function
+/** Optional filter start function
  *
  * This function, if present, is called each time the stream starts
  * running, just before any filter in the stream has it's \ref input()
@@ -166,11 +166,11 @@ int destructor(void);
 int start(uint32_t numInChannels, uint32_t numOutChannels);
 
 
-/** Optional start function
+/** Optional filter stop function
  *
- * This function, if present, is called each time the stream starts
- * running, just before any filter in the stream has it's \ref input()
- * function called.
+ * This function, if present, is called each time the stream stops
+ * running, just after any filter in the stream has it's \ref input()
+ * function called for the last time in a flow/run cycle.
  *
  * \return 0 on success
  *
@@ -190,7 +190,7 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
 #define QS_DEFAULTWRITELENGTH  ((size_t) 1024)
 
 
-/** get a buffer write pointer
+/** get a buffer write pointer in a filters input()
  *
  * qsGetBuffer() may only be called in the filters input() function.  If a
  * given filter at a given \ref input() call will generate output than

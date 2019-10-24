@@ -7,8 +7,8 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-dd if=/dev/urandom count=1000 of=$in
+dd if=/dev/urandom count=1300 of=$in
 
-../bin/quickstream -f stdin -f stdout -c -d < $in > $out
+../bin/quickstream -f stdin -f stdout -c -r < $in > $out
 
 diff $in $out

@@ -594,7 +594,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   any other library than the filter DSO.
 
 
-## Driving concerns
+## Driving concerns and todo list
 
 - Simplicity and performance.
 
@@ -602,13 +602,16 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   can be built upon?
 
     * Sometimes we need to care about the underlying workings that
-      facilitate an abstraction layer because we have a need for speed.
+      facilitate an abstraction layer because we have a need for
+      performance.
       - It would appear that current software development trends frowns
         upon this idea.
 
-- Bench marking with other streaming APIs; without which we quickstream
-  will die of obscurity.
+- Bench marking with other streaming APIs; without which quickstream will
+  die of obscurity.
 
 - It looks like a kernel hack is not needed, or is it?  mmap(2) does what
   we need.
+
+- Add filter modules that are groups of filter modules.
 

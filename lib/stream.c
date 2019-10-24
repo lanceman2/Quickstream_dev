@@ -412,7 +412,9 @@ uint32_t qsStreamFlow(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    ASSERT(!s->sources, "qsStreamPrestart() must be called before this");
+    ASSERT(s->sources, "qsStreamReady() must be called before this");
+    ASSERT(s->flags & _QS_STREAM_LAUNCHED,
+            "Stream has not been launched yet");
 
     uint32_t flowState = 0;
 
@@ -439,10 +441,15 @@ int qsStreamLaunch(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    ASSERT(!s->sources, "qsStreamPrestart() must be successfully"
+    ASSERT(s->sources, "qsStreamReady() must be successfully"
             " called before this");
+    ASSERT(!(s->flags & _QS_STREAM_LAUNCHED),
+            "Stream has been launched already");
 
     // TODO: for the single thread case this does nothing.
+
+
+    s->flags |= _QS_STREAM_LAUNCHED;
 
     return 0;
 }
@@ -450,6 +457,8 @@ int qsStreamLaunch(struct QsStream *s) {
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(s->sources, "");
+
+    s->flags &= (~_QS_STREAM_LAUNCHED);
 
     if(!s->sources) {
         // The setup of the stream failed and the user ignored it.

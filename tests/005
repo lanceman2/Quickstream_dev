@@ -1,3 +1,14 @@
 #!/bin/bash
 
-sleep 2
+set -e
+
+in=$0.IN.tmp
+out=$0.OUT.tmp
+
+# dd count blocks  1 block = 512bytes
+
+dd if=/dev/urandom count=1300 of=$in
+
+../bin/quickstream -f stdin -f tests/copy -f stdout -c -r < $in > $out
+
+diff $in $out

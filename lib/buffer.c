@@ -484,3 +484,21 @@ void qsAdvanceInput(size_t len) {
     _input.advanceInput_wasCalled = true;
 }
 
+
+void qsSetMaxReadThreshold(size_t len, uint32_t *inputChannelNums) {
+
+    DASSERT(_qsStartFilter,"");
+
+}
+
+
+void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums) {
+
+    DASSERT(_qsStartFilter,"");
+}
+
+
+void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums) {
+
+    DASSERT(_qsStartFilter,"");
+}

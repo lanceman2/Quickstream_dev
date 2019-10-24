@@ -49,6 +49,10 @@ int usage(const char *argv0) {
         "  so the order of command-line arguments is very important.  A connect\n"
         "  option, --connect, before you load any filters will have no effect.\n"
         "\n"
+        "    This program executes code after parsing each command line option\n"
+        "  in the order that the options are given.  After code for each command\n"
+        "  line option is executed the program will terminate.\n"
+        "\n"
         "    All command line options require an preceding option flag.  All\n"
         "  command line options with no arguments may be given in any of two\n"
         "  forms.  The two argument option forms below are equivalent:\n"
@@ -89,7 +93,14 @@ int usage(const char *argv0) {
         "               they have been loaded.\n"
         "\n"
         "\n"
-        "  -d|--display  display a dot graph of the stream before running it.\n"
+        "  -d|--display  display a dot graph of the stream.  If display is\n"
+        "               called after the stream is readied (via --ready) this\n"
+        "               will show stream channel and buffering details.\n"
+        "\n"
+        "\n"
+        "  -D|--display-wait  likr --display but this waits for the display\n"
+        "                     program to exit before going on to the next\n"
+        "               argument option.\n"
         "\n"
         "\n"
         "  -f|--filter FILENAME [ args .. ]  load filter module with filename\n"
@@ -102,6 +113,14 @@ int usage(const char *argv0) {
         "\n"
         "\n"
         "   -h|--help   print this help to stderr and exit.\n"
+        "\n"
+        "\n" 
+        "   -R|-ready   ready the stream.  This calls all the filter start()\n"
+        "               functions that exist and get the stream ready to flow,\n"
+        "               except for spawning threads and processes.\n"
+        "\n"
+        "\n" 
+        "   -r|-run     run the stream.  This readies the stream and runs it.\n"
         "\n"
         "\n"
         "   -V|--version  print %s version information to stdout an than exit.\n"
@@ -125,6 +144,7 @@ int main(int argc, const char * const *argv) {
     struct QsFilter **filters = 0;
     bool gotConnection = false;
     bool verbose = false;
+    bool ready = false;
 
     int i = 1;
     const char *arg = 0;
@@ -134,9 +154,12 @@ int main(int argc, const char * const *argv) {
         const struct opts options[] = {
             { "connect", 'c' },
             { "display", 'd' },
+            { "display-wait", 'D' },
             { "filter", 'f' },
             { "help", 'h' },
             { "help", '?' },
+            { "ready", 'R' },
+            { "run", 'r' },
             { "version", 'V' },
             { "verbose", 'v' },
             { 0, 0 }
@@ -227,9 +250,23 @@ int main(int argc, const char * const *argv) {
 
             case 'd':
                 // display a dot graph
-                if(!app) break; // nothing to display yet.
+                if(!app) {
+                    fprintf(stderr, "--display no filters loaded to display\n");
+                    break; // nothing to display yet.
+                }
+                qsAppDisplayFlowImage(app, QSPrintDebug, false/*waitForDisplay*/);
+                break;
+
+             case 'D':
+                // display a dot graph
+                if(!app) {
+                    fprintf(stderr, "--display-wait no filters loaded to display\n");
+                    break; // nothing to display yet.
+                }
                 qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
                 break;
+             
+
             case 'f': // Load filter module
                 if(!arg) {
                     fprintf(stderr, "Bad --filter option\n\n");
@@ -285,6 +322,53 @@ int main(int argc, const char * const *argv) {
 
                 // next
                 arg = 0;
+
+                break;
+
+            case 'R':
+
+                if(ready) {
+                    fprintf(stderr, "--ready with stream already ready\n");
+                    return 1;
+                } else if(!app) {
+                    fprintf(stderr, "--ready with no filters loaded\n");
+                    return 1;
+                }
+
+                if(qsStreamReady(stream)) {
+                    // error
+                    return 1;
+                }
+
+                // success
+                ready = true;
+                break;
+
+            case 'r':
+
+                if(!app) {
+                    fprintf(stderr, "option --ready with no filters loaded\n");
+                    return 1;
+                }
+
+                if(!ready) {
+                    if(qsStreamReady(stream))
+                        // error
+                        return 1;
+                }
+
+                if(qsStreamLaunch(stream)) {
+                    // error
+                    return 1;
+                }
+
+                // loop
+                while(qsStreamFlow(stream) == 0);
+
+                if(qsStreamStop(stream))
+                    return 1;
+
+                ready = false;
 
                 break;
 
