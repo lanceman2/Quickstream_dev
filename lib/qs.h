@@ -68,6 +68,10 @@ struct QsProcess {
 // This is the value of the stream flag when the stream is first created.
 #define _QS_STREAM_DEFAULTFLAGS      (0)
 
+// By limiting  the number of channels possible in or out we can use stack
+// allocation via alloca().
+#define QS_MAX_CHANNELS              ((uint32_t) (4*1024))
+
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their

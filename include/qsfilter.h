@@ -21,13 +21,16 @@
  * This macro may be used in qsSetMaxReadThreshold(),
  * qsSetMinReadThreshold(), qsSetMaxReadSize(), and qsBufferCreate().
  */
-#define QS_ALLCHANNELS   ((uint32_t *)(-1))
+#define QS_ALLCHANNELS   ((uint32_t *)0)
 
 
 /** A special value or length to pass to qsOutput() to cause no output.
  */
 #define QS_NONE          ((size_t) -1) // not 0
 
+
+
+#define QS_ARRAYTERM    ((uint32_t) -1)
 
 
 
@@ -315,8 +318,6 @@ extern
 void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
 
 
-#define QS_ARRAYTERM    ((uint32_t) -1)
-
 
 /** Create an output buffer that is associated with the listed channels
  *
@@ -348,11 +349,11 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
  * command line options.  The --help option is built in and calls the
  * help() function that was set by the filter.
  *
- * \param opts a pointer to a stack or heap allocated struct QsOpts.
- * This memory is used for state in the object, but the user manages this
- * memory, and so there is no destructor function for the struct QsOpt.
- * struct QsOpt should be considered opaque by the user of this
- * function.
+ * \param opts a pointer to a stack or heap allocated struct QsOpts.  The
+ * This memory is used for state in the object, but the user manages the
+ * freeing of these memory, and so there is no destructor function for the
+ * struct QsOpt.  struct QsOpt should be considered opaque by the user of
+ * this function.
  *
  * argc and argv can and will likely be the values that have been passed
  * to the filter construct() function.
@@ -360,11 +361,15 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
  * \param argc the number of string arguments that argv points to.
  *
  * \param argv is the array of string arguments.
+ *
+ * \sa qsOptsGetFloat(), ptsGetDouble(), qsOptsGetString(), and
+ * qsOptsGetInt().
  */
 extern
 void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
 
 /** Initialize simple help and argument parsing object
+ *
  *
  * \param opts should have been previously passed to qsOptInit().
  * \param optName is the name of the argument that was passed with the form

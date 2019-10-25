@@ -16,6 +16,23 @@ void help(FILE *f) {
 }
 
 
+int start(uint32_t numInChannels, uint32_t numOutChannels) {
+
+    DSPEW("BASE_FILE=%s", __BASE_FILE__);
+
+    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
+            count++, numInChannels, numOutChannels);
+
+    // We needed a start() to check for this error.
+    if(!numInChannels || !numOutChannels) {
+        ERROR("There must be at least 1 input and 1 output.\n");
+        return 1;
+    }
+
+    return 0; // success
+}
+
+
 int input(void *buffer, size_t len, uint32_t inputChannelNum,
         uint32_t flowState) {
 
@@ -37,23 +54,6 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
     memcpy(oBuffer, buffer, len);
 
     qsOutput(len, 0);
-
-    return 0; // success
-}
-
-
-int start(uint32_t numInChannels, uint32_t numOutChannels) {
-
-    DSPEW("BASE_FILE=%s", __BASE_FILE__);
-
-    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
-            count++, numInChannels, numOutChannels);
-
-    // We needed a start() to check for this error.
-    if(!numInChannels || !numOutChannels) {
-        ERROR("There must be at least 1 input and 1 output.\n");
-        return 1;
-    }
 
     return 0; // success
 }

@@ -287,7 +287,10 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
         // to bother setting up an array of uint32_t values.  It may be
         // that having all outputs share the same buffer is a common case.
 
-        DASSERT(f->numOutputs <= 2*1024, "");
+        // This should have been checked in stream.c so we just check on
+        // DEBUG now.
+        DASSERT(f->numOutputs <= QS_MAX_CHANNELS, "");
+
         outputChannelNums = // stack allocation
             alloca(sizeof(*outputChannelNums)*(f->numOutputs+1));
         uint32_t i;
@@ -485,20 +488,96 @@ void qsAdvanceInput(size_t len) {
 }
 
 
-void qsSetMaxReadThreshold(size_t len, uint32_t *inputChannelNums) {
+// This looping search is only called at in a filters start() which is
+// only called at qsSourceReady(); so this is not called often.
+//
+static inline
+struct QsOutput *FindOuputToFilter(struct QsStream *s,
+        struct QsFilter *f, uint32_t inputNum) {
 
-    DASSERT(_qsStartFilter,"");
+    for(uint32_t i=s->numConnections-1; i >= 0; --i) {
+        if(s->to[i] == f) {
+            for(uint32_t j=s->from[i]->numOutputs-1; j>=0; --j) {
+                if(s->from[i]->outputs[j].inputChannelNum == inputNum) {
+                    DASSERT(s->from[i]->outputs[j].filter == f, "");
+                    return &(s->from[i]->outputs[j]);
+                }
+            }
+        }
+    }
 
+    ASSERT(false, "filter \"%s\" input channel"
+            "%" PRIu32 " output not found",
+            f->name, inputNum);
+
+    return 0; // stop compiler warning
 }
 
 
-void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums) {
+static
+void SetReadParameter(size_t len, uint32_t *inputNums, struct QsFilter *f,
+        void (*callback)(struct QsOutput *output, size_t len)) {
 
-    DASSERT(_qsStartFilter,"");
+    DASSERT(f,"");
+    DASSERT(f->stream, "");
+
+    if(inputNums == QS_ALLCHANNELS) {
+        // This should have been checked in stream.c so we just check on
+        // DEBUG now.
+        DASSERT(f->u.numInputs < QS_MAX_CHANNELS, "");
+
+        inputNums = alloca(sizeof(*inputNums)*(f->u.numInputs+1));
+        inputNums[f->u.numInputs] = QS_ARRAYTERM;
+        for(uint32_t i = f->u.numInputs - 1; i>=0; --i) {
+            inputNums[i] = i;
+        }
+    }
+
+    for(; *inputNums != QS_ARRAYTERM; ++inputNums)
+        // Find the filter that outputs to this filter, f.
+        callback(FindOuputToFilter(f->stream, f, *inputNums), len);
 }
 
 
-void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums) {
+// Instead of repeating this code 3 times we Macro function it.
+//
+#define SET_READ_PARAMETER(parameter, output, len)\
+    do {\
+        DSPEW("setting filter \"%s\" input %"\
+            PRIu32 " " #parameter " to %zu",\
+            (output)->filter->name, (output)->inputChannelNum, (len));\
+        (output)->parameter = (len);\
+    } while(0)
 
-    DASSERT(_qsStartFilter,"");
+
+static
+void SetMaxReadThreshold(struct QsOutput *output, size_t len) {
+    SET_READ_PARAMETER(maxReadThreshold, output, len);
+}
+
+
+void qsSetMaxReadThreshold(size_t len, uint32_t *inputNums) {
+    SetReadParameter(len, inputNums, _qsStartFilter, SetMaxReadThreshold);
+}
+
+
+static
+void SetMinReadThreshold(struct QsOutput *output, size_t len) {
+    SET_READ_PARAMETER(minReadThreshold, output, len);
+}
+
+
+void qsSetMinReadThreshold(size_t len, uint32_t *inputNums) {
+    SetReadParameter(len, inputNums, _qsStartFilter, SetMinReadThreshold);
+}
+
+
+static
+void SetMaxReadSize(struct QsOutput *output, size_t len) {
+    SET_READ_PARAMETER(maxReadSize, output, len);
+}
+
+
+void qsSetMaxReadSize(size_t len, uint32_t *inputNums) {
+    SetReadParameter(len, inputNums, _qsStartFilter, SetMaxReadSize);
 }

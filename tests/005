@@ -9,6 +9,9 @@ out=$0.OUT.tmp
 
 dd if=/dev/urandom count=1300 of=$in
 
-../bin/quickstream -f stdin -f tests/copy -f stdout -c -r < $in > $out
+../bin/quickstream -f stdin\
+ -f tests/copy\
+ -f stdout\
+ -c -r < $in > $out
 
 diff $in $out

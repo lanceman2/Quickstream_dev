@@ -370,6 +370,12 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
     // Make the output array
     DASSERT(!f->outputs, "");
+    ASSERT(f->numOutputs <= QS_MAX_CHANNELS,
+            "%" PRIu32 " > %" PRIu32 " outputs",
+            f->numOutputs, QS_MAX_CHANNELS);
+    ASSERT(f->u.numInputs <= QS_MAX_CHANNELS,
+            "%" PRIu32 " > %" PRIu32 " inputs",
+            f->u.numInputs, QS_MAX_CHANNELS);
     f->outputs = calloc(1, sizeof(*f->outputs)*f->numOutputs);
     ASSERT(f->outputs, "calloc(1,%zu) failed",
             sizeof(*f->outputs)*f->numOutputs);
@@ -453,6 +459,7 @@ int qsStreamLaunch(struct QsStream *s) {
 
     return 0;
 }
+
 
 int qsStreamStop(struct QsStream *s) {
 
