@@ -199,13 +199,26 @@ struct QsFilter {
     struct QsOutput *outputs; // array of struct QsOutput
 
 
-    // TODO: It'd be nice not to have this extra data.
+    // TODO: It'd be nice not to have this extra data. It's not needed
+    // when the stream is flowing.
     //
     // mark is extra data in this struct so that we can save a marker
     // as we look through the filters in the graph, because if the graph
     // has cycles in it, it's not easy to look at each filter just once
     // without a marker to mark a filter as looked at.
     bool mark;
+
+
+    // These values are gotten at load time when the filter is created
+    // and then they are the defaults for the corresponding values in
+    // outputs that are connected to this filter.  See struct QsOutput.
+    size_t maxReadThreshold, 
+        minReadThreshold,
+        maxReadSize,
+    // maxWrite will be gotten at filter load time and will be the default
+    // value for any output writer that this filter writes to.  See struct
+    // QsWriter.
+        maxWrite;
 };
 
 

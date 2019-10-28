@@ -12,7 +12,8 @@ static int count = 0;
 
 
 void help(FILE *f) {
-    fprintf(f, "test filter module that copies all input to each output\n");
+    fprintf(f,
+        "test filter module that copies all input to each output\n");
 }
 
 
@@ -28,6 +29,8 @@ int start(uint32_t numInChannels, uint32_t numOutChannels) {
         ERROR("There must be at least 1 input and 1 output.\n");
         return 1;
     }
+
+    qsSetMaxReadSize(10, QS_ALLCHANNELS);
 
     return 0; // success
 }

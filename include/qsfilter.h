@@ -343,11 +343,11 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
 
 
 
-/** Initialize simple help and argument parsing object
+/** Initialize simple argument parsing object
  *
  * A very simple command line option parser which parses "--" prefixed
- * command line options.  The --help option is built in and calls the
- * help() function that was set by the filter.
+ * command line options.  Argument options may be of the form
+ * \e --argName \e VAL or \e --argName=VAL
  *
  * \param opts a pointer to a stack or heap allocated struct QsOpts.  The
  * This memory is used for state in the object, but the user manages the
@@ -368,29 +368,66 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
 extern
 void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
 
-/** Initialize simple help and argument parsing object
- *
+
+/** Get a float as an option argument.
  *
  * \param opts should have been previously passed to qsOptInit().
- * \param optName is the name of the argument that was passed with the form
- * --name VAL.  optName should not start with "--", that gets added.
- *  \param defaultVal is the value that is returned if this argument option
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
  *  was no given in the filter arguments.
- *  \return the float value that the last option with this name was given
+ * \return the float value that the last option with this name was given
  *  in the command line, or defaultVal if this option was not given.
  */
 extern
 float qsOptsGetFloat(struct QsOpts *opts, const char *optName,
         float defaultVal);
 
+
+/** Get a double as an option argument.
+ *
+ * \param opts should have been previously passed to qsOptInit().
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ * \return the double value that the last option with this name was given
+ *  in the command line, or defaultVal if this option was not given.
+ */
 extern
 double qsOptsGetDouble(struct QsOpts *opts, const char *optName,
         double defaultVal);
 
+
+/** Get a string as an option argument.
+ *
+ * \param opts should have been previously passed to qsOptInit().
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ * \return pointer to the string last option with this name was given
+ *  in the command line, or defaultVal if this option was not given.
+ */
 extern
 const char *qsOptsGetString(struct QsOpts *opts, const char *optName,
         const char *defaultVal);
 
+
+/** Get an int as an option argument.
+ *
+ * \param opts should have been previously passed to qsOptInit().
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ * \return an int last option with this name was given in the command
+ * line, or defaultVal if this option was not given.
+ */
 extern
 int qsOptsGetInt(struct QsOpts *opts, const char *optName,
         int defaultVal);
