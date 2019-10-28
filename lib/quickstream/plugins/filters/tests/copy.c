@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
 #define QS_FILTER_NAME_CODE
 #include "../../../../../include/qsfilter.h"
@@ -13,7 +14,40 @@ static int count = 0;
 
 void help(FILE *f) {
     fprintf(f,
-        "test filter module that copies all input to each output\n");
+        "test filter module that copies all input to each output\n"
+        "\n"
+        "                               OPTIONS\n"
+        "\n"
+        "      --maxReadThreshold BYTES  default value %zu\n"
+        "\n"
+        "\n"
+        "      --minReadThreshold BYTES  default value %zu\n"
+        "\n"
+        "\n"
+        "      --maxReadSize BYTES       default value %zu\n"
+        "\n"
+        "\n",
+        QS_DEFAULT_maxReadThreshold,
+        QS_DEFAULT_minReadThreshold,
+        QS_DEFAULT_maxReadSize);
+}
+
+
+static size_t maxReadThreshold, minReadThreshold, maxReadSize;
+
+
+int construct(int argc, const char **argv) {
+
+    DSPEW();
+
+    maxReadThreshold = qsOptsGetSizeT(argc, argv,
+            "maxReadThreshold", QS_DEFAULT_maxReadThreshold);
+    minReadThreshold = qsOptsGetSizeT(argc, argv,
+            "minReadThreshold", QS_DEFAULT_minReadThreshold);
+    maxReadSize = qsOptsGetSizeT(argc, argv,
+            "maxReadSize", QS_DEFAULT_maxReadSize);
+ 
+    return 0; // success
 }
 
 
@@ -30,7 +64,9 @@ int start(uint32_t numInChannels, uint32_t numOutChannels) {
         return 1;
     }
 
-    qsSetMaxReadSize(10, QS_ALLCHANNELS);
+    qsSetMaxReadThreshold(maxReadThreshold, QS_ALLCHANNELS);
+    qsSetMinReadThreshold(minReadThreshold, QS_ALLCHANNELS);
+    qsSetMaxReadSize(maxReadSize, QS_ALLCHANNELS);
 
     return 0; // success
 }

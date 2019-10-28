@@ -214,7 +214,8 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     // If "construct", "destroy", "start", or "stop"
     // are not present, that's okay, they are optional.
-    int (* construct)(void) = dlsym(handle, "construct");
+    int (* construct)(int argc, const char **argv) =
+        dlsym(handle, "construct");
     f->start = dlsym(handle, "start");
     f->stop = dlsym(handle, "stop");
 
@@ -246,17 +247,19 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 #endif
     }
 
-    if(construct) construct();
+
+    f->app = app;
+    f->dlhandle = handle;
+
+    if(construct) {
+        _qsCurrentFilter = f;
+        construct(argc, argv);
+        _qsCurrentFilter = 0;
+    }
 
     INFO("Successfully loaded module Filter %s with name \"%s\"",
             path, f->name);
     free(path);
-
-    f->app = app;
-    // Having this copy of the handle also marks that we should try to
-    // call the filters destroy() if there is the "destroy" symbol in
-    // the DSO plugin.
-    f->dlhandle = handle;
 
     return f; // success
 

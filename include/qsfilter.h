@@ -33,6 +33,23 @@
 #define QS_ARRAYTERM    ((uint32_t) -1)
 
 
+// Given the parameters in these data structures (QsOutput and QsBuffer)
+// the stream running code should be able to determine the size needed for
+// the associated circular buffers.
+//
+// QsOutput is the data for a reader filter that another filter feeds
+// data.
+//
+// We cannot put all the ring buffer data in one data structure because
+// the ring buffer can be configured/shared between filters in different
+// ways.
+
+
+#define QS_DEFAULT_maxReadThreshold  ((size_t) 1024)
+#define QS_DEFAULT_minReadThreshold  ((size_t) 1)
+#define QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
+
+
 
 /** \file
  *
@@ -135,7 +152,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
  *
  * \todo figure out more return codes and what they mean
  */
-int constructor(int argc, const char **argv);
+int construct(int argc, const char **argv);
 
 
 /** Optional destructor function
@@ -147,7 +164,7 @@ int constructor(int argc, const char **argv);
  *
  * \todo figure out more return codes and what they mean
  */
-int destructor(void);
+int destroy(void);
 
 
 /** Optional filter start function
@@ -343,35 +360,10 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
 
 
 
-/** Initialize simple argument parsing object
- *
- * A very simple command line option parser which parses "--" prefixed
- * command line options.  Argument options may be of the form
- * \e --argName \e VAL or \e --argName=VAL
- *
- * \param opts a pointer to a stack or heap allocated struct QsOpts.  The
- * This memory is used for state in the object, but the user manages the
- * freeing of these memory, and so there is no destructor function for the
- * struct QsOpt.  struct QsOpt should be considered opaque by the user of
- * this function.
- *
- * argc and argv can and will likely be the values that have been passed
- * to the filter construct() function.
- *
- * \param argc the number of string arguments that argv points to.
- *
- * \param argv is the array of string arguments.
- *
- * \sa qsOptsGetFloat(), ptsGetDouble(), qsOptsGetString(), and
- * qsOptsGetInt().
- */
-extern
-void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
-
-
 /** Get a float as an option argument.
  *
- * \param opts should have been previously passed to qsOptInit().
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
  * \param optName is the name of the argument that was passed with the
  * form --name VAL or --name=VAL.  optName should not start with "--",
  * that gets added.
@@ -381,13 +373,14 @@ void qsOptsInit(struct QsOpts *opts, int argc, const char **argv);
  *  in the command line, or defaultVal if this option was not given.
  */
 extern
-float qsOptsGetFloat(struct QsOpts *opts, const char *optName,
-        float defaultVal);
+float qsOptsGetFloat(int argc, const char **argv,
+        const char *optName, float defaultVal);
 
 
 /** Get a double as an option argument.
  *
- * \param opts should have been previously passed to qsOptInit().
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
  * \param optName is the name of the argument that was passed with the
  * form --name VAL or --name=VAL.  optName should not start with "--",
  * that gets added.
@@ -397,13 +390,14 @@ float qsOptsGetFloat(struct QsOpts *opts, const char *optName,
  *  in the command line, or defaultVal if this option was not given.
  */
 extern
-double qsOptsGetDouble(struct QsOpts *opts, const char *optName,
-        double defaultVal);
+double qsOptsGetDouble(int argc, const char **argv,
+        const char *optName, double defaultVal);
 
 
 /** Get a string as an option argument.
  *
- * \param opts should have been previously passed to qsOptInit().
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
  * \param optName is the name of the argument that was passed with the
  * form --name VAL or --name=VAL.  optName should not start with "--",
  * that gets added.
@@ -413,13 +407,14 @@ double qsOptsGetDouble(struct QsOpts *opts, const char *optName,
  *  in the command line, or defaultVal if this option was not given.
  */
 extern
-const char *qsOptsGetString(struct QsOpts *opts, const char *optName,
-        const char *defaultVal);
+const char *qsOptsGetString(int argc, const char **argv,
+        const char *optName, const char *defaultVal);
 
 
 /** Get an int as an option argument.
  *
- * \param opts should have been previously passed to qsOptInit().
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
  * \param optName is the name of the argument that was passed with the
  * form --name VAL or --name=VAL.  optName should not start with "--",
  * that gets added.
@@ -429,10 +424,42 @@ const char *qsOptsGetString(struct QsOpts *opts, const char *optName,
  * line, or defaultVal if this option was not given.
  */
 extern
-int qsOptsGetInt(struct QsOpts *opts, const char *optName,
-        int defaultVal);
+int qsOptsGetInt(int argc, const char **argv,
+        const char *optName, int defaultVal);
 
 
+/** Get an size_t as an option argument.
+ *
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ * \return a size_t last option with this name was given in the command
+ * line, or defaultVal if this option was not given.
+ */
+extern
+size_t qsOptsGetSizeT(int argc, const char **argv,
+        const char *optName, size_t defaultVal);
+
+
+/** Get an uint32_t as an option argument.
+ *
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
+ * \param optName is the name of the argument that was passed with the
+ * form --name VAL or --name=VAL.  optName should not start with "--",
+ * that gets added.
+ * \param defaultVal is the value that is returned if this argument option
+ *  was no given in the filter arguments.
+ * \return an uint32_t last option with this name was given in the command
+ * line, or defaultVal if this option was not given.
+ */
+extern
+int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
+        uint32_t defaultVal);
 
 //In ../share/doc/quickstream/Doxyfile.in
 // PREDEFINED = DOXYGEN_SHOULD_SKIP_THIS

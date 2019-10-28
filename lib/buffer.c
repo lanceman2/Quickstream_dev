@@ -348,9 +348,9 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
 
 void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 
-    // _qsStartFilter is the filter that is having start() called. 
-    DASSERT(_qsStartFilter, "");
-    BufferWriterCreate(_qsStartFilter, maxWriteLen, outputChannelNums);
+    // _qsCurrentFilter is the filter that is having start() called. 
+    DASSERT(_qsCurrentFilter, "");
+    BufferWriterCreate(_qsCurrentFilter, maxWriteLen, outputChannelNums);
 }
 
 
@@ -557,7 +557,7 @@ void SetMaxReadThreshold(struct QsOutput *output, size_t len) {
 
 
 void qsSetMaxReadThreshold(size_t len, uint32_t *inputNums) {
-    SetReadParameter(len, inputNums, _qsStartFilter, SetMaxReadThreshold);
+    SetReadParameter(len, inputNums, _qsCurrentFilter, SetMaxReadThreshold);
 }
 
 
@@ -568,7 +568,7 @@ void SetMinReadThreshold(struct QsOutput *output, size_t len) {
 
 
 void qsSetMinReadThreshold(size_t len, uint32_t *inputNums) {
-    SetReadParameter(len, inputNums, _qsStartFilter, SetMinReadThreshold);
+    SetReadParameter(len, inputNums, _qsCurrentFilter, SetMinReadThreshold);
 }
 
 
@@ -579,5 +579,5 @@ void SetMaxReadSize(struct QsOutput *output, size_t len) {
 
 
 void qsSetMaxReadSize(size_t len, uint32_t *inputNums) {
-    SetReadParameter(len, inputNums, _qsStartFilter, SetMaxReadSize);
+    SetReadParameter(len, inputNums, _qsCurrentFilter, SetMaxReadSize);
 }

@@ -207,36 +207,7 @@ struct QsFilter {
     // has cycles in it, it's not easy to look at each filter just once
     // without a marker to mark a filter as looked at.
     bool mark;
-
-
-    // These values are gotten at load time when the filter is created
-    // and then they are the defaults for the corresponding values in
-    // outputs that are connected to this filter.  See struct QsOutput.
-    size_t maxReadThreshold, 
-        minReadThreshold,
-        maxReadSize,
-    // maxWrite will be gotten at filter load time and will be the default
-    // value for any output writer that this filter writes to.  See struct
-    // QsWriter.
-        maxWrite;
 };
-
-
-// Given the parameters in these data structures (QsOutput and QsBuffer)
-// the stream running code should be able to determine the size needed for
-// the associated circular buffers.
-//
-// QsOutput is the data for a reader filter that another filter feeds
-// data.
-//
-// We cannot put all the ring buffer data in one data structure because
-// the ring buffer can be configured/shared between filters in different
-// ways.
-
-
-#define _QS_DEFAULT_maxReadThreshold  ((size_t) 1024)
-#define _QS_DEFAULT_minReadThreshold  ((size_t) 1)
-#define _QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
 
 
 
@@ -368,22 +339,11 @@ __thread struct QsInput {
 
 
 
-//
-// The flowState that corresponds with the filter who's input() is
-// being called.
+// The filter that is having construct(), start(), stop() or destroy()
+// called.  There is only one thread when they are called.  TODO: This
+// makes the API not thread-safe.
 extern
-__thread uint32_t _flowState;
-//
-
-
-
-
-// The filter that is having start() called.  There is only one thread
-// when start() is called.  This may be using in stream stop too.
-extern
-struct QsFilter *_qsStartFilter;
-
-
+struct QsFilter *_qsCurrentFilter;
 
 
 

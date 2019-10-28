@@ -60,7 +60,9 @@ void FreeFilter(struct QsFilter *f) {
     if(f->dlhandle) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
         if(destroy) {
+            _qsCurrentFilter = f;
             int ret = destroy();
+            _qsCurrentFilter = 0;
             if(ret) {
                 // TODO: what do we use this return value for??
                 WARN("filter \"%s\" destroy() returned %d", f->name, ret);

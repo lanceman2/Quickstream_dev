@@ -7,32 +7,18 @@
 #include "./debug.h"
 
 
-struct QsOpts {
-
-    int argc;
-    const char **argv;
-};
-
 
 // NOTE: argv[][] may or may not be null terminated.
 
 
-void qsOptsInit(struct QsOpts *opts, int argc, const char **argv) {
-
-    DASSERT(opts, "");
-
-    opts->argc = argc;
-    opts->argv = argv;
-}
-
 // Checks for: "--option"
 static inline
-bool FindOptPresent(struct QsOpts *opts, const char *opt) {
+bool FindOptPresent(int argc, const char **argv, const char *opt) {
 
     size_t optLen = strlen(opt);
 
-    for(int i=opts->argc-1; i>=0; --i) {
-        const char *arg = opts->argv[i];
+    for(int i=argc-1; i>=0; --i) {
+        const char *arg = argv[i];
         size_t argLen = strlen(arg);
         if(argLen == optLen+2 && // --option
                 arg[0] == '-' && arg[1] == '-' &&
@@ -49,12 +35,12 @@ bool FindOptPresent(struct QsOpts *opts, const char *opt) {
 //
 //  returns: val or 0
 static inline
-const char *FindOptString(struct QsOpts *opts, const char *opt) {
+const char *FindOptString(int argc, const char **argv, const char *opt) {
 
     size_t optLen = strlen(opt);
 
-    for(int i=opts->argc-1; i>=0; --i) {
-        const char *arg = opts->argv[i];
+    for(int i=argc-1; i>=0; --i) {
+        const char *arg = argv[i];
         size_t argLen = strlen(arg);
         if(argLen >= optLen + 2 && // --option
                 arg[0] == '-' && arg[1] == '-' &&
@@ -63,9 +49,9 @@ const char *FindOptString(struct QsOpts *opts, const char *opt) {
             if(argLen > optLen+2 && arg[optLen+2] == '=')
                 // got: --option=val
                 return &arg[optLen+3];
-            else if(argLen == optLen+2 && i < opts->argc - 1)
+            else if(argLen == optLen+2 && i < argc - 1)
                 // got: --option val
-                return opts->argv[i + 1];
+                return argv[i + 1];
             // else got: --option
             // with no more args.
             // This is kind-of an error case.
@@ -77,46 +63,55 @@ const char *FindOptString(struct QsOpts *opts, const char *opt) {
 }
 
 
-float qsOptsGetFloat(struct QsOpts *opts, const char *optName,
+float qsOptsGetFloat(int argc, const char **argv, const char *optName,
         float defaultVal) {
 
-    const char *str = FindOptString(opts, optName);
+    const char *str = FindOptString(argc, argv, optName);
     if(str) return strtof(str, 0);
     return defaultVal;
 }
 
 
-double qsOptsGetDouble(struct QsOpts *opts, const char *optName,
+double qsOptsGetDouble(int argc, const char **argv, const char *optName,
         double defaultVal) {
 
-    const char *str = FindOptString(opts, optName);
+    const char *str = FindOptString(argc, argv, optName);
     if(str) return strtod(str, 0);
     return defaultVal;
 }
 
 
-const char *qsOptsGetString(struct QsOpts *opts, const char *optName,
+const char *qsOptsGetString(int argc, const char **argv, const char *optName,
         const char *defaultVal) {
 
-    const char *str = FindOptString(opts, optName);
+    const char *str = FindOptString(argc, argv, optName);
     if(str) return str;
     return defaultVal;
 }
 
 
-int qsOptsGetInt(struct QsOpts *opts, const char *optName,
+int qsOptsGetInt(int argc, const char **argv, const char *optName,
         int defaultVal) {
 
-    const char *str = FindOptString(opts, optName);
+    const char *str = FindOptString(argc, argv, optName);
     if(str) return (int) strtol(str, 0, 10);
     return defaultVal;
 }
 
 
-int qsOptsGetUint32(struct QsOpts *opts, const char *optName,
+size_t qsOptsGetSizeT(int argc, const char **argv, const char *optName,
+        size_t defaultVal) {
+
+    const char *str = FindOptString(argc, argv, optName);
+    if(str) return (size_t) strtoul(str, 0, 10);
+    return defaultVal;
+}
+
+
+int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
         uint32_t defaultVal) {
 
-    const char *str = FindOptString(opts, optName);
+    const char *str = FindOptString(argc, argv, optName);
     if(str) return (uint32_t) strtoul(str, 0, 10);
     return defaultVal;
 }

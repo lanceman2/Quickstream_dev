@@ -24,7 +24,7 @@ __thread struct QsInput _input;
 // The filter that is having start() called.
 // There is only one thread when start() is called.
 //
-struct QsFilter *_qsStartFilter = 0;
+struct QsFilter *_qsCurrentFilter = 0;
 
 
 // The current filter that is having it's input() called in this thread.
@@ -392,9 +392,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].inputChannelNum = (uint32_t) -1;
 
         // Set some possibly non-zero default values:
-        f->outputs[j].maxReadThreshold = _QS_DEFAULT_maxReadThreshold;
-        f->outputs[j].minReadThreshold = _QS_DEFAULT_minReadThreshold;
-        f->outputs[j].maxReadSize = _QS_DEFAULT_maxReadSize;
+        f->outputs[j].maxReadThreshold = QS_DEFAULT_maxReadThreshold;
+        f->outputs[j].minReadThreshold = QS_DEFAULT_minReadThreshold;
+        f->outputs[j].maxReadSize = QS_DEFAULT_maxReadSize;
         // All other values in the QsOutput will start at 0.
 
         if(s->to[i]->numOutputs == 0)
@@ -487,9 +487,11 @@ int qsStreamStop(struct QsStream *s) {
      *********************************************************************/
 
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
-        if(f->stream == s && f->stop)
+        if(f->stream == s && f->stop) {
+            _qsCurrentFilter = f;
             f->stop(f->u.numInputs, f->numOutputs);
-
+            _qsCurrentFilter = 0;
+        }
 
     /**********************************************************************
      *     Stage: cleanup
@@ -613,10 +615,10 @@ int qsStreamReady(struct QsStream *s) {
                 // We mark which filter we are calling the start() for so that
                 // if the filter start() calls any filter API function to get
                 // resources we know what filter these resources belong to.
-                _qsStartFilter = f;
+                _qsCurrentFilter = f;
                 // Call a filter start() function:
                 int ret = f->start(f->u.numInputs, f->numOutputs);
-                _qsStartFilter = 0;
+                _qsCurrentFilter = 0;
                 if(ret) {
                     // TODO: Should we call filter stop() functions?
                     //

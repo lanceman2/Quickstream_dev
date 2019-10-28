@@ -249,18 +249,21 @@ int main(int argc, const char * const *argv) {
                 break;
 
             case 'd':
-                // display a dot graph
+                // display a dot graph and no wait
                 if(!app) {
-                    fprintf(stderr, "--display no filters loaded to display\n");
+                    fprintf(stderr, "--display no filters loaded"
+                            " to display\n");
                     break; // nothing to display yet.
                 }
-                qsAppDisplayFlowImage(app, QSPrintDebug, false/*waitForDisplay*/);
+                qsAppDisplayFlowImage(app, QSPrintDebug,
+                        false/*waitForDisplay*/);
                 break;
 
              case 'D':
-                // display a dot graph
+                // display a dot graph and wait
                 if(!app) {
-                    fprintf(stderr, "--display-wait no filters loaded to display\n");
+                    fprintf(stderr, "--display-wait no filters "
+                            "loaded to display\n");
                     break; // nothing to display yet.
                 }
                 qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
@@ -288,10 +291,16 @@ int main(int argc, const char * const *argv) {
                 //
                 int fargc = 0; // 4
                 const char * const *fargv = 0; // points to --name
+                ++i;
 
-                if(i+1 < argc && strcmp(argv[i+1], "[") == 0) {
-                    ++i;
-                    fargv = &argv[++i];
+                if(i < argc && argv[i][0] == '[') {
+                    if(argv[i][1] == '\0')
+                        // --filter stdin [ --name ...
+                        fargv = &argv[++i];
+                    else
+                        // --filter stdin [--name ...
+                        fargv = &argv[i];
+
                     while(i < argc && strcmp(argv[i], "]")) {
                         if(strcmp(argv[i],"--name") == 0) {
                             ++i;
@@ -307,8 +316,7 @@ int main(int argc, const char * const *argv) {
                         }
                     }
                     if(strcmp(argv[i], "]") == 0) ++i;
-                } else
-                    ++i;
+                }
                 if(verbose) {
                     fprintf(stderr, "Got filter args[%d]= [", fargc);
                     for(int j=0; j<fargc; ++j)
