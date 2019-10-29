@@ -346,7 +346,11 @@ static uint32_t CountFilterPath(struct QsStream *s,
 }
 
 
+#define _INVALID_ChannelNum  ((uint32_t) -1)
 
+
+// The output need to have the input channel number that the filter they
+// are feeding sees.
 static void
 CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
 
@@ -356,7 +360,7 @@ CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsFilter *nextF = f->outputs[i].filter;
         if(nextF->numOutputs > 0 &&
-                nextF->outputs[0].inputChannelNum == (uint32_t) -1)
+                nextF->outputs[0].inputChannelNum == _INVALID_ChannelNum)
             CalculateFilterInputChannelNums(s, nextF);
     }
 }
@@ -400,8 +404,8 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
         f->outputs[j].filter = s->to[i];
 
-        // initialize to a known invalid value.
-        f->outputs[j].inputChannelNum = (uint32_t) -1;
+        // initialize to a known invalid value, so we can see later.
+        f->outputs[j].inputChannelNum = _INVALID_ChannelNum;
 
         // Set some possibly non-zero default values:
         f->outputs[j].maxReadThreshold = QS_DEFAULT_MAXREADTHRESHOLD;
@@ -434,21 +438,18 @@ uint32_t qsStreamFlow(struct QsStream *s) {
     ASSERT(s->flags & _QS_STREAM_LAUNCHED,
             "Stream has not been launched yet");
 
-    uint32_t flowState = 0;
-
     for(uint32_t i=0; i<s->numSources; ++i) {
         DASSERT(s->sources[i],"");
         struct QsFilter *filter = s->sources[i];
         DASSERT(filter,"");
         DASSERT(filter->input, "");
-        uint32_t flowStateReturn = flowState;
-        filter->sendOutput(filter, 0, 0, 0, flowState, &flowStateReturn);
-
+        uint32_t flowStateReturn = s->flowState;
+        filter->sendOutput(filter, 0, 0, 0, s->flowState, &flowStateReturn);
         if(flowStateReturn)
-            flowState = flowStateReturn;
+            s->flowState |= flowStateReturn;
     }
 
-    return flowState;
+    return s->flowState;
 }
 
 
@@ -621,7 +622,7 @@ int qsStreamReady(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs > 0 &&
                 s->sources[i]->outputs[0].inputChannelNum ==
-                (uint32_t) -1)
+                    _INVALID_ChannelNum)
             CalculateFilterInputChannelNums(s, s->sources[i]);
 
 
@@ -649,13 +650,6 @@ int qsStreamReady(struct QsStream *s) {
                     return -3; // We're screwed.
                 }
             }
-
-            // We need to reset this counter so we may use it in
-            // AllocateRingBuffers() below.  In AllocateRingBuffers() we
-            // will use this, u.numInputs, variable to recount the inputs
-            // as we assign the QsOutput::inputChannelNum.
-            //
-            f->u.numInputs = 0;
         }
     }
 

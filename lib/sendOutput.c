@@ -91,7 +91,11 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
         buf += dif;
         remainingLen -= dif;
 
-    } while(remainingLen >= output->maxReadThreshold);
+    } while(remainingLen >= output->maxReadThreshold ||
+            (qsIsLastPackage(flowStateIn) && remainingLen));
+
+// BROKEN
+//ASSERT(qsIsLastPackage(flowStateIn) == 0, "");
 
 
     // Get this value returned to the calling function.
@@ -110,6 +114,7 @@ sendOutput_sameThread(struct QsFilter *filter,
         uint32_t flowStateIn, uint32_t *flowStateReturn) {
 
     DASSERT(output, "");
+    DASSERT(totalLen, "");
 
     // Note: in this case we can pass the flowStateReturn directly to the
     // filter Input() wrapper, but if it was in another thread, there's a
@@ -180,6 +185,20 @@ sendOutput_sameThread_source(struct QsFilter *filter,
             WARN("filter \"%s\" input() returned "
                     "unknown enum QsFilterInputReturn %d",
                     filter->name, ret);
+    }
+
+    if(qsIsLastPackage(flowStateIn)) {
+        // We need to flush the buffers.  The filter should not need to
+        // call qsOutput() any more.
+        //
+        for(uint32_t i=0; i<filter->numOutputs; ++i) {
+            // We have the correct thread to access buffer pointers
+            // and offsets.
+            size_t rLen = GetReadLength(&filter->outputs[i]);
+            if(rLen)
+                // We are adding no additional data, so we output len=0.
+                _qsOutput(0, i);
+        }
     }
 
     *flowStateReturn = flowStateIn;

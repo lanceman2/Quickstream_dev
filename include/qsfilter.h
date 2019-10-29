@@ -283,7 +283,7 @@ void qsAdvanceInput(size_t len);
  *
  * \param len This reading filter promises to read any data at or above
  * this threshold; so we will keep calling the filter input() function
- * until the amount that can be read is less than this threshold.
+ * until the readable buffer is less than this threshold.
  *
  * \param inputChannelNums a list of effected input channel numbers as an
  * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
@@ -315,7 +315,7 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  * amount.  This is not required to be set because an input channels
  * buffer advancement may be set to any amount that is less than of equal
  * to the amount sent in the call to the corresponding filters input()
- * call via the qsAdvanceInput() function.
+ * call via the accumulation of qsAdvanceInput() function calls.
  *
  * qsSetMaxRead() may only be called in filters start() function.
  *

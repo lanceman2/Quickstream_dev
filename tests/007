@@ -7,18 +7,16 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-dd if=/dev/urandom count=1300 of=$in
+dd if=/dev/urandom count=1330 of=$in
 
+
+# This will call the tests/copy input() function lots more than all other
+# input() functions, checking the buffer advancement for the extreme case
+# with a single byte input() at a time.
+#
 ../bin/quickstream -f stdin\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
- -f tests/copy\
+ -f tests/copy [ --maxRead=1 ]\
  -f stdout -c -r < $in > $out
 
 diff $in $out
+echo "$0 SUCCESS"

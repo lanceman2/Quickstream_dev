@@ -366,7 +366,7 @@ void *qsGetBuffer(uint32_t outputChannelNum) {
 
 
 static inline void
-advanceWritePtr(struct QsOutput *output, size_t len) {
+AdvanceWritePtr(struct QsOutput *output, size_t len) {
 
     // We are in the correct thread to do this.
     struct QsWriter *writer = output->writer;
@@ -384,7 +384,7 @@ advanceWritePtr(struct QsOutput *output, size_t len) {
 
 
 static inline void
-advanceReadPtr(struct QsOutput *output, size_t len) {
+AdvanceReadPtr(struct QsOutput *output, size_t len) {
 
     // We are in the correct thread to do this.
     struct QsBuffer *buffer = output->writer->buffer;
@@ -400,21 +400,42 @@ advanceReadPtr(struct QsOutput *output, size_t len) {
 }
 
 
+extern
+size_t GetReadLength(struct QsOutput *output) {
+
+    // We are in the correct thread to do this.
+    struct QsWriter *writer = output->writer;
+
+    if(writer->writePtr >= output->readPtr)
+        return writer->writePtr - output->readPtr;
+    else {
+        DASSERT(writer->buffer->mapLength > 
+                output->readPtr - writer->writePtr, "");
+        // output->readPtr > writer->writePtr
+        return writer->buffer->mapLength +
+            writer->writePtr - output->readPtr;
+    }
+}
+
+
 
 // Here we just advance the write pointer.  This write pointer is only
 // accessed by this filters thread. 
 //
-void qsOutput(size_t len, uint32_t outputChannelNum) {
-
-    DASSERT(len, "");
+void _qsOutput(size_t len, uint32_t outputChannelNum) {
 
     DASSERT(_input.filter,"");
-    struct QsWriter *writer = _input.filter->outputs[outputChannelNum].writer;
+    DASSERT(_input.filter->numOutputs > outputChannelNum, "");
+    struct QsWriter *writer =
+        _input.filter->outputs[outputChannelNum].writer;
+
     DASSERT(writer->writePtr < writer->buffer->mem +
             writer->buffer->mapLength, "");
     DASSERT(writer->writePtr >= writer->buffer->mem, "");
-    DASSERT(len <= writer->maxWrite, "");
+    ASSERT(len <= writer->maxWrite, "");
 
+    if(len)
+        AdvanceWritePtr(&_input.filter->outputs[outputChannelNum], len);
 
     // Check all the outputs with this writer.
     // TODO: Make this not check all the outputs.
@@ -426,9 +447,17 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
 
             // This is the only thread that will access readPtr(s) and
             // writePtr.  We pass the pointer to ring buffer memory on the
-            // stack in this causeInput() function call.
+            // stack in this sendOutput() function call.
 
-            if(len > output->minReadThreshold) {
+            // We computer the length that we have available to read.
+            // There can be accumulated data in the buffer from previous
+            // qsOutput() calls.
+            size_t accLen = GetReadLength(output);
+            // Check for buffer overrun.
+            ASSERT(accLen <= output->writer->buffer->mapLength,
+                    "buffer overrun");
+
+            if(accLen >= output->minReadThreshold) {
                 // Stack memory to keep state.
                 uint32_t returnFlowState = _input.flowState;
                 size_t lenConsumed =
@@ -436,19 +465,17 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
                             _input.filter->outputs[i].filter,
                             &_input.filter->outputs[i],
                             _input.filter->outputs[i].readPtr,
-                            len,
+                            accLen,
                             _input.flowState, &returnFlowState
                     );
 
                 // TODO: WTF to do with returnFlowState
                 // We never get it in the multi-threaded case.
 
-                DASSERT(lenConsumed <= len, "ring buffer read overrun");
-
-                advanceWritePtr(output, len);
+                DASSERT(lenConsumed <= accLen, "ring buffer read overrun");
 
                 if(lenConsumed)
-                    advanceReadPtr(output, lenConsumed);
+                    AdvanceReadPtr(output, lenConsumed);
 
                 // TODO: FIX THIS flowState stuff.
                 if(returnFlowState)
@@ -456,6 +483,16 @@ void qsOutput(size_t len, uint32_t outputChannelNum) {
             }
         }
     }
+}
+
+
+void qsOutput(size_t len, uint32_t outputChannelNum) {
+
+    // The user API can't output 0 bytes.
+    //
+    DASSERT(len, "");
+
+    _qsOutput(len, outputChannelNum);
 }
 
 
@@ -544,7 +581,9 @@ void SetReadParameter(size_t len, uint32_t *inputNums, struct QsFilter *f,
 
 static
 void SetMaxReadThreshold(struct QsOutput *output, size_t len) {
+    DASSERT(len, "maxReadThreshold cannot be 0");
     SET_READ_PARAMETER(maxReadThreshold, output, len);
+    
 }
 
 

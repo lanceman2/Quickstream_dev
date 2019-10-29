@@ -83,6 +83,9 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     DASSERT(len, "");
 
+
+    //DSPEW(" --------------maxRead=%zu-------- LEN=%zu", maxRead, len);
+
     // For output buffering.  By this module using default buffering this
     // will be all the output buffers for all output channels.
     void *oBuffer = qsGetBuffer(0);

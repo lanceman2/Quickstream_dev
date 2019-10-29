@@ -372,6 +372,8 @@ int main(int argc, const char * const *argv) {
 
                 // loop
                 while(qsStreamFlow(stream) == 0);
+                //qsStreamFlow(stream);
+
 
                 if(qsStreamStop(stream))
                     return 1;

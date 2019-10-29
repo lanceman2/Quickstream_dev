@@ -86,6 +86,8 @@ struct QsStream {
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.
 
+    uint32_t flowState;
+
     uint32_t numThreads;       // length of threads
     struct QsThread **threads; // array of threads
 
@@ -270,7 +272,7 @@ struct QsOutput {  // points to reader filters
 
         minReadThreshold, // This reading filter will not read
         // any data until this threshold is met; so we will not call the
-        // filter input() function until this threshold is met.
+        // filter input() function unless this threshold is met.
 
         maxRead; // This reading filter will not read more than
         // this, if this is set.  The filter sets this so that the stream
@@ -375,6 +377,14 @@ void setupSendOutput(struct QsFilter *f);
 
 extern
 void unsetupSendOutput(struct QsFilter *f);
+
+
+extern
+void _qsOutput(size_t len, uint32_t outputChannelNum);
+
+
+extern
+size_t GetReadLength(struct QsOutput *output);
 
 
 #if 0 // Not needed yet.
