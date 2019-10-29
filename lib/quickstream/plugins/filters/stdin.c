@@ -15,7 +15,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     // For output buffering.
     buffer = qsGetBuffer(0);
-    len = QS_DEFAULTWRITELENGTH;
+    len = QS_DEFAULT_MAXWRITE;
 
     // TODO: handle the stream closing.
 

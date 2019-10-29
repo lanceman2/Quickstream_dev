@@ -346,6 +346,23 @@ static uint32_t CountFilterPath(struct QsStream *s,
 }
 
 
+
+static void
+CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
+
+    for(uint32_t i=0; i<f->numOutputs; ++i)
+        f->outputs[i].inputChannelNum = f->outputs[i].filter->u.numInputs++;
+
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsFilter *nextF = f->outputs[i].filter;
+        if(nextF->numOutputs > 0 &&
+                nextF->outputs[0].inputChannelNum == (uint32_t) -1)
+            CalculateFilterInputChannelNums(s, nextF);
+    }
+}
+
+
+
 static
 void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
@@ -359,8 +376,6 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     for(i=0; i<s->numConnections; ++i) {
         if(s->from[i] == f)
             ++f->numOutputs;
-        if(s->to[i] == f)
-            ++f->u.numInputs;
     }
 
     if(f->numOutputs == 0 || f->outputs)
@@ -373,9 +388,6 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     ASSERT(f->numOutputs <= QS_MAX_CHANNELS,
             "%" PRIu32 " > %" PRIu32 " outputs",
             f->numOutputs, QS_MAX_CHANNELS);
-    ASSERT(f->u.numInputs <= QS_MAX_CHANNELS,
-            "%" PRIu32 " > %" PRIu32 " inputs",
-            f->u.numInputs, QS_MAX_CHANNELS);
     f->outputs = calloc(1, sizeof(*f->outputs)*f->numOutputs);
     ASSERT(f->outputs, "calloc(1,%zu) failed",
             sizeof(*f->outputs)*f->numOutputs);
@@ -392,9 +404,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].inputChannelNum = (uint32_t) -1;
 
         // Set some possibly non-zero default values:
-        f->outputs[j].maxReadThreshold = QS_DEFAULT_maxReadThreshold;
-        f->outputs[j].minReadThreshold = QS_DEFAULT_minReadThreshold;
-        f->outputs[j].maxReadSize = QS_DEFAULT_maxReadSize;
+        f->outputs[j].maxReadThreshold = QS_DEFAULT_MAXREADTHRESHOLD;
+        f->outputs[j].minReadThreshold = QS_DEFAULT_MINREADTHRESHOLD;
+        f->outputs[j].maxRead = QS_DEFAULT_MAXREAD;
         // All other values in the QsOutput will start at 0.
 
         if(s->to[i]->numOutputs == 0)
@@ -600,6 +612,17 @@ int qsStreamReady(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i)
         AllocateFilterOutputsFrom(s, s->sources[i]);
+
+
+    /**********************************************************************
+     *      Stage: Set up filter output connections inputChannelNum
+     *********************************************************************/
+
+    for(uint32_t i=0; i<s->numSources; ++i)
+        if(s->sources[i]->numOutputs > 0 &&
+                s->sources[i]->outputs[0].inputChannelNum ==
+                (uint32_t) -1)
+            CalculateFilterInputChannelNums(s, s->sources[i]);
 
 
     /**********************************************************************

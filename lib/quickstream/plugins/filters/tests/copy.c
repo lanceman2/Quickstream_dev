@@ -24,16 +24,19 @@ void help(FILE *f) {
         "      --minReadThreshold BYTES  default value %zu\n"
         "\n"
         "\n"
-        "      --maxReadSize BYTES       default value %zu\n"
+        "      --maxRead BYTES       default value %zu\n"
+        "\n"
+        "      --maxWrite BYTES      default value %zu\n"
         "\n"
         "\n",
-        QS_DEFAULT_maxReadThreshold,
-        QS_DEFAULT_minReadThreshold,
-        QS_DEFAULT_maxReadSize);
+        QS_DEFAULT_MAXREADTHRESHOLD,
+        QS_DEFAULT_MINREADTHRESHOLD,
+        QS_DEFAULT_MAXREAD,
+        QS_DEFAULT_MAXWRITE);
 }
 
 
-static size_t maxReadThreshold, minReadThreshold, maxReadSize;
+static size_t maxReadThreshold, minReadThreshold, maxRead, maxWrite;
 
 
 int construct(int argc, const char **argv) {
@@ -41,12 +44,14 @@ int construct(int argc, const char **argv) {
     DSPEW();
 
     maxReadThreshold = qsOptsGetSizeT(argc, argv,
-            "maxReadThreshold", QS_DEFAULT_maxReadThreshold);
+            "maxReadThreshold", QS_DEFAULT_MAXREADTHRESHOLD);
     minReadThreshold = qsOptsGetSizeT(argc, argv,
-            "minReadThreshold", QS_DEFAULT_minReadThreshold);
-    maxReadSize = qsOptsGetSizeT(argc, argv,
-            "maxReadSize", QS_DEFAULT_maxReadSize);
- 
+            "minReadThreshold", QS_DEFAULT_MINREADTHRESHOLD);
+    maxRead = qsOptsGetSizeT(argc, argv,
+            "maxRead", QS_DEFAULT_MAXREAD);
+    maxWrite = qsOptsGetSizeT(argc, argv,
+            "maxWrite", QS_DEFAULT_MAXWRITE);
+  
     return 0; // success
 }
 
@@ -66,7 +71,8 @@ int start(uint32_t numInChannels, uint32_t numOutChannels) {
 
     qsSetMaxReadThreshold(maxReadThreshold, QS_ALLCHANNELS);
     qsSetMinReadThreshold(minReadThreshold, QS_ALLCHANNELS);
-    qsSetMaxReadSize(maxReadSize, QS_ALLCHANNELS);
+    qsSetMaxRead(maxRead, QS_ALLCHANNELS);
+    qsBufferCreate(maxWrite, QS_ALLCHANNELS);
 
     return 0; // success
 }
@@ -83,8 +89,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     // Input and output must be the same length so we use the lesser of
     // the two lengths.
-    if(QS_DEFAULTWRITELENGTH < len) {
-        len = QS_DEFAULTWRITELENGTH;
+    if(maxWrite < len) {
+        len = maxWrite;
         qsAdvanceInput(len);
     }
 

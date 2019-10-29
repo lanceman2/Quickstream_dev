@@ -19,7 +19,7 @@
  * use this macro to mean all channels.
  *
  * This macro may be used in qsSetMaxReadThreshold(),
- * qsSetMinReadThreshold(), qsSetMaxReadSize(), and qsBufferCreate().
+ * qsSetMinReadThreshold(), qsSetMaxRead(), and qsBufferCreate().
  */
 #define QS_ALLCHANNELS   ((uint32_t *)0)
 
@@ -45,10 +45,20 @@
 // ways.
 
 
-#define QS_DEFAULT_maxReadThreshold  ((size_t) 1024)
-#define QS_DEFAULT_minReadThreshold  ((size_t) 1)
-#define QS_DEFAULT_maxReadSize       ((size_t) 0) // not set
+#define QS_DEFAULT_MAXREADTHRESHOLD  ((size_t) 1024)
+#define QS_DEFAULT_MINREADTHRESHOLD  ((size_t) 1)
+#define QS_DEFAULT_MAXREAD           ((size_t) 0) // not set
 
+
+/** get the default maximum length in bytes that may be written
+ *
+ * A filter that has output may set the maximum length in bytes that may
+ * be written for a given qsOutput() call for a given output channel
+ * number.  If the value of the maximum length in bytes that may be
+ * written was not set in the filter start() function it's value will be
+ * QS_DEFAULT_maxWrite.
+ */
+#define QS_DEFAULT_MAXWRITE   ((size_t) 1024)
 
 
 /** \file
@@ -199,17 +209,6 @@ int start(uint32_t numInChannels, uint32_t numOutChannels);
 int stop(uint32_t numInChannels, uint32_t numOutChannels);
 
 
-/** get the default maximum length in bytes that may be written
- *
- * A filter that has output may set the maximum length in bytes that may
- * be written for a given qsOutput() call for a given output channel
- * number.  If the value of the maximum length in bytes that may be
- * written was not set in the filter start() function it's value will be
- * QS_DEFAULTWRITELENGTH.
- */
-#define QS_DEFAULTWRITELENGTH  ((size_t) 1024)
-
-
 /** get a buffer write pointer in a filters input()
  *
  * qsGetBuffer() may only be called in the filters input() function.  If a
@@ -318,7 +317,7 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  * to the amount sent in the call to the corresponding filters input()
  * call via the qsAdvanceInput() function.
  *
- * qsSetMaxReadSize() may only be called in filters start() function.
+ * qsSetMaxRead() may only be called in filters start() function.
  *
  * \param len This reading filter will not read more than len bytes, if
  * this is set.  The filter sets this so that the stream running does not
@@ -332,7 +331,7 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  * the number of channels.
  */ 
 extern
-void qsSetMaxReadSize(size_t len, uint32_t *inputChannelNums);
+void qsSetMaxRead(size_t len, uint32_t *inputChannelNums);
 
 
 

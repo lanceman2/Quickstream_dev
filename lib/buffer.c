@@ -49,7 +49,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
                 defaultWriter = calloc(1, sizeof(*defaultWriter));
                 ASSERT(defaultWriter, "calloc(1,%zu) failed",
                         sizeof(*defaultWriter));
-                defaultWriter->maxWrite = QS_DEFAULTWRITELENGTH;
+                defaultWriter->maxWrite = QS_DEFAULT_MAXWRITE;
             }
             output->writer = defaultWriter;
             ++output->writer->refCount;
@@ -166,18 +166,8 @@ void AllocateRingBuffers(struct QsFilter *f) {
     _AllocateRingBuffers(f);
 
     // Allocate for all children.
-    for(uint32_t i=0; i<f->numOutputs; ++i) {
-
-        // We reuse the target filters numInputs counter to generate input
-        // channel numbers for the target filter for this output.
-        //
-        // This gets executed once per output, so we can use it to count
-        // and number the input channel for the target filter.
-        f->outputs[i].inputChannelNum =
-                f->outputs[i].filter->u.numInputs++;
-
+    for(uint32_t i=0; i<f->numOutputs; ++i)
         AllocateRingBuffers(f->outputs[i].filter);
-    }
 }
 
 
@@ -495,9 +485,11 @@ static inline
 struct QsOutput *FindOuputToFilter(struct QsStream *s,
         struct QsFilter *f, uint32_t inputNum) {
 
-    for(uint32_t i=s->numConnections-1; i >= 0; --i) {
+    for(uint32_t i=s->numConnections-1; i!=-1; --i) {
         if(s->to[i] == f) {
-            for(uint32_t j=s->from[i]->numOutputs-1; j>=0; --j) {
+DSPEW("\"%s\" -> \"%s\"", s->from[i]->name, f->name);
+            for(uint32_t j=s->from[i]->numOutputs-1; j!=-1; --j) {
+DSPEW("inputChannelNum=%" PRIu32, s->from[i]->outputs[j].inputChannelNum);
                 if(s->from[i]->outputs[j].inputChannelNum == inputNum) {
                     DASSERT(s->from[i]->outputs[j].filter == f, "");
                     return &(s->from[i]->outputs[j]);
@@ -506,7 +498,7 @@ struct QsOutput *FindOuputToFilter(struct QsStream *s,
         }
     }
 
-    ASSERT(false, "filter \"%s\" input channel"
+    ASSERT(false, "filter \"%s\" input channel "
             "%" PRIu32 " output not found",
             f->name, inputNum);
 
@@ -528,7 +520,7 @@ void SetReadParameter(size_t len, uint32_t *inputNums, struct QsFilter *f,
 
         inputNums = alloca(sizeof(*inputNums)*(f->u.numInputs+1));
         inputNums[f->u.numInputs] = QS_ARRAYTERM;
-        for(uint32_t i = f->u.numInputs - 1; i>=0; --i) {
+        for(uint32_t i = f->u.numInputs - 1; i!=-1; --i) {
             inputNums[i] = i;
         }
     }
@@ -573,11 +565,11 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputNums) {
 
 
 static
-void SetMaxReadSize(struct QsOutput *output, size_t len) {
-    SET_READ_PARAMETER(maxReadSize, output, len);
+void SetMaxRead(struct QsOutput *output, size_t len) {
+    SET_READ_PARAMETER(maxRead, output, len);
 }
 
 
-void qsSetMaxReadSize(size_t len, uint32_t *inputNums) {
-    SetReadParameter(len, inputNums, _qsCurrentFilter, SetMaxReadSize);
+void qsSetMaxRead(size_t len, uint32_t *inputNums) {
+    SetReadParameter(len, inputNums, _qsCurrentFilter, SetMaxRead);
 }

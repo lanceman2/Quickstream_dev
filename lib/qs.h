@@ -272,7 +272,7 @@ struct QsOutput {  // points to reader filters
         // any data until this threshold is met; so we will not call the
         // filter input() function until this threshold is met.
 
-        maxReadSize; // This reading filter will not read more than
+        maxRead; // This reading filter will not read more than
         // this, if this is set.  The filter sets this so that the stream
         // running does not call input() with more data than this.  This
         // is a convenience, so the filter does not need to tell the

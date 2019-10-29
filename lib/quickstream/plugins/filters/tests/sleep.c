@@ -53,8 +53,8 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     // Input and output must be the same length so we use the lesser of
     // the two lengths.
-    if(QS_DEFAULTWRITELENGTH < len) {
-        len = QS_DEFAULTWRITELENGTH;
+    if(QS_DEFAULT_MAXWRITE < len) {
+        len = QS_DEFAULT_MAXWRITE;
         qsAdvanceInput(len);
     }
 

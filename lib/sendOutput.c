@@ -20,7 +20,7 @@
 //
 // output is from the feeding filter, we came only read stream run-time
 // constant parts of it like inputChannelNum, maxReadThreshold,
-// minReadThreshold, and maxReadSize; anything that needs to change in it
+// minReadThreshold, and maxRead; anything that needs to change in it
 // can't be changed in this function.
 //
 // Arguments are passed in the stack in this thread that is calling this,
@@ -55,8 +55,8 @@ static size_t Input(struct QsOutput *output, uint8_t *buf, size_t totalLen,
     do {
         size_t len = remainingLen;
 
-        if(output->maxReadSize && len > output->maxReadSize)
-            len = output->maxReadSize;
+        if(output->maxRead && len > output->maxRead)
+            len = output->maxRead;
 
         // _input is the threads object state holder that is accessed in
         // qsAdvanceInput(), qsGetBuffer(), and qsOutput(), which may be
