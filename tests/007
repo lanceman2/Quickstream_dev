@@ -16,6 +16,8 @@ dd if=/dev/urandom count=1330 of=$in
 #
 ../bin/quickstream -f stdin\
  -f tests/copy [ --maxRead=1 ]\
+ -f tests/copy [ --maxRead=3 ]\
+ -f tests/copy [ --maxRead=7 ]\
  -f stdout -c -r < $in > $out
 
 diff $in $out

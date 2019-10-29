@@ -23,13 +23,13 @@ echo "  ================================================"
 echo "                RUNNING $num TESTS"
 echo "  ================================================"
 for run in "${tests[@]}" ; do
-    echo -n "   [ $i / $num ] === running: $run "
+    echo "   [ $i / $num ] === running: $run"
     if ./$run ; then
         let pass=$pass+1
-        echo "=== PASSED"
+        echo "$run === PASSED"
     else
         let fail=$fail+1
-        echo "=== FAILED"
+        echo "$run === FAILED"
     fi
 
     let i=$i+1

@@ -27,12 +27,6 @@ __thread struct QsInput _input;
 struct QsFilter *_qsCurrentFilter = 0;
 
 
-// The current filter that is having it's input() called in this thread.
-//
-__thread struct QsFilter *_qsInputFilter = 0;
-
-
-
 
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
     
