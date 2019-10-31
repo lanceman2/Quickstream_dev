@@ -432,6 +432,7 @@ void _qsOutput(size_t len, uint32_t outputChannelNum) {
     DASSERT(writer->writePtr < writer->buffer->mem +
             writer->buffer->mapLength, "");
     DASSERT(writer->writePtr >= writer->buffer->mem, "");
+
     ASSERT(len <= writer->maxWrite, "");
 
     if(len)

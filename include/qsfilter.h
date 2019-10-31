@@ -502,4 +502,3 @@ static inline bool qsIsLastPackage(uint32_t state) {
 #endif
 
 #endif // #ifndef __qsfilter_h__
-

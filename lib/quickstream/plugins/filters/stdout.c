@@ -7,6 +7,7 @@ static int count = 0;
 
 void help(FILE *f) {
 
+    // TODO: add a buffer size to flush option.
 }
 
 
@@ -15,6 +16,7 @@ int input(void *buffer, size_t len, uint32_t inputChannelNum,
 
     DASSERT(len, "");
     fwrite(buffer, 1, len, stdout);
+    fflush(stdout);
 
     return 0; // success
 }
