@@ -227,10 +227,14 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
  * filter then the value of outputChannelNum may be any of the output
  * channel numbers that are in the output channel shared buffer group.
  *
- * \return a pointer to the first writable byte in the buffer.
+ * \param maxLen is the maximum length in bytes that the filter will
+ * output to the ring buffer.
+ *
+ * \return a pointer to the first writable byte in the buffer.  The filter
+ * may write at most \e maxLen bytes to this returned pointer.
  */
 extern
-void *qsGetBuffer(uint32_t outputChannelNum);
+void *qsGetBuffer(uint32_t outputChannelNum, size_t maxLen);
 
 
 /** trigger the call the listed output filters input() function
@@ -253,7 +257,7 @@ void *qsGetBuffer(uint32_t outputChannelNum);
  * all the sharing output channels will also be used.
  */
 extern
-void qsOutput(size_t len, uint32_t outputChannelNum);
+void qsOutput(uint32_t outputChannelNum, size_t len);
 
 
 /** Advance the current buffer input len bytes
