@@ -51,14 +51,26 @@ any thread-safe filters we will get some parallelization when there are
 large number of filters.  Maybe just two filters with give us some
 parallelization.
 
-I'd expect that cost of adding to the function call stack in each thread
-would be less than the cost of thread synchronization for a thread per
-filter case (or any thread bound to filter association).  It may even be
-able to run this way without any thread synchronization, hence we call it
-threads running wild.  The qsOutput() calls would be a potential point of
-thread synchronization, because we can't have a newer thread overtake an
-older thread in the order of the flow, otherwise the ring buffers would
-get written and read out of order.
+#### Thread running model:
+
+Threads call each filter input() in succession, one at a time, with the
+order being source filter first and the next filter input() calls being
+determined by the next encountered qsOutput() call.   The order of
+qsOutput() calls will determine the order of filter input() calls.  When
+qsOutput() is called it will not call the next filter input() in the
+function call stack, but will queue it up and call the next filter inptu()
+after the current filter input() function returns.  This way will require
+simpler thread synchronization, because we know that threads will only
+access one full input() call at a time, and there will not be a stack of
+input() functions.
+
+For multi-threaded filters qsGetBuffer() and qsOutput() calls are both a
+potential point of thread synchronization: We can't let the thread that is
+behind it call qsGetBuffer() before the thread in front.  The qsOutput()
+calls would be a potential point of thread synchronization, because we
+can't have a newer thread overtake an older thread in the order of the
+flow, otherwise the ring buffers would get written and read out of
+order.
 
 A filter needs a "isThreadSafe" attribute added.
 
@@ -79,6 +91,26 @@ qsGetBuffer() needs a bool argument added that says whither or not
 the length requested is just a maximum or the value that will be passed
 to the corresponding qsOutput() call.
 
+
+## Varying buffer read lengths at flow time
+
+If we have thread-safe filters, and can vary the buffer input() length by
+varying maxRead.  We should be able to optimize different performance
+measures while varying those quantities and the number of concurrent
+threads that run a filter input() function.
+
+We'll assume the filter is letting the quickstream code control the length
+of input data that is being processed at each input() call, otherwise
+quickstream is not being utilized well.
+
+When data in the stream is flowing at a regular rate.  It's a real-time
+stream.
+
+In the limit of fast processing speed will make the latency be the input()
+length divided by the data flow rate.  So small input() lengths will give
+small latencies.  The smallest processable input() length will give the
+smallest latency at a cost of having more input() calls per unit of data
+output.
 
 
 ## Filter options and parameters at *construct()* and *start()*
