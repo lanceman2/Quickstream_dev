@@ -56,12 +56,13 @@ the frequency we get returned by the libUHD.
 Use var args function form??
 control = qsControlCreate(key0, val0, key1, value1, key2, val2, ...);
 
-// Or define a parameter defined in a given filter.
+// Or define a parameter defined in a given filter:
 parameter = qsCreateParameter(key, val);
+// Set the parameter with:
 qsParameterSet(parameter, val);
 
 Q: Can we have parameter change events tagged to a point in the ring
-buffer?
+buffer?  Do we need that?
 
 
 ### Controller
