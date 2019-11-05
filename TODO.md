@@ -36,6 +36,8 @@ buffers?
 
 https://www.gnuradio.org/doc/doxygen/page_msg_passing.html
 
+https://www.gnuradio.org/doc/doxygen/page_stream_tags.html
+
 Metadata the is not in the stream channels data, but may be paired with
 points in the streams channel data.  Controls are published via filter
 name and control name.
