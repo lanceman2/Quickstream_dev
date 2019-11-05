@@ -144,7 +144,7 @@ enum QsFilterInputReturn {
  *
  * \todo figure out more return codes and what they mean
  */
-int input(void *buffer, size_t len, uint32_t inputChannelNum,
+int input(void *buffer[], size_t len[], uint32_t inputChannelNum[],
         uint32_t flowState);
 
 
@@ -279,22 +279,6 @@ void qsOutput(uint32_t outputChannelNum, size_t len);
  */
 extern
 void qsAdvanceInput(size_t len);
-
-
-/** Set the maximum buffer read threshold
- *
- * qsSetMaxReadThreshold() may only be called in filters start() function.
- *
- * \param len This reading filter promises to read any data at or above
- * this threshold; so we will keep calling the filter input() function
- * until the readable buffer is less than this threshold.
- *
- * \param inputChannelNums a list of effected input channel numbers as an
- * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
- * the number of channels.
- */
-extern
-void qsSetMaxReadThreshold(size_t len, uint32_t *inputChannelNums);
 
 
 /** Set the minimum buffer read threshold

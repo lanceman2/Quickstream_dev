@@ -265,10 +265,6 @@ struct QsOutput {  // points to reader filters
     //
     // Sizes in bytes that may be set at filter start():
     size_t
-        maxReadThreshold, // This reading filter promises to read
-        // any data at or above this threshold; so we will keep calling
-        // the filter input() function until the amount that can be read
-        // is less than this threshold.
 
         minReadThreshold, // This reading filter will not read
         // any data until this threshold is met; so we will not call the

@@ -32,6 +32,52 @@ buffers?
       thread.
 
 
+## Control
+
+https://www.gnuradio.org/doc/doxygen/page_msg_passing.html
+
+Metadata the is not in the stream channels data, but may be paired with
+points in the streams channel data.  Controls are published via filter
+name and control name.
+
+We must separate controls that are setters and controls that are getters
+of parameters.  Example: The setting of frequency in a TX filter can then
+pop a getter of the frequency.  With the setter and getter model we then
+only have one code that is writing the getter and many codes that are
+writing the setter.
+
+Each control can have many keys, so we queue up key value pairs.  Each key
+is a parameter, but there may be relations between setters and getters
+like for example we may have a "frequency setter" and a "frequency getter"
+that are two different control parameters, but they are related, and may
+be the same, or not if the frequency to set is rounded (or other) to get
+the frequency we get returned by the libUHD.
+
+Use var args function form??
+control = qsControlCreate(key0, val0, key1, value1, key2, val2, ...);
+
+// Or define a parameter defined in a given filter.
+parameter = qsCreateParameter(key, val);
+qsParameterSet(parameter, val);
+
+Q: Can we have parameter change events tagged to a point in the ring
+buffer?
+
+
+### Controller
+
+Controller is that which accesses controls, reading or writing.
+
+Controller can be a filter or not.
+
+Must we have controller DSO modules separate from filters?
+
+How does the controller that is not a filter run.
+
+Controller modules are event driven.  Where as filters are driven by the
+flow.  Controller could add events that trigger themselves??
+
+
 ## Multi threaded filters
 
 If a filter module input() function is written in a thread-safe manner, we
@@ -55,14 +101,14 @@ parallelization.
 
 Threads call each filter input() in succession, one at a time, with the
 order being source filter first and the next filter input() calls being
-determined by the next encountered qsOutput() call.   The order of
-qsOutput() calls will determine the order of filter input() calls.  When
-qsOutput() is called it will not call the next filter input() in the
-function call stack, but will queue it up and call the next filter inptu()
-after the current filter input() function returns.  This way will require
-simpler thread synchronization, because we know that threads will only
-access one full input() call at a time, and there will not be a stack of
-input() functions.
+determined by the next encountered qsOutput() call, that reaches the next
+filters needed threshold.  The order of qsOutput() calls will determine
+the order of filter input() calls.  When qsOutput() is called it will not
+call the next filter input() in the function call stack, but will queue it
+up and call the next filter input() after the current filter input()
+function returns.  This way will require simpler thread synchronization,
+because we know that threads will only access one full input() call at a
+time, and there will not be a stack of input() functions.
 
 For multi-threaded filters qsGetBuffer() and qsOutput() calls are both a
 potential point of thread synchronization: We can't let the thread that is
@@ -113,27 +159,65 @@ smallest latency at a cost of having more input() calls per unit of data
 output.
 
 
-## Filter options and parameters at *construct()* and *start()*
+## input() with more than one channel
+
+Currently input is called with just one input channel buffer.  We may need
+there to be more than one input channel to be read at a time and we may
+need corresponding read multi-channel thresholds to be fulfilled in order
+for input() to be called.
+
+
+## Do we need named channels?
+
+So that we can connect filters outputs to the current outputs.
+
+
+## Filter controls
+
+### Changing filter options and parameters at *construct()* and *start()*
 
 Add generic option thingy that manages filter options.  It needs to keep
 filter interface requirements to a minimum.  It should not require any
 filter writer user coding, if they are just using the built in default
 filter options.
 
-  1. This needs to automatically add the options to higher level
-     interfaces, without the filter writer user considering what the
-     option interfaces are.  So construct(argc, argv) may not be what we
-     want.
+1. This needs to automatically add the options to higher level
+   interfaces, without the filter writer user considering what the
+   option interfaces are.  So construct(argc, argv) may not be what we
+   want.
 
-  2. Two types of options: *construct()* and *start()*.
+2. Stage of options: *construct()* and *start()*.
 
-     * *construct()* options take effect at filter *construct()*.  So
-       parameters changed by these options just happen when the filter
-       is loaded.
+  * *construct()* options take effect at filter *construct()*.  So
+    parameters changed by these options just happen when the filter
+    is loaded.
 
-     * *start()* options take effect at filter *start()*.  So parameters
-       can be changed between flow cycles, and not just at filter load
-       time.
+  * *start()* options take effect at filter *start()*.  So parameters
+    can be changed between flow cycles, and not just at filter load
+    time.
 
+
+### Changing filter options and parameters at flow time
+
+
+Ya, that too.
+
+
+### Stream data VS. control data
+
+Stream data is flowing, it is a ordered sequence of bytes.  Tends to have
+a constant rate of flow.  There is a fast changing series of values for a
+given channel.
+
+Stream data comes in channels.  Channels can have subcomponents like for
+example 1 stereo channel can be broken into 2 mono channels.
+
+Control data comes as fixed chunks of data that has values that can be
+fixed and vary.  A series of values for a given control is not required.
+
+Control data comes in parts called parameters.
+
+A control parameter can be funneled into, or channeled, into a stream
+channel.
 
 
