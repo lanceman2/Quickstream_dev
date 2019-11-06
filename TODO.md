@@ -56,7 +56,8 @@ be the same, or not if the frequency to set is rounded (or other) to get
 the frequency we get returned by the libUHD.
 
 Use var args function form??
-control = qsControlCreate(key0, val0, key1, value1, key2, val2, ...);
+control = qsControlCreate(key0, type0, val0, key1, type1, val1,
+        key2, type2, val2, ...);
 
 // Or define a parameter defined in a given filter:
 parameter = qsCreateParameter(key, val);
@@ -65,6 +66,9 @@ qsParameterSet(parameter, val);
 
 Q: Can we have parameter change events tagged to a point in the ring
 buffer?  Do we need that?
+
+All filters will have built-in controls like totalBytesOut and the per
+channel version of that.
 
 
 ### Controller
