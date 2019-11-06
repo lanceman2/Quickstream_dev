@@ -3,6 +3,19 @@ This file just used for quickstream design discussion in a free format,
 given that quickstream is not in an alpha (usable) state yet.
 
 
+## References
+
+https://www.gnuradio.org/doc/doxygen/page_msg_passing.html
+
+https://www.gnuradio.org/doc/doxygen/page_stream_tags.html
+
+https://www.bastibl.net/gnuradio-scheduler-1/
+
+https://www.bastibl.net/blog/
+
+https://gnss-sdr.org/docs/fundamentals/
+
+
 ## Add more automatic buffer sizing.
 
 These example cases will not happen but in a couple stream flow cycles.
@@ -32,11 +45,11 @@ buffers?
       thread.
 
 
+## Feature: reuse ring buffers between restarts??
+
+
 ## Control
 
-https://www.gnuradio.org/doc/doxygen/page_msg_passing.html
-
-https://www.gnuradio.org/doc/doxygen/page_stream_tags.html
 
 Metadata the is not in the stream channels data, but may be paired with
 points in the streams channel data.  Controls are published via filter
@@ -46,7 +59,7 @@ We must separate controls that are setters and controls that are getters
 of parameters.  Example: The setting of frequency in a TX filter can then
 pop a getter of the frequency.  With the setter and getter model we then
 only have one code that is writing the getter and many codes that are
-writing the setter.
+writing the setter with one reading.
 
 Each control can have many keys, so we queue up key value pairs.  Each key
 is a parameter, but there may be relations between setters and getters

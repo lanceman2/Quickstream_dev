@@ -18,10 +18,10 @@
  * are if they are just treating all the channels the same.  They can just
  * use this macro to mean all channels.
  *
- * This macro may be used in qsSetMaxReadThreshold(),
- * qsSetMinReadThreshold(), qsSetMaxRead(), and qsBufferCreate().
+ * This macro may be used in qsSetInputThreshold(), qsSetInputMax(), and
+ * qsBufferCreate().
  */
-#define QS_ALLCHANNELS   ((uint32_t *)0)
+#define QS_ALLCHANNELS   ((uint32_t *)-1)
 
 
 /** A special value or length to pass to qsOutput() to cause no output.
@@ -144,7 +144,8 @@ enum QsFilterInputReturn {
  *
  * \todo figure out more return codes and what they mean
  */
-int input(void *buffer[], size_t len[], uint32_t inputChannelNum[],
+int input(void *buffer[], size_t len[],
+        uint32_t numInChannels, uint32_t numOutChannels,
         uint32_t flowState);
 
 
@@ -209,11 +210,12 @@ int start(uint32_t numInChannels, uint32_t numOutChannels);
 int stop(uint32_t numInChannels, uint32_t numOutChannels);
 
 
-/** get a buffer write pointer in a filters input()
+/** get a output buffer pointer
  *
  * qsGetBuffer() may only be called in the filters input() function.  If a
  * given filter at a given \ref input() call will generate output than
- * qsGetBuffer() must be called.
+ * qsGetBuffer() must be called and later followed by a call to
+ * qsOutput().
  *
  * If output is to be generated for this output channel number than
  * qsOutput() must be called some time after this call to qsGetBuffer().
@@ -237,7 +239,17 @@ extern
 void *qsGetBuffer(uint32_t outputChannelNum, size_t maxLen);
 
 
-/** trigger the call the listed output filters input() function
+extern
+void **qsGetBuffers(size_t maxLens[]);
+
+
+/** advance data to the output buffers
+ *
+ * This stores the current buffer write offset by length len bytes.
+ *
+ * If the required a threshold condition is met for a given output filter
+ * that the current input() filter being called, then this will cause
+ * input() to be called for that output filter.
  *
  * qsGetBuffer() must be called before qsOutput().
  *
@@ -260,6 +272,13 @@ extern
 void qsOutput(uint32_t outputChannelNum, size_t len);
 
 
+/** write data to
+ */
+extern
+void qsOutputs(size_t lens[]);
+
+
+
 /** Advance the current buffer input len bytes
  *
  * qsAdvanceInput() can only be called in a filter input() function.
@@ -273,28 +292,25 @@ void qsOutput(uint32_t outputChannelNum, size_t len);
  * This has no effect on output from the current filter.  This only
  * effects the current input channel number that passed to input();
  *
+ * \param inputChannelNum refers to the input channel that we wish to
+ * advance.
+ *
  * \param len advance the current input buffer len bytes.  len can be less
- * than or equal to the length in bytes that was passed to the input()
- * call.
+ * than or equal to the corresponding length in bytes that was passed to
+ * the input() call.  len greater than the input length will be clipped.
  */
 extern
-void qsAdvanceInput(size_t len);
+void qsAdvanceInput(uint32_t inputChannelNum, size_t len);
 
 
-/** Set the minimum buffer read threshold
+/** Set the buffer read threshold
  *
- * qsSetMinReadThreshold() may only be called in filters start() function.
+ * qsSetReadThresholds() may only be called in filters start() function.
  *
- * \param This reading filter will not read any data until this threshold,
- * len bytes, is met; so we will not call the filter input() function
- * until this threshold is met.
- *
- * \param inputChannelNums a list of effected input channel numbers as an
- * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
- * the number of channels.
+ * \param  points to an array 
  */
 extern
-void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
+void qsSetInputThresholds(size_t *lens);
 
 
 /** Set the maximum buffer read size passed to input()
@@ -305,7 +321,7 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  * to the amount sent in the call to the corresponding filters input()
  * call via the accumulation of qsAdvanceInput() function calls.
  *
- * qsSetMaxRead() may only be called in filters start() function.
+ * qsSetInputMax() may only be called in filters start() function.
  *
  * \param len This reading filter will not read more than len bytes, if
  * this is set.  The filter sets this so that the stream running does not
@@ -313,13 +329,9 @@ void qsSetMinReadThreshold(size_t len, uint32_t *inputChannelNums);
  * filter does not need to tell the stream running to not advance the
  * buffer so far at every input() call had the input length exceeded this
  * number.
- *
- * \param inputChannelNums a list of effected input channel numbers as an
- * array of numbers.  Channel numbers start at 0 and run to N-1 where N is
- * the number of channels.
  */ 
 extern
-void qsSetMaxRead(size_t len, uint32_t *inputChannelNums);
+void qsSetInputMax(size_t *lens);
 
 
 
