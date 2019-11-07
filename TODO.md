@@ -5,6 +5,8 @@ given that quickstream is not in an alpha (usable) state yet.
 
 ## References
 
+https://www.gnuradio.org/doc/doxygen/page_operating_fg.html
+
 https://www.gnuradio.org/doc/doxygen/page_msg_passing.html
 
 https://www.gnuradio.org/doc/doxygen/page_stream_tags.html
@@ -170,14 +172,14 @@ We'll assume the filter is letting the quickstream code control the length
 of input data that is being processed at each input() call, otherwise
 quickstream is not being utilized well.
 
-When data in the stream is flowing at a regular rate.  It's a real-time
-stream.
+TODO: We need to have a method to determine when a reallocated ring buffer
+can be un-mapped.
 
-In the limit of fast processing speed will make the latency be the input()
-length divided by the data flow rate.  So small input() lengths will give
-small latencies.  The smallest processable input() length will give the
-smallest latency at a cost of having more input() calls per unit of data
-output.
+In the limit of fast processing speed will make the latency will be the
+input() length divided by the data flow rate, for any channel.  So small
+input() lengths will give small latencies.  The smallest processable
+input() length will give the smallest latency at a cost of having more
+input() calls per unit of data output.
 
 
 ## input() with more than one channel
