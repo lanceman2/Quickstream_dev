@@ -230,7 +230,10 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
  * channel numbers that are in the output channel shared buffer group.
  *
  * \param maxLen is the maximum length in bytes that the filter will
- * output to the ring buffer.
+ * output to the ring buffer.  If the filter has a thread safe input()
+ * function, that maxLen must be the same as the corresponding length
+ * passed to qsOutput(), otherwise there will be unwritten gaps in the
+ * ring buffer.
  *
  * \return a pointer to the first writable byte in the buffer.  The filter
  * may write at most \e maxLen bytes to this returned pointer.
@@ -239,6 +242,13 @@ extern
 void *qsGetBuffer(uint32_t outputChannelNum, size_t maxLen);
 
 
+/** get an array of output buffers
+ *
+ * /param maxLens is an array of length that is the number of output
+ * channels connected from the calling filter input() function.
+ *
+ * /return an array of pointers to the writing point in the ring buffers.
+ */
 extern
 void **qsGetBuffers(size_t maxLens[]);
 
