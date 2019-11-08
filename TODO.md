@@ -20,7 +20,8 @@ https://gnss-sdr.org/docs/fundamentals/
 
 ## Add more automatic buffer sizing.
 
-These example cases will not happen but in a couple stream flow cycles.
+These example cases will not happen but in a couple stream flow cycles
+out of infinity of them.
 
 A qsGetBuffer() call with a length that would overflow the buffer, will
 cause the buffer to increase its' size.
