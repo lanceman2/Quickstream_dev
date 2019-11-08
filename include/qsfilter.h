@@ -45,7 +45,6 @@
 // ways.
 
 
-#define QS_DEFAULT_MAXREADTHRESHOLD  ((size_t) 1024)
 #define QS_DEFAULT_MINREADTHRESHOLD  ((size_t) 1)
 #define QS_DEFAULT_MAXREAD           ((size_t) 0) // not set
 
