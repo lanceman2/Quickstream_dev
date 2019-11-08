@@ -15,7 +15,37 @@ https://www.bastibl.net/gnuradio-scheduler-1/
 
 https://www.bastibl.net/blog/
 
+Best one:
 https://gnss-sdr.org/docs/fundamentals/
+
+
+## Not a Kahn’s process network
+
+https://en.wikipedia.org/wiki/Kahn_process_networks
+
+https://en.wikipedia.org/wiki/Flow-based_programming
+
+We can spread threads across more than one filter module for filter
+modules that do not require so much computation.  By letting the thread
+run through the stream graph we can have the threads automatically
+distribute themselves in an optimal fashion.
+
+What is optimized?  In all of nature, physics, something is always
+optimized. ???
+
+Bottlenecks will accumulate, block, threads at there input() calls.
+Thread-safe filters input() functions may have more than one thread
+running.  Non-bottleneck filters will not block threads at there input()
+calls.
+
+Many quick filter modules can share one thread.  Slow filters can use more
+than one thread at a time.  Net result, it can be faster than a Kahn’s
+process network.  It will only be as fast as the bottlenecks be it a
+Kahn’s process network or this trans filter threads thing.
+
+No runtime scheduler is needed the thread just control themselves.  It's
+less complex.  If bottleneck filters are thread-safe this will be able to
+process data faster than GNUradio.
 
 
 ## Add more automatic buffer sizing.
