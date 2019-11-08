@@ -437,10 +437,12 @@ uint32_t qsStreamFlow(struct QsStream *s) {
         struct QsFilter *filter = s->sources[i];
         DASSERT(filter,"");
         DASSERT(filter->input, "");
-        uint32_t flowStateReturn = s->flowState;
-        filter->sendOutput(filter, 0, 0, 0, s->flowState, &flowStateReturn);
-        if(flowStateReturn)
-            s->flowState |= flowStateReturn;
+
+        // TODO:  FLOW
+
+        // Check stream 
+
+
     }
 
     return s->flowState;
@@ -461,8 +463,11 @@ int qsStreamLaunch(struct QsStream *s) {
 
     // TODO: for the single thread case this does nothing.
 
-
     s->flags |= _QS_STREAM_LAUNCHED;
+
+
+
+
 
     return 0;
 }
@@ -480,14 +485,6 @@ int qsStreamStop(struct QsStream *s) {
         return -1;
     }
 
-
-    /**********************************************************************
-     *     Stage: setup the way we call filter input() from qsOutput()
-     *********************************************************************/
-
-    for(uint32_t i=0; i<s->numSources; ++i)
-        if(s->sources[i]->numOutputs)
-            unsetupSendOutput(s->sources[i]);
 
     /**********************************************************************
      *     Stage: call all stream's filter stop() if present
@@ -660,16 +657,6 @@ int qsStreamReady(struct QsStream *s) {
         // It easier to now because the f->outputs are more setup now.
         // If not we setup buffering connectivity defaults.
         AllocateRingBuffers(s->sources[i]);
-
-
-    /**********************************************************************
-     *     Stage: setup the way we call filter input() from qsOutput()
-     *********************************************************************/
-
-    for(uint32_t i=0; i<s->numSources; ++i)
-        if(s->sources[i]->numOutputs)
-            setupSendOutput(s->sources[i]);
-
 
 
     return 0; // success

@@ -37,36 +37,31 @@ struct QsApp {
 };
 
 
+// QsThread is only in the QsStream struct
+
 struct QsThread {
 
-    struct QsStream *stream;  // stream that owns this thread
-    struct QSProcess *process;
+    pthread_t pthread;
+    struct QsThread *next;
 };
 
 
-struct QsProcess {
-
-    struct QsStream *stream; // stream that owns this process
-
-    uint32_t numThreads;      // length of threads
-    struct QsThread *threads; // array of threads
-};
-
-
+QS_STREAM_DEFAULTMAXTHTREADS         (8)
 
 // bit Flags for the stream
 //
 // this is a stream configuration option bit flag
 #define _QS_STREAM_ALLOWLOOPS        (01)
 
+
+// This is the value of the stream flag when the stream is first created.
+#define _QS_STREAM_DEFAULTFLAGS      (0)
+
 // set if qsStreamLaunch() was called successfully
 // unset in qsStreamStop()
 //
 // this is a stream state bit flag
 #define _QS_STREAM_LAUNCHED          (02)
-
-// This is the value of the stream flag when the stream is first created.
-#define _QS_STREAM_DEFAULTFLAGS      (0)
 
 // By limiting  the number of channels possible in or out we can use stack
 // allocation via alloca().
@@ -82,14 +77,43 @@ struct QsStream {
 
     struct QsApp *app;
 
+    // maxThreads=0 means do not start any.  maxThreads does not change at
+    // flow/run time, so we need no mutex to access it.
+    uint32_t maxThreads; // Will not create more pthreads than this.
+
     uint32_t flags; // bit flags that configure the stream
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
-    // in the graph.
+    // in the graph.  flags does not change at flow/run time, so we need
+    // no mutex to access it.
 
-    uint32_t flowState;
 
-    uint32_t numThreads;       // length of threads
-    struct QsThread **threads; // array of threads
+    //////////////////// STREAM MUTEX GROUP ///////////////////////////////
+    //
+    // These are the only variables in QsStream that change at flow/run
+    // time.
+    //
+    // This mutex protects the reading and writing of things that can
+    // change in this stream struct when the stream is flowing.  There is
+    // not much time needed to access the little changing data in the
+    // stream, relatively speaking, or so we hope.  We expect a write/read
+    // lock would not be as good as a simple mutex, given the low
+    // probability of contention on this mutex.
+    //
+    pthread_mutex_t mutex;
+    //
+    uint32_t flowState; // must have a mutex lock to access flowState.
+    //
+    // number of pthreads that exist from this stream, be they idle or
+    // flowing.
+    uint32_t numThreads; // must have a mutex lock to access numThreads.
+    //
+    // We keep a stack/pool of idle threads in threadPool.  The running
+    // threads handle themselves and we do not keep a list of running
+    // pthreads.  We must have a mutex lock to access threadPool.
+    struct QsThread *threadPool; // must mutex lock to access threadPool.
+    //
+    ///////////////////////////////////////////////////////////////////////
+
 
     // The array list of sources is created at start:
     uint32_t numSources;       // length of sources
@@ -144,39 +168,6 @@ struct QsFilter {
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
     int (* input)(void *buffer, size_t len, uint32_t inputChannelNum,
             uint32_t flowState);
-
-
-    // sendOutput() is the filter input() wrapper function that calls the
-    // filter input() function for a filter that is at this filters
-    // output.  The output filter could be in the same thread, a different
-    // thread, or in a thread in another process.  The function that
-    // this points to is set at stream start, before the stream is
-    // flowing.  The thread and process that a filter modules input() is
-    // called in can change at each stream start.  So this pointer points
-    // to a function that causes that thread/process to call the filters
-    // input().  The len bytes is the total bytes that can be consumed.
-    // The filters input() may be called more than once.
-    //
-    // The function this point to varies depending on if the output filter
-    // is in the same thread or a different thread or different thread and
-    // process.
-    //
-    // The filters input() may be called a number of times.  The number of
-    // times depends on how much the filters can read in an input()
-    // call.
-    //
-    // This function can block if it needs to.
-    //
-    // sendOutput() returns the number of bytes consumed in the series of
-    // input() calls which should be less than or equal to len that was
-    // passed in.
-    //
-    // The returned returnFlowState is the change in the flow state due to
-    // the return values of calling the filter input().
-    //
-    size_t (*sendOutput)(struct QsFilter *filter/*this filter*/,
-            struct QsOutput *output, uint8_t *buf, size_t totalLen,
-            uint32_t flowStateIn, uint32_t *flowStateReturn);
 
 
     struct QsFilter *next; // next loaded filter in app list
