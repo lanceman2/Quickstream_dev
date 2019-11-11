@@ -97,7 +97,10 @@ struct QsStream {
     // not much time needed to access the little changing data in the
     // stream, relatively speaking, or so we hope.  We expect a write/read
     // lock would not be as good as a simple mutex, given the low
-    // probability of contention on this mutex.
+    // probability of inter thread contention on this mutex.
+    //
+    // TODO: We can add the mutex contention test with
+    // pthread_mutex_trylock() when we compile wityh DEBUG.
     //
     pthread_mutex_t mutex;
     //
@@ -106,11 +109,13 @@ struct QsStream {
     // number of pthreads that exist from this stream, be they idle or
     // flowing.
     uint32_t numThreads; // must have a mutex lock to access numThreads.
+    // number of thread that at in the idle thread stack.
+    uint32_t numIdleThreads;
     //
-    // We keep a stack/pool of idle threads in threadPool.  The running
+    // We keep a stack/pool of idle threads in idleThreads.  The running
     // threads handle themselves and we do not keep a list of running
-    // pthreads.  We must have a mutex lock to access threadPool.
-    struct QsThread *threadPool; // must mutex lock to access threadPool.
+    // pthreads.  We must have a mutex lock to access idleThreads.
+    struct QsThread *idleThreads;
     //
     ///////////////////////////////////////////////////////////////////////
 
@@ -137,7 +142,6 @@ struct QsStream {
 
 
 struct QsOutput;
-
 
 // The filter (QsFilter) is loaded by app as a module DSO (dynamic shared
 // object) plugin.  The filter after be loaded is added to a only one
@@ -172,24 +176,71 @@ struct QsFilter {
 
     struct QsFilter *next; // next loaded filter in app list
 
+    // Set to true if this filter input() can be called by more than one
+    // thread at a time.
+    //
+    bool isThreadSafe;
+
 
     ///////////////////////////////////////////////////////////////////////
     // The following are setup at stream start and cleaned up at stream
     // stop
     ///////////////////////////////////////////////////////////////////////
+
+
+    bool isSource;  // startup flag marking filter as a source
+
+
+    // This filter owns these output structs, in that it is the only
+    // filter that may change the ring buffer pointers.
     //
-    // We use this u variable at startup and at runtime for two different
-    // things at two different times in the code.
-    union {
-        // We don't used both of these 2 variables at the same time so
-        // they can use the same memory:
-        uint32_t numInputs; // runtime number of connected input filters
-        uint32_t isSource;  // startup flag marking filter as a source
-    } u;
-
-
-    uint32_t numOutputs; // number of connected output filters
+    uint32_t numOutputs; // number of connected filter we write to.
     struct QsOutput *outputs; // array of struct QsOutput
+
+    uint32_t numInputs; // number of connected input filters feeding this.
+
+
+    //////////////////// STREAM MUTEX GROUP ///////////////////////////////
+    //
+    // These variables are in the STREAM MUTEX GROUP and require the
+    // stream mutex lock to access them at flow/run time.
+    //
+    // TODO: If there is just one filter feeding (outputting to) this
+    // filter than no mutex lock will to needed to access this group
+    // of data: buffer, len, and flowState; for that case the only filter
+    // (thread) that will access this variable group is the feeding
+    // filter.
+    //
+    //
+    // We require a list related to outputs from filters writing to this
+    // filter, so that we may check that input thresholds are satisfied
+    // before calling input().  This is accessed by any filters that are
+    // outputting to this filter, so ya we need a mutex lock.
+    // The access time should be relatively short, for it's just setting
+    // up to pointers to ring buffers
+    //
+    // Used for setting the parameters for calls to the filters input(),
+    // and for checking that thresholds are met before calling input().
+    // The buffer pointers and lengths get set by filters that maybe
+    // outputting.  If more than one filter is outputting to the filter
+    // that this input() corresponds to than a mutex lock is required
+    // to read or write these values.  Once the values are copied to
+    // and input() args, then they are in that function call stack and
+    // the values in this struct are free to be accessed by another
+    // filter with the mutex lock.
+    //
+    void *buffer[];
+    // This is not necessarily the same as the length that is passed to
+    // input(), but that lengths is calculated from this. 
+    size_t len[];
+    // flowState comes just from the filters that write to this filter.
+    // In effect it's a marker in the stream flow.  We do not want filters
+    // that are very far down stream to see flowState changes that have
+    // not propagated to them yet.
+    uint32_t flowState;
+    //
+    ///////////////////////////////////////////////////////////////////////
+
 
 
     // TODO: It'd be nice not to have this extra data. It's not needed
@@ -254,19 +305,25 @@ struct QsOutput {  // points to reader filters
     // All these limits may be set in the reading filters start()
     // function.
     //
-    // Sizes in bytes that may be set at filter start():
+    // Sizes in bytes that may be set at filter start() and
+    // do not change at flow time:
     size_t
 
-        minReadThreshold, // This reading filter will not read
+        inputThreshold, // This reading filter will not read (input)
         // any data until this threshold is met; so we will not call the
         // filter input() function unless this threshold is met.
+        // inputThreshold is the input length needed to trigger an input()
+        // call.  When the flow is flushing this is ignored.
 
-        maxRead; // This reading filter will not read more than
+        maxInput; // This reading filter will not read (input) more than
         // this, if this is set.  The filter sets this so that the stream
         // running does not call input() with more data than this.  This
         // is a convenience, so the filter does not need to tell the
         // stream running to not advance the buffer so far at every
-        // input() call had the input length exceeded this number.
+        // input() call had the input buffer length exceeded this number.
+        // When there is more readable data than this, the read filter
+        // input() will be called many times, with buffer read length
+        // values of maxInput.
 };
 
 

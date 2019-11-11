@@ -312,9 +312,9 @@ extern
 void qsAdvanceInput(uint32_t inputChannelNum, size_t len);
 
 
-/** Set the buffer read threshold
+/** Set the buffer input read threshold
  *
- * qsSetReadThresholds() may only be called in filters start() function.
+ * qsSetInputThresholds() may only be called in filters start() function.
  *
  * \param  points to an array 
  */
@@ -322,7 +322,7 @@ extern
 void qsSetInputThresholds(size_t *lens);
 
 
-/** Set the maximum buffer read size passed to input()
+/** Set the maximum buffer input read size passed to input()
  *
  * Filters may may request that an input channel not input past a set
  * amount.  This is not required to be set because an input channels

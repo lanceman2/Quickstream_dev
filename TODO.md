@@ -21,6 +21,8 @@ https://gnss-sdr.org/docs/fundamentals/
 
 ## Not a Kahn’s process network
 
+At least not like the GNUradio reversion of one.
+
 https://en.wikipedia.org/wiki/Kahn_process_networks
 
 https://en.wikipedia.org/wiki/Flow-based_programming
@@ -28,10 +30,13 @@ https://en.wikipedia.org/wiki/Flow-based_programming
 We can spread threads across more than one filter module for filter
 modules that do not require so much computation.  By letting the thread
 run through the stream graph we can have the threads automatically
-distribute themselves in an optimal fashion.
+distribute themselves in an optimal fashion.  Threads are analogous to
+migrant laborers, they just go where work is needed.
 
 What is optimized?  In all of nature, physics, something is always
-optimized. ???
+optimized. ???  It'd be nice to architect the software based on an
+optimization principle.  It'd provide a nice theme for publishing a nice
+white paper.
 
 Bottlenecks will accumulate, block, threads at there input() calls.
 Thread-safe filters input() functions may have more than one thread
