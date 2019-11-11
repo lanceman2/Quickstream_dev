@@ -6,8 +6,6 @@ libquickstream_la_SOURCES =\
  app.c\
  filter.c\
  stream.c\
- sendOutput.c\
- thread.c\
  debug.c\
  opts.c\
  buffer.c\

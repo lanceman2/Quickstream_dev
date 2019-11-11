@@ -45,8 +45,8 @@
 // ways.
 
 
-#define QS_DEFAULT_MINREADTHRESHOLD  ((size_t) 1)
-#define QS_DEFAULT_MAXREAD           ((size_t) 0) // not set
+#define QS_DEFAULT_INPUTTHRESHOLD  ((size_t) 1)
+#define QS_DEFAULT_MAXINPUT           ((size_t) 0) // not set
 
 
 /** get the default maximum length in bytes that may be written

@@ -554,11 +554,11 @@ void SetReadParameter(size_t len, uint32_t *inputNums, struct QsFilter *f,
     if(inputNums == QS_ALLCHANNELS) {
         // This should have been checked in stream.c so we just check on
         // DEBUG now.
-        DASSERT(f->u.numInputs < QS_MAX_CHANNELS, "");
+        DASSERT(f->numInputs < QS_MAX_CHANNELS, "");
 
-        inputNums = alloca(sizeof(*inputNums)*(f->u.numInputs+1));
-        inputNums[f->u.numInputs] = QS_ARRAYTERM;
-        for(uint32_t i = f->u.numInputs - 1; i!=-1; --i) {
+        inputNums = alloca(sizeof(*inputNums)*(f->numInputs+1));
+        inputNums[f->numInputs] = QS_ARRAYTERM;
+        for(uint32_t i = f->numInputs - 1; i!=-1; --i) {
             inputNums[i] = i;
         }
     }

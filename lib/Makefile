@@ -5,14 +5,12 @@ libquickstream.so_SOURCES :=\
  app.c\
  filter.c\
  stream.c\
- sendOutput.c\
- thread.c\
  debug.c\
  opts.c\
  buffer.c\
  makeRingBuffer.c
 libquickstream.so_LDFLAGS := -lpthread -ldl -lrt
-# need to add something like: -export-symbols-regex '^qs'
+# TODO: need to add something like: -export-symbols-regex '^qs'
 
 # build and install pkgconfig/quickstream.pc
 #
@@ -21,7 +19,6 @@ libquickstream.so_LDFLAGS := -lpthread -ldl -lrt
 # to make building independent of PREFIX.  Not so with the GNU autotools
 # building method in "makefile.am".
 POST_INSTALL_COMMAND = ./qb_install_quickstream.pc.bash $(PREFIX)
-
 
 
 include ../quickbuild.make

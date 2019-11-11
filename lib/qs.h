@@ -46,7 +46,7 @@ struct QsThread {
 };
 
 
-QS_STREAM_DEFAULTMAXTHTREADS         (8)
+#define QS_STREAM_DEFAULTMAXTHTREADS (8)
 
 // bit Flags for the stream
 //
@@ -67,6 +67,15 @@ QS_STREAM_DEFAULTMAXTHTREADS         (8)
 // allocation via alloca().
 #define QS_MAX_CHANNELS              ((uint32_t) (4*1024))
 
+
+
+///////////////////////////////////////////////////////////////////////////
+//                 THREAD SAFETY WARNING
+//
+// Most of the variables in the data structures are not changing when the
+// stream is flowing.  Any variables that do change at flow time we must
+// handle with thread-safe care.
+///////////////////////////////////////////////////////////////////////////
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
@@ -187,7 +196,9 @@ struct QsFilter {
     // stop
     ///////////////////////////////////////////////////////////////////////
 
-
+    
+    // We define source as a filter with no input.  We will feed is zeros
+    // when the stream is flowing.
     bool isSource;  // startup flag marking filter as a source
 
 
@@ -217,22 +228,22 @@ struct QsFilter {
     // before calling input().  This is accessed by any filters that are
     // outputting to this filter, so ya we need a mutex lock.
     // The access time should be relatively short, for it's just setting
-    // up to pointers to ring buffers
+    // up to pointers to ring buffers and ...
     //
     // Used for setting the parameters for calls to the filters input(),
     // and for checking that thresholds are met before calling input().
     // The buffer pointers and lengths get set by filters that maybe
     // outputting.  If more than one filter is outputting to the filter
-    // that this input() corresponds to than a mutex lock is required
-    // to read or write these values.  Once the values are copied to
-    // and input() args, then they are in that function call stack and
-    // the values in this struct are free to be accessed by another
-    // filter with the mutex lock.
+    // that this input() corresponds to than a mutex lock is required to
+    // read or write these values.  Once the values are copied to and
+    // input() args, then they are in that function call stack and the
+    // values in this struct are free to be accessed by another filter
+    // with the mutex lock.
     //
-    void *buffer[];
+    void **buffers; // May not need mutex.
     // This is not necessarily the same as the length that is passed to
     // input(), but that lengths is calculated from this. 
-    size_t len[];
+    size_t *lens; // May not need mutex.
     // flowState comes just from the filters that write to this filter.
     // In effect it's a marker in the stream flow.  We do not want filters
     // that are very far down stream to see flowState changes that have

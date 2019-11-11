@@ -258,15 +258,27 @@ void FreeFilterRunResources(struct QsFilter *f) {
         FreeRingBuffersAndWriters(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
+        if(f->numInputs) {
+            memset(f->buffers, 0, sizeof(*f->buffers)*f->numInputs);
+            memset(f->lens, 0, sizeof(*f->lens)*f->numInputs);
+        }
 #endif
         free(f->outputs);
+        if(f->numInputs) {
+            free(f->buffers);
+            free(f->lens);
+        }
 #ifdef DEBUG
         f->outputs = 0;
 #endif
         f->numOutputs = 0;
+        f->buffers = 0;
+        f->lens = 0;
+        f->flowState = 0;
+        f->isSource = false;
     }
 
-    f->u.numInputs = 0;
+    f->numInputs = 0;
 }
 
 
@@ -343,13 +355,13 @@ static uint32_t CountFilterPath(struct QsStream *s,
 #define _INVALID_ChannelNum  ((uint32_t) -1)
 
 
-// The output need to have the input channel number that the filter they
+// The output needs to have the input channel number that the filter they
 // are feeding sees.
 static void
 CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t i=0; i<f->numOutputs; ++i)
-        f->outputs[i].inputChannelNum = f->outputs[i].filter->u.numInputs++;
+        f->outputs[i].inputChannelNum = f->outputs[i].filter->numInputs++;
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsFilter *nextF = f->outputs[i].filter;
@@ -360,6 +372,26 @@ CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
 }
 
 
+// Allocate the input() args like buffers[] by following filter outputs.
+static void
+CreateFilterInputArgs(struct QsStream *s, struct QsFilter *f) {
+
+    DASSERT(f->numInputs, "");
+
+    f->buffers = calloc(f->numInputs, sizeof(*f->buffers));
+    ASSERT(f->buffers, "calloc(%" PRIu32 ",%zu) failed",
+            f->numInputs, sizeof(*f->buffers));
+    f->lens = calloc(f->numInputs, sizeof(*f->lens));
+    ASSERT(f->buffers, "calloc(%" PRIu32 ",%zu) failed",
+            f->numInputs, sizeof(*f->lens));
+
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsFilter *nextF = f->outputs[i].filter;
+        if(nextF->buffers == 0)
+            CreateFilterInputArgs(s, nextF);
+    }
+}
+
 
 static
 void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
@@ -367,7 +399,7 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     // This will work if there are loops in the graph.
 
     DASSERT(f->numOutputs == 0, "");
-    DASSERT(f->u.numInputs == 0, "");
+    DASSERT(f->numInputs == 0, "");
 
     // count the number of filters that this filter connects to
     uint32_t i;
@@ -386,9 +418,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     ASSERT(f->numOutputs <= QS_MAX_CHANNELS,
             "%" PRIu32 " > %" PRIu32 " outputs",
             f->numOutputs, QS_MAX_CHANNELS);
-    f->outputs = calloc(1, sizeof(*f->outputs)*f->numOutputs);
-    ASSERT(f->outputs, "calloc(1,%zu) failed",
-            sizeof(*f->outputs)*f->numOutputs);
+    f->outputs = calloc(f->numOutputs, sizeof(*f->outputs));
+    ASSERT(f->outputs, "calloc(%" PRIu32 ",%zu) failed",
+            f->numOutputs, sizeof(*f->outputs));
 
 
     for(i=0; s->from[i] != f; ++i);
@@ -402,9 +434,8 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].inputChannelNum = _INVALID_ChannelNum;
 
         // Set some possibly non-zero default values:
-        f->outputs[j].maxReadThreshold = QS_DEFAULT_MAXREADTHRESHOLD;
-        f->outputs[j].minReadThreshold = QS_DEFAULT_MINREADTHRESHOLD;
-        f->outputs[j].maxRead = QS_DEFAULT_MAXREAD;
+        f->outputs[j].inputThreshold = QS_DEFAULT_INPUTTHRESHOLD;
+        f->outputs[j].maxInput = QS_DEFAULT_MAXINPUT;
         // All other values in the QsOutput will start at 0.
 
         if(s->to[i]->numOutputs == 0)
@@ -466,9 +497,6 @@ int qsStreamLaunch(struct QsStream *s) {
     s->flags |= _QS_STREAM_LAUNCHED;
 
 
-
-
-
     return 0;
 }
 
@@ -493,7 +521,7 @@ int qsStreamStop(struct QsStream *s) {
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->stop) {
             _qsCurrentFilter = f;
-            f->stop(f->u.numInputs, f->numOutputs);
+            f->stop(f->numInputs, f->numOutputs);
             _qsCurrentFilter = 0;
         }
 
@@ -546,9 +574,10 @@ int qsStreamReady(struct QsStream *s) {
                 // f is not a source
                 break;
         }
-        if(!(j < s->numConnections) && !f->u.isSource) {
+        if(!(j < s->numConnections) && !f->isSource) {
+            // Count the sources.
             ++s->numSources;
-            f->u.isSource = 1;
+            f->isSource = true;
         }
     }
 
@@ -557,7 +586,8 @@ int qsStreamReady(struct QsStream *s) {
         // It's not going to flow, or call any filter callbacks
         // because there are no sources.
         ERROR("This stream has no sources");
-        // We have nothing to free at this time.
+        // We have nothing to free at this time so we just return with
+        // error.
         return -1; // error no sources
     }
 
@@ -565,15 +595,11 @@ int qsStreamReady(struct QsStream *s) {
     ASSERT(s->sources, "malloc(,%zu) failed",
             s->numSources*sizeof(*s->sources));
 
+    // Get a pointer to the source filters.
     uint32_t j = 0;
-    for(uint32_t i=0; i < s->numConnections; ++i) {
-        if(s->from[i]->u.isSource) {
+    for(uint32_t i=0; i < s->numConnections; ++i)
+        if(s->from[i]->isSource)
             s->sources[j++] = s->from[i];
-            // reset flag so that s->from[i]->u.numInputs == 0
-            // and we use it for the number of inputs after here.
-            s->from[i]->u.numInputs = 0;
-        }
-    }
 
     DASSERT(j == s->numSources, "");
 
@@ -584,7 +610,7 @@ int qsStreamReady(struct QsStream *s) {
 
     if(!(s->flags && _QS_STREAM_ALLOWLOOPS))
         // In this case, we do not allow loops in the filter graph.
-        for(uint32_t i=0; i<s->numSources; ++i) {
+        for(uint32_t i=0; i<s->numSources; ++i)
             if(CountFilterPath(s, s->sources[i], 0, s->numConnections) >
                     s->numConnections + 1) {
                 ERROR("a stream has loops in it consider"
@@ -595,7 +621,6 @@ int qsStreamReady(struct QsStream *s) {
                 FreeRunResources(s);
                 return -2; // error we have loops
             }
-        }
 
 
     /**********************************************************************
@@ -613,8 +638,22 @@ int qsStreamReady(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs > 0 &&
                 s->sources[i]->outputs[0].inputChannelNum ==
-                    _INVALID_ChannelNum)
+                _INVALID_ChannelNum)
             CalculateFilterInputChannelNums(s, s->sources[i]);
+
+
+    /**********************************************************************
+     *      Stage: Set up filter input() arguments in filter struct
+     *********************************************************************/
+
+    for(uint32_t i=0; i<s->numSources; ++i) {
+        uint32_t jLimit = s->sources[i]->numOutputs;
+        for(j=0; j<jLimit; ++j) {
+            struct QsFilter *f = s->sources[i]->outputs[j].filter;
+            if(f->buffers == 0)
+                CreateFilterInputArgs(s, f);
+        }
+    }
 
 
     /**********************************************************************
@@ -632,7 +671,7 @@ int qsStreamReady(struct QsStream *s) {
                 // resources we know what filter these resources belong to.
                 _qsCurrentFilter = f;
                 // Call a filter start() function:
-                int ret = f->start(f->u.numInputs, f->numOutputs);
+                int ret = f->start(f->numInputs, f->numOutputs);
                 _qsCurrentFilter = 0;
                 if(ret) {
                     // TODO: Should we call filter stop() functions?
