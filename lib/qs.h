@@ -369,7 +369,7 @@ struct QsBuffer {  // all writers need a circular buffer
 
     // These two parameters make it a circular buffer or ring buffer.  See
     // makeRingBuffer.c.
-    size_t mapLength, overhangLength;
+    size_t mapLength, overhangLength; // in bytes.
 
     uint32_t refCount; // Number of writers pointing to this.
 };

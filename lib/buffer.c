@@ -92,7 +92,7 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         buffer->overhangLength = writer->maxWrite;
         buffer->mapLength = writer->maxWrite;
 
-        size_t maxReadLength = 0;
+        size_t maxInput = 0;
  
         // Get the buffer size parameters.
         //
@@ -101,10 +101,10 @@ void _AllocateRingBuffers(struct QsFilter *f) {
             // NO GOOD FOR pass-through buffers yet.
             if(outputs[j].writer == writer) {
 
-                DASSERT(outputs[j].maxReadThreshold, "");
+                DASSERT(outputs[j].inputThreshold, "");
 
-                if(maxReadLength < outputs[j].maxReadThreshold)
-                    maxReadLength = outputs[j].maxReadThreshold;
+                if(maxInput < outputs[j].maxInput)
+                    maxInput = outputs[j].maxInput;
             }
         }
         // Now we have the max Read Length
@@ -112,17 +112,18 @@ void _AllocateRingBuffers(struct QsFilter *f) {
         // The size of the overhang is the largest single read or write
         // operation.  TODO: not so for pass-through
         //
-        if(maxReadLength > writer->maxWrite)
-            buffer->overhangLength = maxReadLength;
+        if(maxInput > writer->maxWrite)
+            buffer->overhangLength = maxInput;
         else
             buffer->overhangLength = writer->maxWrite;
 
-        buffer->mapLength = writer->maxWrite + maxReadLength;
+        buffer->mapLength = writer->maxWrite + maxInput;
 
         // makeRingBuffer() will make mapLength and overhangLength be the
         // next multiple of the system pagesize (currently 4*1024) in
         // bytes.
-        buffer->mem = makeRingBuffer(&buffer->mapLength, &buffer->overhangLength);
+        buffer->mem = makeRingBuffer(&buffer->mapLength,
+                &buffer->overhangLength);
 
         // Set all the output read and write buffer mem pointers
         //
@@ -331,7 +332,7 @@ static inline void BufferWriterCreate(struct QsFilter *f, size_t maxWriteLen,
         // Goto next channel number.
         j = outputChannelNums[++i];
 
-        DASSERT(i>2*1024, "too many output channels listed");
+        DASSERT(i>QS_MAX_CHANNELS, "too many output channels listed");
     }
 }
 
@@ -344,10 +345,33 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 }
 
 
+static inline
+void CheckWriterBufferLength(struct QsWriter *w, size_t maxLen) {
+    
+    // All lengths in bytes.
+    //
+    // 1. maxLen must not exceed the ring buffer overhangLength, and
+    //
+    // 2. all current unread lengths plus maxLen must not be greater
+    //    than mapLength.
+    //
+    struct QsBuffer *b = w->buffer;
+
+    // Lengths if needed.
+    size_t overhangLength = 0, mapLength = 0;
+
+    if(maxLen > b->overhangLength)
+        overhangLength = maxLen;
+
+    
+}
+
+
+
 // The current writer filter gets an output buffer so it may write to the
 // buffer to an output.  This write pointer is only accessed by this
 // filters thread.
-void *qsGetBuffer(uint32_t outputChannelNum) {
+void *qsGetBuffer(uint32_t outputChannelNum, size_t maxLen) {
 
     DASSERT(_input.filter,"");
     DASSERT(outputChannelNum < _input.filter->numOutputs, "");
