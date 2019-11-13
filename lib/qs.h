@@ -365,6 +365,13 @@ struct QsBuffer {  // all writers need a circular buffer
     // will be a buffer the passes through one of the filters; a
     // pass-through buffer.
 
+    // Since there may be more than one writer (pass-through) and more
+    // than one reader, we need the max length of the all writers and
+    // readers.
+    size_t maxWrite, // max length maxWrite for all writers
+           maxRead;  // max length for all readers by it from
+            // inputThreshold or maxInput.
+
     uint8_t *mem; // Pointer to start of mmap()ed memory.
 
     // These two parameters make it a circular buffer or ring buffer.  See

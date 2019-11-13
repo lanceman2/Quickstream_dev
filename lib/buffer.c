@@ -348,22 +348,8 @@ void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums) {
 static inline
 void CheckWriterBufferLength(struct QsWriter *w, size_t maxLen) {
     
-    // All lengths in bytes.
-    //
-    // 1. maxLen must not exceed the ring buffer overhangLength, and
-    //
-    // 2. all current unread lengths plus maxLen must not be greater
-    //    than mapLength.
-    //
-    struct QsBuffer *b = w->buffer;
+    if(maxLen > w->maxWrite)
 
-    // Lengths if needed.
-    size_t overhangLength = 0, mapLength = 0;
-
-    if(maxLen > b->overhangLength)
-        overhangLength = maxLen;
-
-    
 }
 
 
