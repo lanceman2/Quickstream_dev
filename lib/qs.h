@@ -332,9 +332,9 @@ struct QsOutput {  // points to reader filters
         // is a convenience, so the filter does not need to tell the
         // stream running to not advance the buffer so far at every
         // input() call had the input buffer length exceeded this number.
-        // When there is more readable data than this, the read filter
-        // input() will be called many times, with buffer read length
-        // values of maxInput.
+        // When there is much more readable data than this, the read
+        // filter input() will be called many times, with buffer read
+        // length values of maxInput or less.
 };
 
 
