@@ -112,3 +112,4 @@ mv quickbuild.make.tmp quickbuild.make
 
 ./RELEASE.bash package.make.rl > package.make
 
+[ -e config.make ] || cp config.make.example config.make

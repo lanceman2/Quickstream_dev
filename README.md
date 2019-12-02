@@ -165,50 +165,27 @@ change directory to the top source directory and then run:
 ./quickbuild
 ```
 
-which will download the file *quickbuild.make*.
-
-Now there are no more file downloads needed.  Now run:
-
-```console
-echo "PREFIX = MY_PREFIX" > config.make
-```
-
-where ``MY_PREFIX`` is the top installation directory, like for example
-*/usr/local/encap/quickstream*.  Then run:
+which will download the file *quickbuild.make* and generate *config.make*.
+Now edit *config.make* to your liking.  Then run:
 
 ```console
 make
 ```
 
-to generate (compile) files in the source directory.
-Then, at your option, run:
+to generate (compile) files in the source directory.  When building with
+quickbuild, you can run programs from the source directories without
+installing.  After running *make*, at your option, run:
 
 ```console
 make install
 ```
 
-to install files into the prefix directory you defined.
+to install files into the prefix (PREFIX) directory you defined.
 
 Note the *PREFIX* will only be used in the *make install* and is not
 required to be set until *make install* runs, so alternatively you can
 skip making the *config.make* file and in place of running *make install*
 you can run *make install PREFIX=MY_PREFIX*.
-
-For debugging and development additional configuration options can be
-added to the *config.make* files as C preprocessor (CPP) flags when
-compiling are for example:
-
-```shell
-CPPFLAGS := -DDEBUG
-CPPFLAGS := -DDEBUG -DSPEW_LEVEL_DEBUG
-CPPFLAGS := -DSPEW_LEVEL_INFO
-CPPFLAGS := "-DDEBUG -DSPEW_LEVEL_NOTICE"
-CPPFLAGS := -DSPEW_LEVEL_WARN
-CFLAGS := -g -Wall -Werror
-```
-
-See file *lib/debug.h* for how these CPP macro flags are
-used.
 
 If you wish to remove all files that are generated from the build scripts
 in this package, leaving you with just files that are from the repository

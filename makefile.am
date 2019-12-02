@@ -67,6 +67,7 @@ EXTRA_DIST =\
  README.md\
  RELEASE.bash\
  RepoClean\
+ config.make.example\
  $(docfiles)\
  $(quickbuild_makefiles)\
  $(dev_tests)

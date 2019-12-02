@@ -119,7 +119,6 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
         strcpy(qsErrorBuffer, buffer);
         pthread_mutex_unlock(&mutex);
     }
-
 }
 
 

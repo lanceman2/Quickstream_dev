@@ -49,7 +49,11 @@ mkdir -p m4
 
 autoreconf --force --verbose --install
 
+
 # We need the quickbuild files for "make dist".
+#
+# quickbuild.make is used as an alternate build system to GNU autotools.
+#
 if [ ! -e quickbuild.make ] ; then
     ./quickbuild
 fi
