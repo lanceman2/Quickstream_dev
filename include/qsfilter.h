@@ -12,23 +12,6 @@
 //
 
 
-/** A special value to mean an array of all channel numbers.
- *
- * The filter writer does not need to figure out how many channels there
- * are if they are just treating all the channels the same.  They can just
- * use this macro to mean all channels.
- *
- * This macro may be used in qsSetInputThreshold(), qsSetInputMax(), and
- * qsBufferCreate().
- */
-#define QS_ALLCHANNELS   ((uint32_t *)-1)
-
-
-/** A special value or length to pass to qsOutput() to cause no output.
- */
-#define QS_NONE          ((size_t) -1) // not 0
-
-
 
 #define QS_ARRAYTERM    ((uint32_t) -1)
 
@@ -52,7 +35,7 @@
 /** get the default maximum length in bytes that may be written
  *
  * A filter that has output may set the maximum length in bytes that may
- * be written for a given qsOutput() call for a given output channel
+ * be written for a given qsOutput() call for a given output port
  * number.  If the value of the maximum length in bytes that may be
  * written was not set in the filter start() function it's value will be
  * QS_DEFAULT_maxWrite.
@@ -121,18 +104,17 @@ enum QsFilterInputReturn {
  * \param len the length of the data pasted in bytes.  len is 0 if this is
  * a source feed.
  *
- * \param inputChannelNum the channel designation for this input. A
- * transmitting (or feeder) filter is a filter that is outputting to a
- * receiver.  The receiver filter is the filter that has it's input()
- * function called.  For a given filter the input channels are numbered
- * from 0 to N-1 where N is the total number of input channels.  There may
- * be more than one input to a given receiver filter from a given
- * transmitter filter.
+ * \param inputPortNum the port designation for this input. A transmitting
+ * (or feeder) filter is a filter that is outputting to a receiver.  The
+ * receiver filter is the filter that has it's input() function called.
+ * For a given filter the input ports are numbered from 0 to N-1 where N
+ * is the total number of input ports.  There may be more than one input
+ * to a given receiver filter from a given transmitter filter.
  *
- * \param flowState should be considered an opaque data type that is passed
- * in to the filter input() to let the filter know stuff about the state
- * of the stream flow.  inline functions provide ways to interpret this so
- * called state.  See \ref qsFlowIsLastPackage().
+ * \param flowState should be considered an opaque data type that is
+ * passed in to the filter input() to let the filter know stuff about the
+ * state of the stream flow.  inline functions provide ways to interpret
+ * this so called state.  See \ref qsFlowIsLastPackage().
  *
  * \return The values returned from input() give the filters some control
  * over how the stream and it's flow behaves.  The return value 0 is the
@@ -143,9 +125,9 @@ enum QsFilterInputReturn {
  *
  * \todo figure out more return codes and what they mean
  */
-int input(void *buffer[], size_t len[],
-        uint32_t numInChannels, uint32_t numOutChannels,
-        uint32_t flowState);
+int input(const void *buffer[], const size_t len[],
+        const bool isFlushing[],
+        uint32_t numInPorts, uint32_t numOutPorts);
 
 
 /** Optional constructor function
@@ -193,7 +175,7 @@ int destroy(void);
  *
  * \todo figure out more return codes and what they mean
  */
-int start(uint32_t numInChannels, uint32_t numOutChannels);
+int start(uint32_t numInPorts, uint32_t numOutPorts);
 
 
 /** Optional filter stop function
@@ -206,7 +188,7 @@ int start(uint32_t numInChannels, uint32_t numOutChannels);
  *
  * \todo figure out more return codes and what they mean
  */
-int stop(uint32_t numInChannels, uint32_t numOutChannels);
+int stop(uint32_t numInPorts, uint32_t numOutPorts);
 
 
 /** get a output buffer pointer
@@ -216,17 +198,17 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
  * qsGetBuffer() must be called and later followed by a call to
  * qsOutput().
  *
- * If output is to be generated for this output channel number than
+ * If output is to be generated for this output port number than
  * qsOutput() must be called some time after this call to qsGetBuffer().
  *
  * If qsGetBuffer() is not called in a given filter input() callback
  * function there will be no output from the filter in the given input()
  * call.
  *
- * \param outputChannelNum the associated output channel.  If the output
- * channel is sharing a buffer between other output channels from this
- * filter then the value of outputChannelNum may be any of the output
- * channel numbers that are in the output channel shared buffer group.
+ * \param outputPortNum the associated output port.  If the output
+ * port is sharing a buffer between other output ports from this
+ * filter then the value of outputPortNum may be any of the output
+ * port numbers that are in the output port shared buffer group.
  *
  * \param maxLen is the maximum length in bytes that the filter will
  * output to the ring buffer.  If the filter has a thread safe input()
@@ -238,13 +220,13 @@ int stop(uint32_t numInChannels, uint32_t numOutChannels);
  * may write at most \e maxLen bytes to this returned pointer.
  */
 extern
-void *qsGetBuffer(uint32_t outputChannelNum, size_t maxLen);
+void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
 
 
 /** get an array of output buffers
  *
  * /param maxLens is an array of length that is the number of output
- * channels connected from the calling filter input() function.
+ * ports connected from the calling filter input() function.
  *
  * /return an array of pointers to the writing point in the ring buffers.
  */
@@ -262,10 +244,10 @@ void **qsGetBuffers(size_t maxLens[]);
  *
  * qsGetBuffer() must be called before qsOutput().
  *
- * qsOutput() must be called in a filter module input() function in order
+ * qsOutputs() must be called in a filter module input() function in order
  * to have output to another filter module.
  *
- * \param len the length in bytes to advance the output buffer.  len may be
+ * \param lens the length in bytes to advance the output buffer.  len may be
  * 0 to cause the corresponding output filters input() functions to be
  * called with an input length of 0.  Setting len to QS_NONE to stop the
  * corresponding output filters input() functions from being called.
@@ -273,12 +255,12 @@ void **qsGetBuffers(size_t maxLens[]);
  * filters input() function with an input length of 0, like it was a
  * source filter.
  *
- * \param outputChannelNum is the associated output channel.  If the buffer
- * of this output channel is shared between other output channels than
- * all the sharing output channels will also be used.
+ * \param outputPortNum is the associated output port.  If the buffer
+ * of this output port is shared between other output ports than
+ * all the sharing output ports will also be used.
  */
 extern
-void qsOutput(uint32_t outputChannelNum, size_t len);
+void qsOutput(uint32_t outputPortNum, size_t len);
 
 
 /** write data to
@@ -299,33 +281,30 @@ void qsOutputs(size_t lens[]);
  * the length that was passed to input().
  *
  * This has no effect on output from the current filter.  This only
- * effects the current input channel number that passed to input();
+ * effects the current input port number that passed to input();
  *
- * \param inputChannelNum refers to the input channel that we wish to
- * advance.
- *
- * \param len advance the current input buffer len bytes.  len can be less
+ * \param lens advance the current input buffer lens bytes.  len can be less
  * than or equal to the corresponding length in bytes that was passed to
  * the input() call.  len greater than the input length will be clipped.
  */
 extern
-void qsAdvanceInput(uint32_t inputChannelNum, size_t len);
+void qsAdvanceInput(size_t lens[]);
 
 
 /** Set the buffer input read threshold
  *
- * qsSetInputThresholds() may only be called in filters start() function.
+ * qsSetInputThreshold() may only be called in filters start() function.
  *
- * \param  points to an array 
+ * \param points to an array of length inputPortNums
  */
 extern
-void qsSetInputThresholds(size_t *lens);
+void qsSetInputThreshold(size_t lens[]);
 
 
 /** Set the maximum buffer input read size passed to input()
  *
- * Filters may may request that an input channel not input past a set
- * amount.  This is not required to be set because an input channels
+ * Filters may may request that an input port not input past a set
+ * amount.  This is not required to be set because an input ports
  * buffer advancement may be set to any amount that is less than of equal
  * to the amount sent in the call to the corresponding filters input()
  * call via the accumulation of qsAdvanceInput() function calls.
@@ -344,10 +323,10 @@ void qsSetInputMax(size_t *lens);
 
 
 
-/** Create an output buffer that is associated with the listed channels
+/** Create an output buffer that is associated with the listed ports
  *
- * If there is more than one output channel number given than the ring
- * buffer will be shared between the output channels, and the data read by
+ * If there is more than one output port number given than the ring
+ * buffer will be shared between the output ports, and the data read by
  * all the receiving filters will be the same.
  *
  * qsBufferCreate() can only be called in the filter's start() function.
@@ -357,14 +336,14 @@ void qsSetInputMax(size_t *lens);
  * accessing this buffer down stream.
  *
  * \param maxWriteLen this filter promises to write at most maxWriteLen
- * bytes to this output channel.  If the filter writes more than that
+ * bytes to this output port.  If the filter writes more than that
  * memory may be corrupted.
  *
- * \param outputChannelNums is a pointer to an array of output channel
- * numbers which is terminated with a value QS_ARRAYTERM.
+ * \param outputPortNums is a pointer to an array of output port numbers
+ * which is terminated with a value QS_ARRAYTERM.
  */
 extern
-void qsBufferCreate(size_t maxWriteLen, uint32_t *outputChannelNums);
+void qsBufferCreate(size_t maxWriteLen, uint32_t *outputPortNums);
 
 
 
@@ -490,12 +469,13 @@ int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
 #endif // #ifndef DOXYGEN_SHOULD_SKIP_THIS  too here.
 
 
-/** 
+/** \todo redo this ...
+ *
  * This function is only relevant when called in a filters input()
  * function.
  *
  *  /returns true if this is the last length of data to be input
- *  for a given input channel number.
+ *  for a given input port number.
  *
  *  \see input()
  */

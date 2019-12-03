@@ -36,7 +36,8 @@ struct QsApp {
     struct QsStream *streams;
 };
 
-
+// https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
+// example: _sync_fetch_and_add
 // QsThread is only in the QsStream struct
 
 struct QsThread {
@@ -63,7 +64,7 @@ struct QsThread {
 // this is a stream state bit flag
 #define _QS_STREAM_LAUNCHED          (02)
 
-// By limiting  the number of channels possible in or out we can use stack
+// By limiting the number of channels possible in or out we can use stack
 // allocation via alloca().
 #define QS_MAX_CHANNELS              ((uint32_t) (4*1024))
 
@@ -173,14 +174,15 @@ struct QsFilter {
     // malloc()ed memory.
     char *name; // unique name for the Filter in a given app
 
-    // Callback functions that may be loaded.  We do not get a copy of
-    // the construct() and destroy() functions because they are only
-    // called once, so we just dlsym() (if we have a dlhandle) them just
-    // before we call them.
+    // Callback functions that may be loaded.  We do not get a copy of the
+    // construct() and destroy() functions because they are only called
+    // once, so we just dlsym() (if we have a dlhandle) them just before
+    // we call them.
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
-    int (* input)(void *buffer, size_t len, uint32_t inputChannelNum,
-            uint32_t flowState);
+    int (* input)(const void *buffer[], const size_t len[],
+            const uint32_t isFlushing[],
+            uint32_t numInputs, uint32_t numOutputs);
 
 
     struct QsFilter *next; // next loaded filter in app list
@@ -275,9 +277,9 @@ struct QsOutput {  // points to reader filters
     // input.
     struct QsFilter *filter;
 
-    // The input channel number that the filter being written to sees
-    // in it's input(,,channelNum,) call.
-    uint32_t inputChannelNum;
+    // The input port number that the filter being written to sees
+    // in it's input(,,portNum,) call.
+    uint32_t inputPortNum;
 
 
     // Here's where it gets weird: We need a buffer and a write pointer,
@@ -302,7 +304,7 @@ struct QsOutput {  // points to reader filters
     // time.
     // **
     // 
-    struct QsWriter *writer;
+    struct QsBuffer *buffer;
 
 
     // read filter access pointer to the circular buffer.
@@ -326,58 +328,43 @@ struct QsOutput {  // points to reader filters
         // inputThreshold is the input length needed to trigger an input()
         // call.  When the flow is flushing this is ignored.
 
-        maxInput; // This reading filter will not read (input) more than
-        // this, if this is set.  The filter sets this so that the stream
-        // running does not call input() with more data than this.  This
-        // is a convenience, so the filter does not need to tell the
-        // stream running to not advance the buffer so far at every
-        // input() call had the input buffer length exceeded this number.
-        // When there is much more readable data than this, the read
-        // filter input() will be called many times, with buffer read
+        maxInput; // = 0 by default.  This reading filter will not read
+        // (input) more than this, if this is set.  The filter sets this
+        // so that the stream running does not call input() with more data
+        // than this.  This is a convenience, so the filter does not need
+        // to tell the stream running to not advance the buffer so far at
+        // every input() call had the input buffer length exceeded this
+        // number.  When there is much more readable data than this, the
+        // read filter input() will be called many times, with buffer read
         // length values of maxInput or less.
 };
 
 
-struct QsWriter {  // all outputs need a writer
 
-    // There can be many outputs pointing to each writer.
+struct QsBuffer {  // all outputs have a circular buffer
 
-    size_t maxWrite; // maximum the writer can write.  If it writes more
-    // than this then the memory could be overrun.
-
-    // QsBuffer may be shared by other QsWriter's, if the buffer is shared
-    // it's a pass-through buffer, and it should be also written to in an
-    // neighboring down-stream filter.
-    struct QsBuffer *buffer;
+    // Their can be many outputs pointing to this (using this) buffer.
 
     // This is the last place a writing filter wrote to in this memory.
     uint8_t *writePtr;
 
-    uint32_t refCount; // Number of outputs pointing to this.
-};
+    // maxRead is the distance between the write pointer and the farthest
+    // read pointer.  This is the data that is stored.  This value gets
+    // checked and recalculated each time the buffer is accessed for
+    // writing and for reading which is when input() is called.
+    size_t maxRead;
 
-
-struct QsBuffer {  // all writers need a circular buffer
-
-    // Their can be many writers pointing to this buffer.
+    ///////////////////////////////////////////////////////////////////////
+    // The rest of this structure stays constant while the stream is
+    // flowing.
     //
-    // If there are writers from different and connected filters then this
-    // will be a buffer the passes through one of the filters; a
-    // pass-through buffer.
-
-    // Since there may be more than one writer (pass-through) and more
-    // than one reader, we need the max length of the all writers and
-    // readers.
-    size_t maxWrite, // max length maxWrite for all writers
-           maxRead;  // max length for all readers by it from
-            // inputThreshold or maxInput.
-
     uint8_t *mem; // Pointer to start of mmap()ed memory.
-
+    //
     // These two parameters make it a circular buffer or ring buffer.  See
-    // makeRingBuffer.c.
+    // makeRingBuffer.c.  The mapLength is the most the buffer can hold to
+    // be read by a filter.
     size_t mapLength, overhangLength; // in bytes.
-
+    //
     uint32_t refCount; // Number of writers pointing to this.
 };
 
@@ -442,7 +429,7 @@ void unsetupSendOutput(struct QsFilter *f);
 
 
 extern
-void _qsOutput(size_t len, uint32_t outputChannelNum);
+void _qsOutput(size_t len, uint32_t outputPortNum);
 
 
 extern

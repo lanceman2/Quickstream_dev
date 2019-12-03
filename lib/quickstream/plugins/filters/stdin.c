@@ -16,8 +16,9 @@ void help(FILE *f) {
 }
 
 
-int input(void *buffer, size_t len, uint32_t inputChannelNum,
-        uint32_t flowState) {
+int input(const void *buffer[], const size_t len[],
+        const bool isFlushing[],
+        uint32_t numInputs, uint32_t numOutputs) {
 
     // We'll assume there is no input data.
     DASSERT(len == 0, "");
