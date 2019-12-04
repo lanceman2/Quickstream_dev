@@ -7,7 +7,7 @@
 
 // This file is the guts of quickstream.  By understanding each data
 // member in these data structures you can get a clear understanding of
-// the insides of quickstream, and code it.  Easier said than done...
+// the insides of quickstream, and code it.
 
 
 // Then studying these structures one must keep in mind most data is
@@ -28,7 +28,7 @@ struct QsApp {
     // List of filters.  Head of a singly linked list.
     struct QsFilter *filters;
 
-    // We could have more than one stream, but we can't delete or edit one
+    // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
     // one stream while another stream is running.
     //
@@ -36,10 +36,16 @@ struct QsApp {
     struct QsStream *streams;
 };
 
-// https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
-// example: _sync_fetch_and_add
-// QsThread is only in the QsStream struct
 
+// https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
+// example: _sync_fetch_and_add()
+// Or use:
+// #include <stdatomic.h>
+// example: https://en.cppreference.com/w/c/language/atomic
+
+
+// QsThread is only in the QsStream struct
+//
 struct QsThread {
 
     pthread_t pthread;
@@ -47,7 +53,8 @@ struct QsThread {
 };
 
 
-#define QS_STREAM_DEFAULTMAXTHTREADS (8)
+//#define QS_STREAM_DEFAULTMAXTHTREADS (8)
+#define QS_STREAM_DEFAULTMAXTHTREADS (0)
 
 // bit Flags for the stream
 //
@@ -68,6 +75,10 @@ struct QsThread {
 // allocation via alloca().
 #define QS_MAX_CHANNELS              ((uint32_t) (4*1024))
 
+// So we don't run away mapping to much memory for ring-buffers.
+// We get trouble if we mmap() more than this.
+#define QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
+
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -75,7 +86,7 @@ struct QsThread {
 //
 // Most of the variables in the data structures are not changing when the
 // stream is flowing.  Any variables that do change at flow time we must
-// handle with thread-safe care.
+// handle with "thread-safe" care.
 ///////////////////////////////////////////////////////////////////////////
 
 
@@ -110,11 +121,9 @@ struct QsStream {
     // probability of inter thread contention on this mutex.
     //
     // TODO: We can add the mutex contention test with
-    // pthread_mutex_trylock() when we compile wityh DEBUG.
+    // pthread_mutex_trylock() when we compile with DEBUG.
     //
     pthread_mutex_t mutex;
-    //
-    uint32_t flowState; // must have a mutex lock to access flowState.
     //
     // number of pthreads that exist from this stream, be they idle or
     // flowing.
@@ -213,49 +222,6 @@ struct QsFilter {
     uint32_t numInputs; // number of connected input filters feeding this.
 
 
-    //////////////////// STREAM MUTEX GROUP ///////////////////////////////
-    //
-    // These variables are in the STREAM MUTEX GROUP and require the
-    // stream mutex lock to access them at flow/run time.
-    //
-    // TODO: If there is just one filter feeding (outputting to) this
-    // filter than no mutex lock will to needed to access this group
-    // of data: buffer, len, and flowState; for that case the only filter
-    // (thread) that will access this variable group is the feeding
-    // filter.
-    //
-    //
-    // We require a list related to outputs from filters writing to this
-    // filter, so that we may check that input thresholds are satisfied
-    // before calling input().  This is accessed by any filters that are
-    // outputting to this filter, so ya we need a mutex lock.
-    // The access time should be relatively short, for it's just setting
-    // up to pointers to ring buffers and ...
-    //
-    // Used for setting the parameters for calls to the filters input(),
-    // and for checking that thresholds are met before calling input().
-    // The buffer pointers and lengths get set by filters that maybe
-    // outputting.  If more than one filter is outputting to the filter
-    // that this input() corresponds to than a mutex lock is required to
-    // read or write these values.  Once the values are copied to and
-    // input() args, then they are in that function call stack and the
-    // values in this struct are free to be accessed by another filter
-    // with the mutex lock.
-    //
-    void **buffers; // May not need mutex.
-    // This is not necessarily the same as the length that is passed to
-    // input(), but that lengths is calculated from this. 
-    size_t *lens; // May not need mutex.
-    // flowState comes just from the filters that write to this filter.
-    // In effect it's a marker in the stream flow.  We do not want filters
-    // that are very far down stream to see flowState changes that have
-    // not propagated to them yet.
-    uint32_t flowState;
-    //
-    ///////////////////////////////////////////////////////////////////////
-
-
-
     // TODO: It'd be nice not to have this extra data. It's not needed
     // when the stream is flowing.
     //
@@ -281,24 +247,6 @@ struct QsOutput {  // points to reader filters
     // in it's input(,,portNum,) call.
     uint32_t inputPortNum;
 
-
-    // Here's where it gets weird: We need a buffer and a write pointer,
-    // where the buffer may be shared between outputs in the same filter
-    // and shared between outputs in different adjacent filters.
-    // So we may have more than one output point to a given writer.
-    //
-    // The writer for this particular output.  This writer can be shared
-    // between many outputs in one filter, hence this is just a pointer
-    // and a single writer that may be used for more than one output.
-    //
-    // TODO: "pass-through buffers" in which the buffer can be shared
-    // for multiple filter levels, that is a filter can read the buffer
-    // and then treat it like it is the writer to the next filter.
-    // The passing filter can't change the size of the buffer, but it can
-    // over-write it's content if it's careful.  If a filter at the same
-    // level does this then the ring buffer memory will not necessarily
-    // have what you want in its' memory.
-    //
     // ** Only the filter (and it's thread) that has a pointer to this
     // output can read and write to the writePtr in this writer, at flow
     // time.
@@ -315,19 +263,12 @@ struct QsOutput {  // points to reader filters
     uint8_t *readPtr;
 
 
-    // All these limits may be set in the reading filters start()
-    // function.
-    //
-    // Sizes in bytes that may be set at filter start() and
-    // do not change at flow time:
+    // input() just returns 0 if a threshold is not reached.
+
+
+    // maxInput may be set in the reading filters start() function
+    // and does not change until the next start().
     size_t
-
-        inputThreshold, // This reading filter will not read (input)
-        // any data until this threshold is met; so we will not call the
-        // filter input() function unless this threshold is met.
-        // inputThreshold is the input length needed to trigger an input()
-        // call.  When the flow is flushing this is ignored.
-
         maxInput; // = 0 by default.  This reading filter will not read
         // (input) more than this, if this is set.  The filter sets this
         // so that the stream running does not call input() with more data
@@ -345,14 +286,16 @@ struct QsBuffer {  // all outputs have a circular buffer
 
     // Their can be many outputs pointing to this (using this) buffer.
 
-    // This is the last place a writing filter wrote to in this memory.
+    // This is the next place a writing filter will write to in this
+    // memory.
     uint8_t *writePtr;
 
-    // maxRead is the distance between the write pointer and the farthest
-    // read pointer.  This is the data that is stored.  This value gets
-    // checked and recalculated each time the buffer is accessed for
-    // writing and for reading which is when input() is called.
-    size_t maxRead;
+    // 0 terminated array of pointers to outputs
+    // 
+    // Example getting readPtr: ptr = outputs[i]->readPtr
+    // 
+    // Just a little faster access to the outputs that use this buffer.
+    struct QsOutputs **outputs;
 
     ///////////////////////////////////////////////////////////////////////
     // The rest of this structure stays constant while the stream is

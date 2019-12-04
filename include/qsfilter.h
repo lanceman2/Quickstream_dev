@@ -88,9 +88,8 @@ void help(FILE *file);
 
 
 enum QsFilterInputReturn {
-
     QsFContinue = 0,
-    QsFFinished = 1
+    QsFFinished = 1 // returned to start flushing
 };
 
 
@@ -223,32 +222,18 @@ extern
 void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
 
 
-/** get an array of output buffers
- *
- * /param maxLens is an array of length that is the number of output
- * ports connected from the calling filter input() function.
- *
- * /return an array of pointers to the writing point in the ring buffers.
- */
-extern
-void **qsGetBuffers(size_t maxLens[]);
-
 
 /** advance data to the output buffers
  *
  * This stores the current buffer write offset by length len bytes.
  *
- * If the required a threshold condition is met for a given output filter
- * that the current input() filter being called, then this will cause
- * input() to be called for that output filter.
- *
  * qsGetBuffer() must be called before qsOutput().
  *
- * qsOutputs() must be called in a filter module input() function in order
+ * qsOutput() must be called in a filter module input() function in order
  * to have output to another filter module.
  *
- * \param lens the length in bytes to advance the output buffer.  len may be
- * 0 to cause the corresponding output filters input() functions to be
+ * \param lens the length in bytes to advance the output buffer.  len may
+ * be 0 to cause the corresponding output filters input() functions to be
  * called with an input length of 0.  Setting len to QS_NONE to stop the
  * corresponding output filters input() functions from being called.
  * Passing a len value of 0 will still trigger a call the listed output
@@ -261,12 +246,6 @@ void **qsGetBuffers(size_t maxLens[]);
  */
 extern
 void qsOutput(uint32_t outputPortNum, size_t len);
-
-
-/** write data to
- */
-extern
-void qsOutputs(size_t lens[]);
 
 
 
@@ -290,15 +269,6 @@ void qsOutputs(size_t lens[]);
 extern
 void qsAdvanceInput(size_t lens[]);
 
-
-/** Set the buffer input read threshold
- *
- * qsSetInputThreshold() may only be called in filters start() function.
- *
- * \param points to an array of length inputPortNums
- */
-extern
-void qsSetInputThreshold(size_t lens[]);
 
 
 /** Set the maximum buffer input read size passed to input()

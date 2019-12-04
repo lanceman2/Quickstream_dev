@@ -6,7 +6,8 @@ topdir := ../../..
 
 
 # WEB_DOCS_TARGET_DIR directory may be a git clone of
-# https://github.com:lanceman2/quickstream.doc.git
+# https://github.com:lanceman2/quickstream.doc.git or
+# git@github.com:lanceman2/quickstream.doc
 #
 # It's just so that we can push binary image files to the github.com web
 # pages.  It's a different repo then
