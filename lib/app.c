@@ -113,68 +113,66 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
 }
 
 
-// This prints the connections from the outputs through the writer to the
+// This prints the connections from the outputs through the buffer to the
 // inputs.  At this point the outputs have a location in the filters in
-// the graph.  TODO: add a thing that differentiates writers and buffers;
-// without "pass-through" buffers the writer and the buffer are one to
-// one.
-static inline void
-PrintStreamFilter2(struct QsFilter *filter, uint32_t numBuffers, FILE *file) {
+// the graph.
+static inline uint32_t
+PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
+        FILE *file) {
 
     filter->mark = false; // Mark this filter looked at (graphed).
 
-    uint32_t numWriters = 0;
-
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
 
-        struct QsWriter *writer = filter->outputs[i].writer;
-        // See if we've looked at this writer before now.
+        struct QsBuffer *buffer = filter->outputs[i].buffer;
+        // See if we've looked at this buffer before now.
         for(uint32_t j=0; j<i; ++j)
-            if(writer == filter->outputs[j].writer)
-                // We have looked at this writer before in this i loop
+            if(buffer == filter->outputs[j].buffer)
+                // We have looked at this buffer before in this i loop
                 // so we can skip it now.
                 continue;
 
-        // So now this writer has not been graphed yet.  We draw all the
+        // So now this buffer has not been graphed yet.  We draw all the
         // outputs channels to it and all the input channels from it.  All
         // the output nodes have been defined in the PrintStreamFilter1()
         // call before this.
         //
-        fprintf(file, "\n");
-        for(uint32_t j=0; j<filter->numOutputs; ++j) {
-            // Define the writer graph node.
-            //
-            // TODO: Add a check if buffer is shared between more than one
-            // writer, and if so label and draw it differently.
-            //
-            fprintf(file, "    node [shape=\"parallelogram\","
-                    "color=\"red\", label=\"buffer %" PRIu32 "\"];"
-                    " \"%s_writer_%" PRIu32 "\";\n",
-                    numBuffers++,
-                    filter->name, numWriters);
 
-            if(writer == filter->outputs[j].writer) {
+        // Define the buffer graph node.
+        //
+        fprintf(file, "\n    node [shape=\"parallelogram\","
+                "color=\"red\", label=\"buffer %" PRIu32 "\"];"
+                " \"%s_writer_%" PRIu32 "\";\n",
+                numBuffers,
+                filter->name, numBuffers);
+
+        for(uint32_t j=0; j<filter->numOutputs; ++j) {
+            //
+            // For all outputs that use this buffer:
+            //
+            if(buffer == filter->outputs[j].buffer) {
                 
                 // Add to graph the two edges:
 
-                // output -> writer;
+                // output -> buffer;
                 fprintf(file,"    "
                         "\"%s_output_%" PRIu32 "\" -> "
                         "\"%s_writer_%" PRIu32 "\";\n",
                         filter->name, j,
-                        filter->name, numWriters);
+                        filter->name, numBuffers);
 
-                // writer -> input;
+                // buffer -> input;
                 fprintf(file,"    "
                         "\"%s_writer_%" PRIu32 "\" -> "
                         "\"%s\" [label=\"input %" PRIu32 "\"];\n",
-                        filter->name, numWriters,
+                        filter->name, numBuffers,
                         filter->outputs[j].filter->name,
-                        filter->outputs[j].inputChannelNum);
+                        filter->outputs[j].inputPortNum);
             }
         }
-
-        ++numWriters;
+        // Count this buffer:
+        //
+        ++numBuffers;
     }
 
     // Recurse
@@ -182,7 +180,10 @@ PrintStreamFilter2(struct QsFilter *filter, uint32_t numBuffers, FILE *file) {
         // Skip unmarked filters.
         if(filter->outputs[i].filter->mark)
             // Recurse
-            PrintStreamFilter2(filter->outputs[i].filter, numBuffers, file);
+            numBuffers = PrintStreamFilterBuffer(filter->outputs[i].filter,
+                    numBuffers, file);
+
+    return numBuffers; // So we tally up the number of buffers.
 }
 
 
@@ -214,7 +215,7 @@ PrintStreamDetail(struct QsStream *s,
     // Mark all the filters as needing to be looked at.
     StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
-        PrintStreamFilter2(s->sources[i], 0, file);
+        PrintStreamFilterBuffer(s->sources[i], 0, file);
 
     fprintf(file, "  }\n");
 }
@@ -257,6 +258,7 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         if(l == QSPrintOutline || !s->sources)
             PrintStreamOutline(s, sNum++, clusterNum++, file);
         else
+            // More verbose print.
             PrintStreamDetail(s, sNum++, clusterNum++, file);
     }
 

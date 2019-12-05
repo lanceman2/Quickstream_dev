@@ -12,7 +12,7 @@
 #include "../include/qsfilter.h"
 #include "./debug.h"
 
-
+#if 0
 static inline void
 AdvanceWritePtr(struct QsOutput *output, size_t len) {
 
@@ -46,3 +46,4 @@ AdvanceReadPtr(struct QsOutput *output, size_t len) {
     else
         output->readPtr += len - buffer->mapLength;
 }
+#endif

@@ -54,7 +54,7 @@ struct QsThread {
 
 
 //#define QS_STREAM_DEFAULTMAXTHTREADS (8)
-#define QS_STREAM_DEFAULTMAXTHTREADS (0)
+#define _QS_STREAM_DEFAULTMAXTHTREADS (0)
 
 // bit Flags for the stream
 //

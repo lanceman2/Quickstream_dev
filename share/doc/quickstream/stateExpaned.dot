@@ -23,6 +23,7 @@ digraph {
     }
 
     start -> flow;
+    flow -> flow;
     flow -> flush;
     flow -> stop;
     flush -> stop;

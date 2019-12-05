@@ -34,7 +34,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     struct QsStream *s = calloc(1, sizeof(*s));
     ASSERT(s, "calloc(1, %zu) failed", sizeof(*s));
-
+    s->maxThreads = _QS_STREAM_DEFAULTMAXTHTREADS;
     s->flags = _QS_STREAM_DEFAULTFLAGS;
 
     // Add this stream to the end of the app list
@@ -50,6 +50,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     return s;
 }
+
 
 void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
 
@@ -69,7 +70,14 @@ static inline void CleanupStream(struct QsStream *s) {
     DASSERT(s->numConnections || (
         s->from == 0 && s->to == 0), "");
 
-    if(s->sources) free(s->sources);
+    if(s->sources) {
+        DASSERT(s->numSources, "");
+#ifdef DEBUG
+        memset(s->sources, sizeof(*s->sources)*s->numSources);
+#endif
+        free(s->sources);
+    }
+
     if(s->numConnections) {
 
         DASSERT(s->from, "");
