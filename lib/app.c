@@ -36,12 +36,14 @@ int qsAppDestroy(struct QsApp *app) {
 
     DASSERT(app, "");
 
+    // Destroy the streams.  We assume they are not flowing.
+    while(app->streams) qsStreamDestroy(app->streams);
+
     // First cleanup filters in this app list
     struct QsFilter *f = app->filters;
     while(f) {
         struct QsFilter *nextF = f->next;
         // Destroy this filter f.
-
         FreeFilter(f);
         f = nextF;
     }

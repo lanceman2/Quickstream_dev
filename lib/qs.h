@@ -71,12 +71,12 @@ struct QsThread {
 // this is a stream state bit flag
 #define _QS_STREAM_LAUNCHED          (02)
 
-// By limiting the number of channels possible in or out we can use stack
-// allocation via alloca().
-#define QS_MAX_CHANNELS              ((uint32_t) (4*1024))
+// By limiting the number of channels possible, ports in or out we can use
+// stack allocation via alloca().
+#define QS_MAX_CHANNELS              ((uint32_t) (128))
 
-// So we don't run away mapping to much memory for ring-buffers.
-// We get trouble if we mmap() more than this.
+// So we don't run away mapping to much memory for ring-buffers.  There
+// just has to be some limit.
 #define QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
 
 
@@ -177,7 +177,6 @@ struct QsFilter {
 
     struct QsApp *app;       // This does not change
     struct QsStream *stream; // This stream can be changed
-    struct QsThread *thread; // thread/process that this filter will run in
 
     // name never changes after filter loading/creation pointer to
     // malloc()ed memory.
@@ -207,7 +206,7 @@ struct QsFilter {
     // stop
     ///////////////////////////////////////////////////////////////////////
 
-    
+
     // We define source as a filter with no input.  We will feed is zeros
     // when the stream is flowing.
     bool isSource;  // startup flag marking filter as a source
@@ -325,9 +324,8 @@ extern
 __thread struct QsInput {
 
     size_t len;
-    bool advanceInput_wasCalled;
+    bool advanceInputs_wasCalled;
     struct QsFilter *filter; // filter module having input() called.
-    uint32_t flowState;
 
 } _input;
 

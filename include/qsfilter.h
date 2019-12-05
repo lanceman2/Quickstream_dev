@@ -16,6 +16,10 @@
 #define QS_ARRAYTERM    ((uint32_t) -1)
 
 
+#define QS_ALLPORTS     ((uint32_t) -2)
+
+
+
 // Given the parameters in these data structures (QsOutput and QsBuffer)
 // the stream running code should be able to determine the size needed for
 // the associated circular buffers.
@@ -28,19 +32,19 @@
 // ways.
 
 
-#define QS_DEFAULT_INPUTTHRESHOLD  ((size_t) 1)
-#define QS_DEFAULT_MAXINPUT           ((size_t) 0) // not set
+#define QS_DEFAULT_INPUTTHRESHOLD   ((size_t) 1)
+#define QS_DEFAULT_MAXINPUT         ((size_t) 0) // not set
 
 
 /** get the default maximum length in bytes that may be written
  *
  * A filter that has output may set the maximum length in bytes that may
- * be written for a given qsOutput() call for a given output port
- * number.  If the value of the maximum length in bytes that may be
- * written was not set in the filter start() function it's value will be
- * QS_DEFAULT_maxWrite.
+ * be written for a given qsOutputs() and qsGetBuffer() calls for a given
+ * output port number.  If the value of the maximum length in bytes that
+ * may be written was not set in the filter start() function it's value
+ * will be QS_DEFAULT_maxWrite.
  */
-#define QS_DEFAULT_MAXWRITE   ((size_t) 1024)
+#define QS_DEFAULT_MAXWRITE         ((size_t) 1024)
 
 
 /** \file
@@ -227,7 +231,7 @@ void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
  *
  * This stores the current buffer write offset by length len bytes.
  *
- * qsGetBuffer() must be called before qsOutput().
+ * qsGetBuffer() must be called before qsOutputs().
  *
  * qsOutput() must be called in a filter module input() function in order
  * to have output to another filter module.
@@ -245,7 +249,7 @@ void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
  * all the sharing output ports will also be used.
  */
 extern
-void qsOutput(uint32_t outputPortNum, size_t len);
+void qsOutputs(size_t lens[]);
 
 
 
@@ -267,7 +271,7 @@ void qsOutput(uint32_t outputPortNum, size_t len);
  * the input() call.  len greater than the input length will be clipped.
  */
 extern
-void qsAdvanceInput(size_t lens[]);
+void qsAdvanceInputs(size_t lens[]);
 
 
 
@@ -289,7 +293,7 @@ void qsAdvanceInput(size_t lens[]);
  * number.
  */ 
 extern
-void qsSetInputMax(size_t *lens);
+void qsSetInputMax(size_t lens[]);
 
 
 
@@ -417,43 +421,6 @@ size_t qsOptsGetSizeT(int argc, const char **argv,
 extern
 int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
         uint32_t defaultVal);
-
-//In ../share/doc/quickstream/Doxyfile.in
-// PREDEFINED = DOXYGEN_SHOULD_SKIP_THIS
-//
-// makes doxygen exclude documenting from here
-//
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-// Unfortunately for performance we must expose these macros as user
-// interfaces.  We are just avoiding dereferencing a pointer, but it will
-// likely be happening at every call to input() at least in source
-// filters.
-
-// flow state bit flags
-//
-#  define _QS_LASTPACKAGE  01
-//# define _QS_BLA_BLA_BLA  02
-
-
-#endif // #ifndef DOXYGEN_SHOULD_SKIP_THIS  too here.
-
-
-/** \todo redo this ...
- *
- * This function is only relevant when called in a filters input()
- * function.
- *
- *  /returns true if this is the last length of data to be input
- *  for a given input port number.
- *
- *  \see input()
- */
-static inline bool qsIsLastPackage(uint32_t state) {
-    return _QS_LASTPACKAGE && state;
-};
-
-
 
 
 #ifdef __cplusplus

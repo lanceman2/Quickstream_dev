@@ -29,8 +29,9 @@
 #ifndef __qsapp_h__
 #  error "qsapp.h needs to be included before this file."
 #endif
+
 #ifndef __debug_h__
-#  error "qsapp.h needs to be included before this file."
+#  error "debug.h needs to be included before this file."
 #endif
 
 
@@ -185,4 +186,3 @@ struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
 
     return f;
 }
-
