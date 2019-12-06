@@ -16,7 +16,10 @@
 #define QS_ARRAYTERM    ((uint32_t) -1)
 
 
-#define QS_ALLPORTS     ((uint32_t) -2)
+#define QS_ALLPORTS     ((uint32_t *) -2)
+
+
+#define QS_NONE         ((size_t) -1)
 
 
 
@@ -32,7 +35,6 @@
 // ways.
 
 
-#define QS_DEFAULT_INPUTTHRESHOLD   ((size_t) 1)
 #define QS_DEFAULT_MAXINPUT         ((size_t) 0) // not set
 
 
@@ -233,33 +235,29 @@ void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
  *
  * qsGetBuffer() must be called before qsOutputs().
  *
- * qsOutput() must be called in a filter module input() function in order
+ * qsOutputs() must be called in a filter module input() function in order
  * to have output to another filter module.
  *
- * \param lens the length in bytes to advance the output buffer.  len may
- * be 0 to cause the corresponding output filters input() functions to be
- * called with an input length of 0.  Setting len to QS_NONE to stop the
+ * \param lens array of lengths in bytes to advance the output buffers.
+ * length may be 0 to cause the corresponding output filters input() functions to be
+ * called with an input length of 0.  Setting a length to QS_NONE to stop the
  * corresponding output filters input() functions from being called.
  * Passing a len value of 0 will still trigger a call the listed output
  * filters input() function with an input length of 0, like it was a
  * source filter.
- *
- * \param outputPortNum is the associated output port.  If the buffer
- * of this output port is shared between other output ports than
- * all the sharing output ports will also be used.
  */
 extern
-void qsOutputs(size_t lens[]);
+void qsOutputs(const size_t lens[]);
 
 
 
 /** Advance the current buffer input len bytes
  *
- * qsAdvanceInput() can only be called in a filter input() function.
+ * qsAdvanceInputs() can only be called in a filter input() function.
  *
  * In order to advance the input buffer a length that is not the length
- * that was passed into the input() call, this qsAdvanceInput() function
- * must be called in the input() function.  If qsAdvanceInput() is not
+ * that was passed into the input() call, this qsAdvanceInputs() function
+ * must be called in the input() function.  If qsAdvanceInputs() is not
  * called in input() than the input buffer will automatically be advanced
  * the length that was passed to input().
  *
@@ -271,7 +269,7 @@ void qsOutputs(size_t lens[]);
  * the input() call.  len greater than the input length will be clipped.
  */
 extern
-void qsAdvanceInputs(size_t lens[]);
+void qsAdvanceInputs(const size_t lens[]);
 
 
 
@@ -281,7 +279,7 @@ void qsAdvanceInputs(size_t lens[]);
  * amount.  This is not required to be set because an input ports
  * buffer advancement may be set to any amount that is less than of equal
  * to the amount sent in the call to the corresponding filters input()
- * call via the accumulation of qsAdvanceInput() function calls.
+ * call via the accumulation of qsAdvanceInputs() function calls.
  *
  * qsSetInputMax() may only be called in filters start() function.
  *
@@ -293,7 +291,7 @@ void qsAdvanceInputs(size_t lens[]);
  * number.
  */ 
 extern
-void qsSetInputMax(size_t lens[]);
+void qsSetInputMax(const size_t lens[]);
 
 
 
@@ -317,7 +315,7 @@ void qsSetInputMax(size_t lens[]);
  * which is terminated with a value QS_ARRAYTERM.
  */
 extern
-void qsBufferCreate(size_t maxWriteLen, uint32_t *outputPortNums);
+void qsBufferCreate(size_t maxWriteLen, const uint32_t outputPortNums[]);
 
 
 

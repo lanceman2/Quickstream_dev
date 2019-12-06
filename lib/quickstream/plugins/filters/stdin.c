@@ -16,28 +16,35 @@ void help(FILE *f) {
 }
 
 
-int input(const void *buffer[], const size_t len[],
+static const size_t OutLen = 1024;
+
+
+int input(const void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInputs, uint32_t numOutputs) {
 
     // We'll assume there is no input data.
-    DASSERT(len == 0, "");
+    DASSERT(numInputs == 0, "");
 
     // For output buffering.
-    buffer = qsGetBuffer(0);
-    len = 1;
+    void *buffer = qsGetBuffer(0, OutLen);
 
     // TODO: handle the stream closing.
 
     enum QsFilterInputReturn ret = QsFContinue;
 
-    size_t rd = fread(buffer, 1, len, stdin);
+    // Put data in the output buffer.
+    size_t rd = fread(buffer, 1, OutLen, stdin);
 
     if(feof(stdin)) { ret = QsFFinished; }
 
     // Output to all output channels
-    if(rd)
-        qsOutput(rd, 0);
+    if(rd) {
+        size_t outLens[numOutputs];
+        for(uint32_t i=0; i<numOutputs; ++i)
+            outLens[i] = rd;
+        qsOutputs(outLens);
+    }
 
-    return ret; // success
+    return ret;
 }

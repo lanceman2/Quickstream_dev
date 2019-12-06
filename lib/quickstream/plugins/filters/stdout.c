@@ -10,12 +10,15 @@ void help(FILE *f) {
     // TODO: add a buffer size to flush option.
 }
 
+int input(const void *buffers[], const size_t lens[],
+        const bool isFlushing[],
+        uint32_t numInPorts, uint32_t numOutPorts) {
 
-int input(void *buffer, size_t len, uint32_t inputChannelNum,
-        uint32_t flowState) {
+    DASSERT(lens, "");
+    DASSERT(lens[0], "");
+    DASSERT(numInPorts, "");
 
-    DASSERT(len, "");
-    fwrite(buffer, 1, len, stdout);
+    fwrite(buffers[0], 1, lens[0], stdout);
     fflush(stdout);
 
     return 0; // success

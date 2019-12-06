@@ -263,7 +263,8 @@ static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
     if(f->numOutputs) {
-        FreeRingBuffersAndWriters(f);
+        UnmapRingBuffers(f);
+        FreeBuffers(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
 #endif
@@ -349,13 +350,13 @@ static uint32_t CountFilterPath(struct QsStream *s,
 }
 
 
-#define _INVALID_ChannelNum  ((uint32_t) -1)
+#define _INVALID_PortNum  ((uint32_t) -1)
 
 
-// The output needs to have the input channel number that the filter they
+// The output needs to have the input port number that the filter they
 // are feeding sees.
 static void
-CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
+CalculateFilterInputPortNums(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t i=0; i<f->numOutputs; ++i)
         f->outputs[i].inputPortNum = f->outputs[i].filter->numInputs++;
@@ -363,31 +364,11 @@ CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsFilter *nextF = f->outputs[i].filter;
         if(nextF->numOutputs > 0 &&
-                nextF->outputs[0].inputPortNum == _INVALID_ChannelNum)
-            CalculateFilterInputChannelNums(s, nextF);
+                nextF->outputs[0].inputPortNum == _INVALID_PortNum)
+            CalculateFilterInputPortNums(s, nextF);
     }
 }
 
-
-// Allocate the input() args like buffers[] by following filter outputs.
-static void
-CreateFilterInputArgs(struct QsStream *s, struct QsFilter *f) {
-
-    DASSERT(f->numInputs, "");
-
-    f->buffers = calloc(f->numInputs, sizeof(*f->buffers));
-    ASSERT(f->buffers, "calloc(%" PRIu32 ",%zu) failed",
-            f->numInputs, sizeof(*f->buffers));
-    f->lens = calloc(f->numInputs, sizeof(*f->lens));
-    ASSERT(f->buffers, "calloc(%" PRIu32 ",%zu) failed",
-            f->numInputs, sizeof(*f->lens));
-
-    for(uint32_t i=0; i<f->numOutputs; ++i) {
-        struct QsFilter *nextF = f->outputs[i].filter;
-        if(nextF->buffers == 0)
-            CreateFilterInputArgs(s, nextF);
-    }
-}
 
 
 static
@@ -428,10 +409,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].filter = s->to[i];
 
         // initialize to a known invalid value, so we can see later.
-        f->outputs[j].inputPortNum = _INVALID_ChannelNum;
+        f->outputs[j].inputPortNum = _INVALID_PortNum;
 
         // Set some possibly non-zero default values:
-        f->outputs[j].inputThreshold = QS_DEFAULT_INPUTTHRESHOLD;
         f->outputs[j].maxInput = QS_DEFAULT_MAXINPUT;
         // All other values in the QsOutput will start at 0.
 
@@ -473,7 +453,7 @@ uint32_t qsStreamFlow(struct QsStream *s) {
 
     }
 
-    return s->flowState;
+    return 0;
 }
 
 
@@ -588,15 +568,22 @@ int qsStreamReady(struct QsStream *s) {
         return -1; // error no sources
     }
 
-    s->sources = malloc(s->numSources*sizeof(*s->sources));
-    ASSERT(s->sources, "malloc(,%zu) failed",
+    s->sources = calloc(1, s->numSources*sizeof(*s->sources));
+    ASSERT(s->sources, "calloc(1,%zu) failed", 
             s->numSources*sizeof(*s->sources));
 
     // Get a pointer to the source filters.
     uint32_t j = 0;
     for(uint32_t i=0; i < s->numConnections; ++i)
-        if(s->from[i]->isSource)
-            s->sources[j++] = s->from[i];
+        if(s->from[i]->isSource) {
+            uint32_t k=0;
+            for(;k<j; ++k)
+                if(s->sources[k] == s->from[i])
+                    break;
+            if(k == j)
+                // s->from[i] was not in the s->sources[] so add it.
+                s->sources[j++] = s->from[i];
+        }
 
     DASSERT(j == s->numSources, "");
 
@@ -635,22 +622,19 @@ int qsStreamReady(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs > 0 &&
                 s->sources[i]->outputs[0].inputPortNum ==
-                _INVALID_ChannelNum)
-            CalculateFilterInputChannelNums(s, s->sources[i]);
+                _INVALID_PortNum)
+            CalculateFilterInputPortNums(s, s->sources[i]);
 
 
     /**********************************************************************
-     *      Stage: Set up filter input() arguments in filter struct
+     *     Stage: Malloc output::buffer structures
      *********************************************************************/
 
-    for(uint32_t i=0; i<s->numSources; ++i) {
-        uint32_t jLimit = s->sources[i]->numOutputs;
-        for(j=0; j<jLimit; ++j) {
-            struct QsFilter *f = s->sources[i]->outputs[j].filter;
-            if(f->buffers == 0)
-                CreateFilterInputArgs(s, f);
-        }
-    }
+    // Now allocate all the output->buffer for every filter.
+    //
+    for(uint32_t i=0; i<s->numSources; ++i)
+        // It easier to now because the f->outputs are more setup now.
+        AllocateBuffers(s->sources[i]);
 
 
     /**********************************************************************
@@ -682,7 +666,7 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: Allocate flow buffers
+     *     Stage: mmap() ring buffers to memory
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten
@@ -690,9 +674,7 @@ int qsStreamReady(struct QsStream *s) {
     // memory that is the conveyor belt between filters.  We follow every
     // path (connection) in the stream:
     for(uint32_t i=0; i<s->numSources; ++i)
-        // It easier to now because the f->outputs are more setup now.
-        // If not we setup buffering connectivity defaults.
-        AllocateRingBuffers(s->sources[i]);
+        MapRingBuffers(s->sources[i]);
 
 
     return 0; // success

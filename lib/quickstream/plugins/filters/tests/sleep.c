@@ -1,8 +1,8 @@
-// This tests all the callbacks: help(), construct(), destroy(), start(),
-// stop() and input().  Only help() and input() are required.
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
+#define QS_FILTER_NAME_CODE
 #include "../../../../../include/qsfilter.h"
 #include "../../../../../lib/debug.h"
 
@@ -11,80 +11,101 @@ static int count = 0;
 #endif
 
 
-// TODO: Add command line options.
-
 //static unsigned int usecs = 200000; // 1 micro second = 1s/1,000,000
 static unsigned int usecs = 0; // 1 micro second = 1s/1,000,000
+static double seconds = 0;
 
-#if 0
 void help(FILE *f) {
-    fprintf(f, "the test filter module that sleeps\n");
-
+    fprintf(f,
+        "test filter module that copies all input to each output and sleeps\n"
+        "\n"
+        "                       OPTIONS\n"
+        "\n"
+        "      --maxRead BYTES       default value %zu\n"
+        "\n"
+        "      --maxWrite BYTES      default value %zu\n"
+        "\n"
+        "\n    --period SEC         default value %lf seconds\n"
+        "\n"
+        "\n",
+        QS_DEFAULT_MAXINPUT,
+        QS_DEFAULT_MAXWRITE,
+        seconds
+        );
 }
-#endif
+
+
+static size_t maxRead, maxWrite;
 
 
 int construct(int argc, const char **argv) {
 
-    DSPEW("count=%d", count++);
+    DSPEW();
+
+    maxRead = qsOptsGetSizeT(argc, argv,
+            "maxRead", QS_DEFAULT_MAXINPUT);
+    maxWrite = qsOptsGetSizeT(argc, argv,
+            "maxWrite", QS_DEFAULT_MAXWRITE);
+    seconds = qsOptsGetSizeT(argc, argv,
+            "period", QS_DEFAULT_MAXWRITE);
+
+    usecs = seconds * 1000000;
+
+    if(usecs < 1.0e-7)
+        usecs = 0;
+
     return 0; // success
 }
 
 
-int destroy(void) {
+int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
-    DSPEW("count=%d", count++);
+    ASSERT(numInPorts, "");
+    ASSERT(numOutPorts, "");
+    ASSERT(numInPorts == numOutPorts, "");
+
+
+    DSPEW("BASE_FILE=%s", __BASE_FILE__);
+
+    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
+            count++, numInPorts, numOutPorts);
+
+    // We needed a start() to check for this error.
+    if(!numInPorts || !numOutPorts) {
+        ERROR("There must be 1 or more inputs and 1 or more outputs.\n");
+        return 1;
+    }
+
+    size_t lens[numOutPorts];
+    for(uint32_t i=0;i<numInPorts;++i)
+        lens[i] = maxRead;
+    qsSetInputMax(lens);
+
+    uint32_t ports[2];
+    ports[1] = QS_ARRAYTERM;
+    for(uint32_t i=0;i<numInPorts;++i) {
+        ports[0] = i;
+        qsBufferCreate(maxWrite, ports);
+    }
+
     return 0; // success
 }
 
 
-int input(void *buffer, size_t len, uint32_t inputChannelNum,
-        uint32_t flowState) {
-
-    DASSERT(len, "");
+int input(const void *buffers[], const size_t lens_in[],
+        const bool isFlushing[],
+        uint32_t numInPorts, uint32_t numOutPorts) {
 
     // The filter module's stupid action, sleep.
     if(usecs)
         usleep(usecs);
 
-    // For output buffering.  By this module using default buffering this
-    // will be all the output buffers for all output channels.
-    void *oBuffer = qsGetBuffer(0);
+    qsAdvanceInputs(lens_in);
 
-    // Input and output must be the same length so we use the lesser of
-    // the two lengths.
-    if(QS_DEFAULT_MAXWRITE < len) {
-        len = QS_DEFAULT_MAXWRITE;
-        qsAdvanceInput(len);
-    }
+    for(uint32_t i=0; i<numInPorts; ++i)
+        memcpy(qsGetBuffer(i, lens_in[i]), buffers[i], lens_in[i]);
 
-    // TODO: change this to a pass-through.
-
-    memcpy(oBuffer, buffer, len);
-
-    qsOutput(len, 0);
+    qsOutputs(lens_in);
 
     return 0; // success
 }
-
-
-int start(uint32_t numInChannels, uint32_t numOutChannels) {
-
-    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
-            count++, numInChannels, numOutChannels);
-
-    if(!numInChannels || !numOutChannels) {
-        ERROR("There must be at least 1 input and 1 output.\n");
-        return 1;
-    }
-
-    return 0; // success
-}
-
-
-int stop(uint32_t numInChannels, uint32_t numOutChannels) {
-
-    DSPEW("count=%d", count++);
-    return 0; // success
-}
-

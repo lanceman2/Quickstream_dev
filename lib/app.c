@@ -151,20 +151,21 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
             // For all outputs that use this buffer:
             //
             if(buffer == filter->outputs[j].buffer) {
-                
+
                 // Add to graph the two edges:
 
                 // output -> buffer;
                 fprintf(file,"    "
                         "\"%s_output_%" PRIu32 "\" -> "
-                        "\"%s_writer_%" PRIu32 "\";\n",
+                        "\"%s_writer_%" PRIu32 "\""
+                        " [label=\"%" PRIu32 "\"];\n",
                         filter->name, j,
-                        filter->name, numBuffers);
+                        filter->name, numBuffers, j);
 
                 // buffer -> input;
                 fprintf(file,"    "
                         "\"%s_writer_%" PRIu32 "\" -> "
-                        "\"%s\" [label=\"input %" PRIu32 "\"];\n",
+                        "\"%s\" [label=\"%" PRIu32 "\"];\n",
                         filter->name, numBuffers,
                         filter->outputs[j].filter->name,
                         filter->outputs[j].inputPortNum);

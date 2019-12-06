@@ -246,11 +246,8 @@ struct QsOutput {  // points to reader filters
     // in it's input(,,portNum,) call.
     uint32_t inputPortNum;
 
-    // ** Only the filter (and it's thread) that has a pointer to this
-    // output can read and write to the writePtr in this writer, at flow
-    // time.
-    // **
-    // 
+
+    //
     struct QsBuffer *buffer;
 
 
@@ -294,7 +291,7 @@ struct QsBuffer {  // all outputs have a circular buffer
     // Example getting readPtr: ptr = outputs[i]->readPtr
     // 
     // Just a little faster access to the outputs that use this buffer.
-    struct QsOutputs **outputs;
+    struct QsOutput **outputs;
 
     ///////////////////////////////////////////////////////////////////////
     // The rest of this structure stays constant while the stream is
@@ -341,13 +338,18 @@ struct QsFilter *_qsCurrentFilter;
 
 // These below functions are not API user interfaces:
 
+extern
+void AllocateBuffers(struct QsFilter *f);
 
 extern
-void AllocateRingBuffers(struct QsFilter *f);
+void FreeBuffers(struct QsFilter *f);
+
+extern
+void MapRingBuffers(struct QsFilter *f);
 
 
 extern
-void FreeRingBuffersAndWriters(struct QsFilter *f);
+void UnmapRingBuffers(struct QsFilter *f);
 
 extern
 int stream_run_0p_0t(struct QsStream *s);
@@ -356,25 +358,9 @@ int stream_run_0p_0t(struct QsStream *s);
 extern
 void *makeRingBuffer(size_t *len, size_t *overhang);
 
-
 extern
 void freeRingBuffer(void *x, size_t len, size_t overhang);
 
-
-extern
-void setupSendOutput(struct QsFilter *f);
-
-
-extern
-void unsetupSendOutput(struct QsFilter *f);
-
-
-extern
-void _qsOutput(size_t len, uint32_t outputPortNum);
-
-
-extern
-size_t GetReadLength(struct QsOutput *output);
 
 
 #if 0 // Not needed yet.
