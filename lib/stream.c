@@ -73,7 +73,7 @@ static inline void CleanupStream(struct QsStream *s) {
     if(s->sources) {
         DASSERT(s->numSources, "");
 #ifdef DEBUG
-        memset(s->sources, sizeof(*s->sources)*s->numSources);
+        memset(s->sources, 0, sizeof(*s->sources)*s->numSources);
 #endif
         free(s->sources);
     }
@@ -266,23 +266,12 @@ void FreeFilterRunResources(struct QsFilter *f) {
         FreeRingBuffersAndWriters(f);
 #ifdef DEBUG
         memset(f->outputs, 0, sizeof(*f->outputs)*f->numOutputs);
-        if(f->numInputs) {
-            memset(f->buffers, 0, sizeof(*f->buffers)*f->numInputs);
-            memset(f->lens, 0, sizeof(*f->lens)*f->numInputs);
-        }
 #endif
         free(f->outputs);
-        if(f->numInputs) {
-            free(f->buffers);
-            free(f->lens);
-        }
 #ifdef DEBUG
         f->outputs = 0;
 #endif
         f->numOutputs = 0;
-        f->buffers = 0;
-        f->lens = 0;
-        f->flowState = 0;
         f->isSource = false;
     }
 
@@ -369,12 +358,12 @@ static void
 CalculateFilterInputChannelNums(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t i=0; i<f->numOutputs; ++i)
-        f->outputs[i].inputChannelNum = f->outputs[i].filter->numInputs++;
+        f->outputs[i].inputPortNum = f->outputs[i].filter->numInputs++;
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsFilter *nextF = f->outputs[i].filter;
         if(nextF->numOutputs > 0 &&
-                nextF->outputs[0].inputChannelNum == _INVALID_ChannelNum)
+                nextF->outputs[0].inputPortNum == _INVALID_ChannelNum)
             CalculateFilterInputChannelNums(s, nextF);
     }
 }
@@ -439,7 +428,7 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].filter = s->to[i];
 
         // initialize to a known invalid value, so we can see later.
-        f->outputs[j].inputChannelNum = _INVALID_ChannelNum;
+        f->outputs[j].inputPortNum = _INVALID_ChannelNum;
 
         // Set some possibly non-zero default values:
         f->outputs[j].inputThreshold = QS_DEFAULT_INPUTTHRESHOLD;
@@ -640,12 +629,12 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *      Stage: Set up filter output connections inputChannelNum
+     *      Stage: Set up filter output connections inputPortNum
      *********************************************************************/
 
     for(uint32_t i=0; i<s->numSources; ++i)
         if(s->sources[i]->numOutputs > 0 &&
-                s->sources[i]->outputs[0].inputChannelNum ==
+                s->sources[i]->outputs[0].inputPortNum ==
                 _INVALID_ChannelNum)
             CalculateFilterInputChannelNums(s, s->sources[i]);
 
