@@ -627,17 +627,6 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: Malloc output::buffer structures
-     *********************************************************************/
-
-    // Now allocate all the output->buffer for every filter.
-    //
-    for(uint32_t i=0; i<s->numSources; ++i)
-        // It easier to now because the f->outputs are more setup now.
-        AllocateBuffers(s->sources[i]);
-
-
-    /**********************************************************************
      *      Stage: call all stream's filter start() if present
      *********************************************************************/
 
@@ -666,15 +655,26 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: mmap() ring buffers to memory
+     *     Stage: allocate default output buffers
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten
-    // from the filters' start() function.  Now we can allocated the
-    // memory that is the conveyor belt between filters.  We follow every
-    // path (connection) in the stream:
+    // from the filters' start() function.  Now we allocate any output
+    // buffers that have not been explicitly allocated from the filter
+    // start() calling qsBufferCreate().
+    //
+    StreamSetFilterMarks(s, false);
+    for(uint32_t i=0; i<s->numSources; ++i)
+        AllocateBuffer(s->sources[i]);
+
+
+    /**********************************************************************
+     *     Stage: mmap() ring buffers to memory
+     *********************************************************************/
+
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
+
 
 
     return 0; // success

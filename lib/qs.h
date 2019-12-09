@@ -80,6 +80,8 @@ struct QsThread {
 #define QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
 
 
+#define QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
+
 
 ///////////////////////////////////////////////////////////////////////////
 //                 THREAD SAFETY WARNING
@@ -339,7 +341,8 @@ struct QsFilter *_qsCurrentFilter;
 // These below functions are not API user interfaces:
 
 extern
-void AllocateBuffers(struct QsFilter *f);
+void AllocateBuffer(struct QsFilter *f);
+
 
 extern
 void FreeBuffers(struct QsFilter *f);
