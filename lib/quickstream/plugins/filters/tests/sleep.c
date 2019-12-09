@@ -92,6 +92,14 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
 }
 
 
+int stop(uint32_t numInPorts, uint32_t numOutPorts) {
+
+    DSPEW();
+
+    return 0; // success
+}
+
+
 int input(const void *buffers[], const size_t lens_in[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {

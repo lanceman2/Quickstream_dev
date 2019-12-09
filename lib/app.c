@@ -59,29 +59,32 @@ int qsAppDestroy(struct QsApp *app) {
 }
 
 
-static inline void
+static inline uint32_t
 PrintStreamOutline(struct QsStream *s,
         uint32_t sNum /*stream number*/,
         uint32_t clusterNum,
         FILE *file) {
 
+    DASSERT(s->numConnections || s->connections == 0, "");
+
     fprintf(file, "\n"
             "  subgraph cluster_%" PRIu32 " {\n"
             "    label=\"stream %" PRIu32 "\";\n\n",
-            clusterNum, sNum);
+            clusterNum++, sNum);
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->from[i], "");
-        DASSERT(s->from[i]->name, "");
-        DASSERT(s->to[i], "");
-        DASSERT(s->to[i]->name, "");
+        DASSERT(s->connections[i].from, "");
+        DASSERT(s->connections[i].from->name, "");
+        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].to->name, "");
         fprintf(file, "    \"%s\" -> \"%s\";\n",
-                s->from[i]->name, s->to[i]->name);
+                s->connections[i].from->name, s->connections[i].to->name);
     }
     fprintf(file, "  }\n");
+    return clusterNum;
 }
 
 
-static void
+static uint32_t
 PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
         FILE *file) {
 
@@ -90,7 +93,7 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
     fprintf(file, "\n"
         "    subgraph cluster_%" PRIu32 " {\n"
         "      label=\"%s\";\n\n",
-        clusterNum, filter->name);
+        clusterNum++, filter->name);
 
     fprintf(file, "      \"%s\" [label=\"input()\"];\n", filter->name);
 
@@ -107,9 +110,10 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
         // Skip unmarked filters.
         if(filter->outputs[i].filter->mark)
             // Recurse
-            PrintStreamFilter1(filter->outputs[i].filter,
-                    ++clusterNum, file);
+            clusterNum = PrintStreamFilter1(filter->outputs[i].filter,
+                    clusterNum, file);
 
+    return clusterNum;
 }
 
 
@@ -120,17 +124,20 @@ static inline uint32_t
 PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
         FILE *file) {
 
-    filter->mark = false; // Mark this filter looked at (graphed).
 
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
 
         struct QsBuffer *buffer = filter->outputs[i].buffer;
         // See if we've looked at this buffer before now.
-        for(uint32_t j=0; j<i; ++j)
+        uint32_t j;
+        for(j=0; j<i; ++j)
             if(buffer == filter->outputs[j].buffer)
                 // We have looked at this buffer before in this i loop
                 // so we can skip it now.
-                continue;
+                break;
+        if(j < i)
+            // We have drawn this buffer before.
+            continue;
 
         // So now this buffer has not been graphed yet.  We draw all the
         // outputs channels to it and all the input channels from it.  All
@@ -146,7 +153,7 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
                 numBuffers,
                 filter->name, numBuffers);
 
-        for(uint32_t j=0; j<filter->numOutputs; ++j) {
+        for(j=0; j<filter->numOutputs; ++j)
             //
             // For all outputs that use this buffer:
             //
@@ -170,11 +177,13 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
                         filter->outputs[j].filter->name,
                         filter->outputs[j].inputPortNum);
             }
-        }
+
         // Count this buffer:
         //
         ++numBuffers;
     }
+
+    filter->mark = false; // Mark this filter looked at (graphed).
 
     // Recurse
     for(uint32_t i=0; i<filter->numOutputs; ++i)
@@ -188,7 +197,7 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
 }
 
 
-static inline void
+static inline uint32_t
 PrintStreamDetail(struct QsStream *s,
         uint32_t sNum /*stream number*/,
         uint32_t clusterNum,
@@ -210,7 +219,7 @@ PrintStreamDetail(struct QsStream *s,
     // Mark all the filters as needing to be looked at.
     StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
-        PrintStreamFilter1(s->sources[i], clusterNum++, file);
+        clusterNum = PrintStreamFilter1(s->sources[i], clusterNum, file);
 
     /////////// pass 2
     // Mark all the filters as needing to be looked at.
@@ -219,6 +228,8 @@ PrintStreamDetail(struct QsStream *s,
         PrintStreamFilterBuffer(s->sources[i], 0, file);
 
     fprintf(file, "  }\n");
+
+    return clusterNum;
 }
 
 
@@ -257,10 +268,10 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
 
     for(struct QsStream *s = app->streams; s; s = s->next) {
         if(l == QSPrintOutline || !s->sources)
-            PrintStreamOutline(s, sNum++, clusterNum++, file);
+            clusterNum = PrintStreamOutline(s, sNum++, clusterNum, file);
         else
             // More verbose print.
-            PrintStreamDetail(s, sNum++, clusterNum++, file);
+            clusterNum = PrintStreamDetail(s, sNum++, clusterNum, file);
     }
 
     fprintf(file, "}\n");

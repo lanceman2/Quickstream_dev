@@ -61,12 +61,14 @@ void AllocateBuffer(struct QsFilter *f) {
             break;
 
     if(i != f->numOutputs) {
-
+        // We found some outputs without buffers.
+        //
         struct QsBuffer *buffer = calloc(1, sizeof(*buffer));
         ASSERT(buffer, "calloc(1, %zu) failed", sizeof(*buffer));
         buffer->mapLength = QS_DEFAULT_MAXWRITELEN;
         uint32_t numPorts = 0;
         for(uint32_t i=0; i<f->numOutputs;++i)
+            // Count the number of output ports that do not have a buffer.
             if(f->outputs[i].buffer == 0)
                 ++numPorts;
 

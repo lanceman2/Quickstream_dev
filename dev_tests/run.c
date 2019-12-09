@@ -18,6 +18,8 @@ static void catcher(int signum) {
 }
 
 
+
+
 int main(void) {
 
     signal(SIGSEGV, catcher);
@@ -27,6 +29,9 @@ int main(void) {
     struct QsApp *app = qsAppCreate();
     if(!app)
         return 1;
+
+
+
 
     const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
     struct QsFilter *f[10];
@@ -51,14 +56,22 @@ int main(void) {
         goto fail;
     if(qsStreamConnectFilters(s, f[i], f[2]))
         goto fail;
-     i++;
+
+
+    if(qsStreamConnectFilters(s, f[0], f[i]))
+        goto fail;
+    if(qsStreamConnectFilters(s, f[i], f[2]))
+        goto fail;
+
+
+    i++;
 
     qsStreamReady(s);
     
-    qsAppDisplayFlowImage(app, QSPrintDebug, false);
     qsAppPrintDotToFile(app, QSPrintDebug, stdout);
+    qsAppDisplayFlowImage(app, 0, false);
+    qsAppDisplayFlowImage(app, QSPrintDebug, false);
 
-    //qsStreamStart(s);
 
     qsAppDestroy(app);
 

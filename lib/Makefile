@@ -8,7 +8,9 @@ libquickstream.so_SOURCES :=\
  debug.c\
  opts.c\
  buffer.c\
+ flow.c\
  makeRingBuffer.c
+
 libquickstream.so_LDFLAGS := -lpthread -ldl -lrt
 # TODO: need to add something like: -export-symbols-regex '^qs'
 

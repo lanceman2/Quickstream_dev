@@ -67,8 +67,7 @@ static inline void CleanupStream(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    DASSERT(s->numConnections || (
-        s->from == 0 && s->to == 0), "");
+    DASSERT(s->numConnections || s->connections == 0, "");
 
     if(s->sources) {
         DASSERT(s->numSources, "");
@@ -80,16 +79,12 @@ static inline void CleanupStream(struct QsStream *s) {
 
     if(s->numConnections) {
 
-        DASSERT(s->from, "");
-        DASSERT(s->to, "");
+        DASSERT(s->connections, "");
 #ifdef DEBUG
-        memset(s->from, 0, sizeof(*s->from)*s->numConnections);
-        memset(s->to, 0, sizeof(*s->to)*s->numConnections);
+        memset(s->connections, 0, sizeof(*s->connections)*s->numConnections);
 #endif
-        free(s->from);
-        free(s->to);
-
-        s->from = s->to = 0;
+        free(s->connections);
+        s->connections = 0;
         s->numConnections = 0;
     }
 #ifdef DEBUG
@@ -103,18 +98,19 @@ int qsStreamDestroy(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    DASSERT(s->numConnections || (
-        s->from == 0 && s->to == 0), "");
+    DASSERT(s->numConnections || s->connections == 0, "");
 
     // Remove this stream from all the filters in the listed connections.
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->from[i], "");
-        DASSERT(s->to[i], "");
-        DASSERT(s->from[i]->stream == s || s->from[i]->stream == 0, "");
-        DASSERT(s->to[i]->stream == s || s->to[i]->stream == 0, "");
+        DASSERT(s->connections[i].from, "");
+        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].from->stream == s ||
+                s->connections[i].from->stream == 0, "");
+        DASSERT(s->connections[i].to->stream == s ||
+                s->connections[i].to->stream == 0, "");
 
-        s->from[i]->stream = 0;
-        s->to[i]->stream = 0;
+        s->connections[i].from->stream = 0;
+        s->connections[i].to->stream = 0;
     }
 
     // Find and remove this stream from the app.
@@ -142,15 +138,18 @@ int qsStreamDestroy(struct QsStream *s) {
 }
 
 
-int qsStreamConnectFilters(struct QsStream *s,
-        struct QsFilter *from, struct QsFilter *to) {
+#define _QS_NEXTPORT  ((uint32_t) -2)
+
+
+static int _qsStreamConnectFilters(struct QsStream *s,
+        struct QsFilter *from, struct QsFilter *to,
+        uint32_t fromPortNum, uint32_t toPortNum) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
     DASSERT(from != to, "a filter cannot connect to itself");
     DASSERT(from, "");
     DASSERT(to, "");
-    DASSERT(from->app, "");
     DASSERT(to->app, "");
     DASSERT(from->app == s->app, "wrong app");
     DASSERT(to->app == s->app, "wrong app");
@@ -164,58 +163,92 @@ int qsStreamConnectFilters(struct QsStream *s,
         return 1;
     }
 
-    // Grow the from and to arrays
-    s->from = realloc(s->from, (s->numConnections+1)*sizeof(*s->from));
-    ASSERT(s->from, "realloc(,%zu) failed",
-            (s->numConnections+1)*sizeof(*s->from));
-    s->from[s->numConnections] = from;
-    s->to = realloc(s->to, (s->numConnections+1)*sizeof(*s->to));
-    ASSERT(s->to, "realloc(,%zu) failed",
-            (s->numConnections+1)*sizeof(*s->to));
-    s->to[s->numConnections] = to;
+    // Grow the connections array:
+    //
+    uint32_t numConnections = s->numConnections;
+    s->connections = realloc(s->connections,
+            (numConnections+1)*sizeof(*s->connections));
+    ASSERT(s->connections, "realloc(,%zu) failed",
+            (numConnections+1)*sizeof(*s->connections));
+    //
+    s->connections[numConnections].from = from;
+    s->connections[numConnections].to = to;
+    s->connections[numConnections].fromPortNum = fromPortNum;
+    s->connections[numConnections].toPortNum = toPortNum;
+    //
+    s->connections[numConnections].from->stream = s;
+    s->connections[numConnections].to ->stream = s;
+    //
     ++s->numConnections;
-
-    from->stream = s;
-    to->stream = s;
 
     return 0; // success
 }
 
 
+int qsStreamConnectFilters(struct QsStream *s,
+        struct QsFilter *from, struct QsFilter *to) {
+    return _qsStreamConnectFilters(s, from, to, _QS_NEXTPORT, _QS_NEXTPORT);
+}
+
+
+
+int qsStreamConnectFiltersWithPorts(struct QsStream *s,
+        struct QsFilter *from, struct QsFilter *to,
+        uint32_t fromPortNum, uint32_t toPortNum) {
+    return _qsStreamConnectFilters(s, from, to, fromPortNum, toPortNum);
+}
+
+
+
 static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
     DASSERT(s, "");
+    DASSERT(i < -1, "");
     DASSERT(s->numConnections > i, "");
 
     // This is how many connections there will be after this function
     --s->numConnections;
 
-    struct QsFilter *from = s->from[i];
-    struct QsFilter *to = s->to[i];
+    struct QsFilter *from = s->connections[i].from;
+    struct QsFilter *to = s->connections[i].to;
 
     DASSERT(from, "");
     DASSERT(to, "");
     DASSERT(from->stream == s, "");
     DASSERT(to->stream == s, "");
+    // Outputs should not be allocated yet.
+    DASSERT(from->outputs == 0, "");
+    DASSERT(to->outputs == 0, "");
+    DASSERT(from->numOutputs == 0, "");
+    DASSERT(to->numOutputs == 0, "");
+
+    if(s->numConnections == 0) {
+
+        // Singular case.  We have no connections anymore.
+        //
+        from->stream = 0;
+        to->stream = 0;
+        //
+        free(s->connections);
+        s->connections = 0;
+        return;
+    }
+
 
     // At index i shift all the connections back one, overwriting the i-th
     // one.
-    for(;i<s->numConnections; ++i) {
-        s->from[i] = s->from[i+1];
-        s->to[i] = s->to[i+1];
-    }
+    for(;i<s->numConnections; ++i)
+        s->connections[i] = s->connections[i+1];
 
-    // Shrink the "from" and "to" arrays by one
-    s->from = realloc(s->from, (s->numConnections)*sizeof(*s->from));
-    ASSERT(s->from, "realloc(,%zu) failed",
-            (s->numConnections)*sizeof(*s->from));
-    s->to = realloc(s->to, (s->numConnections)*sizeof(*s->to));
-    ASSERT(s->to, "realloc(,%zu) failed",
-            (s->numConnections)*sizeof(*s->to));
+    // Shrink the connections arrays by one
+    s->connections = realloc(s->connections,
+            (s->numConnections)*sizeof(*s->connections));
+    ASSERT(s->connections, "realloc(,%zu) failed",
+            (s->numConnections)*sizeof(*s->connections));
 
     // If this "from" filter is not in this stream mark it as such.
     for(i=0; i<s->numConnections; ++i)
-        if(s->from[i] == from || s->to[i] == from)
+        if(s->connections[i].from == from || s->connections[i].to == from)
             break;
     if(i==s->numConnections)
         // This "from" filter has no stream associated with it:
@@ -223,7 +256,7 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
     // If the "to" filter is not in this stream mark it as such.
     for(i=0; i<s->numConnections; ++i)
-        if(s->from[i] == to || s->to[i] == to)
+        if(s->connections[i].from == to || s->connections[i].to == to)
             break;
     if(i==s->numConnections)
         // This "to" filter has no stream associated with it:
@@ -231,19 +264,23 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 }
 
 
+
 int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(s, "");
     DASSERT(f, "");
     DASSERT(f->stream == s, "");
+    DASSERT(s->numConnections || s->connections == 0, "");
 
     bool gotOne = false;
 
     for(uint32_t i=0; i<s->numConnections;) {
-        DASSERT(s->from[i], "");
-        DASSERT(s->to[i], "");
-        DASSERT(s->to[i] != s->from[i], "");
-        if(s->from[i] == f || s->to[i] == f) {
+        DASSERT(s->connections, "");
+        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].from, "");
+        DASSERT(s->connections[i].to != s->connections[i].from, "");
+        //
+        if(s->connections[i].from == f || s->connections[i].to == f) {
             RemoveConnection(s, i);
             // s->numConnections just got smaller by one
             // and the current index points to the next
@@ -288,8 +325,8 @@ void FreeRunResources(struct QsStream *s) {
 
     for(int32_t i=0; i<s->numConnections; ++i) {
         // These can handle being called more than once per filter.
-        FreeFilterRunResources(s->from[i]);
-        FreeFilterRunResources(s->to[i]);
+        FreeFilterRunResources(s->connections[i].from);
+        FreeFilterRunResources(s->connections[i].to);
     }
 
 
@@ -334,10 +371,11 @@ static uint32_t CountFilterPath(struct QsStream *s,
     //
     for(uint32_t i=0; i<s->numConnections; ++i)
         // look for this source as a "from" filter
-        if(s->from[i] == f) {
+        if(s->connections[i].from == f) {
             uint32_t count =
                 // recurse
-                CountFilterPath(s, s->to[i], loopCount, maxCount);
+                CountFilterPath(s, s->connections[i].to,
+                        loopCount, maxCount);
             // this filter feeds the "to" filter.
             if(count > returnCount)
                 // We want the largest filter count in all paths.
@@ -382,7 +420,7 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     // count the number of filters that this filter connects to
     uint32_t i;
     for(i=0; i<s->numConnections; ++i) {
-        if(s->from[i] == f)
+        if(s->connections[i].from == f)
             ++f->numOutputs;
     }
 
@@ -401,12 +439,13 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
             f->numOutputs, sizeof(*f->outputs));
 
 
-    for(i=0; s->from[i] != f; ++i);
-    // s->from[i] == f
+    for(i=0; s->connections[i].from != f; ++i);
+    //
+    // now: s->connections[i].from == f
 
     for(uint32_t j=0; j<f->numOutputs;) {
 
-        f->outputs[j].filter = s->to[i];
+        f->outputs[j].filter = s->connections[i].to;
 
         // initialize to a known invalid value, so we can see later.
         f->outputs[j].inputPortNum = _INVALID_PortNum;
@@ -415,9 +454,9 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         f->outputs[j].maxInput = QS_DEFAULT_MAXINPUT;
         // All other values in the QsOutput will start at 0.
 
-        if(s->to[i]->numOutputs == 0)
+        if(s->connections[i].to->numOutputs == 0)
             // recurse.  Allocate children.
-            AllocateFilterOutputsFrom(s, s->to[i]);
+            AllocateFilterOutputsFrom(s, s->connections[i].to);
         ++j;
 
         if(j == f->numOutputs)
@@ -425,8 +464,8 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
             break;
 
         // go to next connection that is from this filter f
-        for(++i; s->from[i] != f; ++i);
-        DASSERT(s->from[i] == f, "");
+        for(++i; s->connections[i].from != f; ++i);
+        DASSERT(s->connections[i].from == f, "");
     }
 }
 
@@ -436,24 +475,14 @@ uint32_t qsStreamFlow(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    ASSERT(s->sources, "qsStreamReady() must be called before this");
+    ASSERT(s->sources, "qsStreamReady() and qsStreamLaunch() "
+            "must be called before this");
     ASSERT(s->flags & _QS_STREAM_LAUNCHED,
             "Stream has not been launched yet");
 
-    for(uint32_t i=0; i<s->numSources; ++i) {
-        DASSERT(s->sources[i],"");
-        struct QsFilter *filter = s->sources[i];
-        DASSERT(filter,"");
-        DASSERT(filter->input, "");
+    DASSERT(s->flow, "");
 
-        // TODO:  FLOW
-
-        // Check stream 
-
-
-    }
-
-    return 0;
+    return s->flow(s);
 }
 
 
@@ -508,6 +537,8 @@ int qsStreamStop(struct QsStream *s) {
 
     FreeRunResources(s);
 
+    s->flow = 0;
+
 
     return 0; // success ??
 }
@@ -544,10 +575,10 @@ int qsStreamReady(struct QsStream *s) {
 
     for(uint32_t i=0; i < s->numConnections; ++i) {
 
-        struct QsFilter *f = s->from[i];
+        struct QsFilter *f = s->connections[i].from;
         uint32_t j=0;
         for(; j<s->numConnections; ++j) {
-            if(s->to[j] == f)
+            if(s->connections[j].to == f)
                 // f is not a source
                 break;
         }
@@ -575,14 +606,15 @@ int qsStreamReady(struct QsStream *s) {
     // Get a pointer to the source filters.
     uint32_t j = 0;
     for(uint32_t i=0; i < s->numConnections; ++i)
-        if(s->from[i]->isSource) {
+        if(s->connections[i].from->isSource) {
             uint32_t k=0;
             for(;k<j; ++k)
-                if(s->sources[k] == s->from[i])
+                if(s->sources[k] == s->connections[i].from)
                     break;
             if(k == j)
-                // s->from[i] was not in the s->sources[] so add it.
-                s->sources[j++] = s->from[i];
+                // s->connections[i].from was not in the s->sources[] so
+                // add it.
+                s->sources[j++] = s->connections[i].from;
         }
 
     DASSERT(j == s->numSources, "");
@@ -674,6 +706,16 @@ int qsStreamReady(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
+
+
+    /**********************************************************************
+     *     Stage: set the flow function
+     *********************************************************************/
+
+    // TODO: vary this:
+    //
+    s->flow = singleThreadFlow;
+
 
 
 

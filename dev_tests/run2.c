@@ -27,56 +27,28 @@ int main(void) {
     INFO("hello quickstream version %s", QS_VERSION);
 
     struct QsApp *app = qsAppCreate();
-
-    const int numFilters = 10;
-
-    struct QsFilter *f[numFilters];
-
-    for(int i=0; i<numFilters; ++i)
-        if(!(f[i] = qsAppFilterLoad(app, "tests/sleep.so", 0, 0, 0))) {
-            qsAppDestroy(app);
-            return 1;
-        }
-
     struct QsStream *stream = qsAppStreamCreate(app);
-    if(!stream) {
-        qsAppDestroy(app);
-        return 1;
-    }
 
+    struct QsFilter *f0 = qsAppFilterLoad(app, "stdin", 0, 0, 0);
+    struct QsFilter *f1 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
+    struct QsFilter *f2 = qsAppFilterLoad(app, "stdout.so", 0, 0, 0);
+    qsStreamConnectFilters(stream, f0, f1);
+    qsStreamConnectFilters(stream, f1, f2);
 
-    for(int i=0; i<numFilters-1; ++i)
-        if(qsStreamConnectFilters(stream, f[i], f[i+1])) {
-            qsAppDestroy(app);
-            return 1;
-        }
-
-#if 1
-    qsFilterUnload(f[0]);
-
-
-    f[0] = qsAppFilterLoad(app, "stdin", 0, 0, 0);
-
-    qsStreamConnectFilters(stream, f[0], f[2]);
-    qsStreamConnectFilters(stream, f[0], f[3]);
-
-
-#endif
 
     qsStreamReady(stream);
 
-    qsAppDisplayFlowImage(app, 0, false);
+    qsAppDisplayFlowImage(app, 3, false);
 
     qsStreamLaunch(stream);
 
 
     qsStreamFlow(stream);
 
-
+    qsStreamStop(stream);
 
     qsAppDestroy(app);
 
-    qsFilterPrintHelp("stdin", stderr);
 
     WARN("SUCCESS");
 

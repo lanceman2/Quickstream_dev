@@ -92,6 +92,17 @@ struct QsThread {
 ///////////////////////////////////////////////////////////////////////////
 
 
+struct QsConnection {
+
+    struct QsFilter *from; // from filter
+    struct QsFilter *to;   // to filter
+
+    uint32_t fromPortNum; // output port number for from filter
+    uint32_t toPortNum;   // input port number for to filter
+};
+
+
+
 // Stream (QsStream) is the thing the manages a group of filters and their
 // flow state.  Since streams can add and remove filters when it is not
 // flowing the stream needs app to be a list of loaded filters for it.
@@ -108,6 +119,11 @@ struct QsStream {
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.  flags does not change at flow/run time, so we need
     // no mutex to access it.
+
+    // We can define and set different flow() function that run the flow
+    // graph different ways.  This function gets set in qsStreamReady().
+    //
+    uint32_t (*flow)(struct QsStream *s);
 
 
     //////////////////// STREAM MUTEX GROUP ///////////////////////////////
@@ -149,14 +165,14 @@ struct QsStream {
     struct QsFilter **sources; // array of filter sources
 
     // This list of filter connections is not used while the stream is
-    // running.  It's queried a stream start, and the QsFilter data
-    // structs are setup at startup.  The QsFilter data structures are
-    // used when the stream is running.
+    // running (flowing).  It's queried a stream start, and the QsFilter
+    // data structs are setup at startup.  The QsFilter data structures
+    // are used when the stream is running.
     //
     // tallied filter connections:
-    uint32_t numConnections;// length of "from" and "to" arrays
-    struct QsFilter **from; // array of filter pointers
-    struct QsFilter **to;   // array of filter pointers
+    uint32_t numConnections;// length of connections array
+    struct QsConnection *connections; // malloc()ed array of connections
+
 
     struct QsStream *next; // next stream in app list of streams
 };
@@ -365,6 +381,10 @@ extern
 void freeRingBuffer(void *x, size_t len, size_t overhang);
 
 
+extern
+uint32_t singleThreadFlow(struct QsStream *s);
+
+
 
 #if 0 // Not needed yet.
 // Set filter->mark = val for every filter in the app.
@@ -383,7 +403,7 @@ void StreamSetFilterMarks(struct QsStream *s, bool val) {
         for(uint32_t i=0; i<s->numSources; ++i)
             s->sources[i]->mark = val;
         for(uint32_t i=0; i<s->numConnections; ++i)
-            s->to[i]->mark = val;
+            s->connections[i].to->mark = val;
         return;
     }
 
@@ -391,7 +411,7 @@ void StreamSetFilterMarks(struct QsStream *s, bool val) {
     // found the source filters (sources) yet.  The filters are just
     // listed in the stream connection arrays, to[], and from[].
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        s->to[i]->mark = val;
-        s->from[i]->mark = val;
+        s->connections[i].to->mark = val;
+        s->connections[i].from->mark = val;
     }
 }
