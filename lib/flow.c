@@ -14,19 +14,33 @@
 
 uint32_t singleThreadFlow(struct QsStream *s) {
 
-
     for(uint32_t i=0; i<s->numSources; ++i) {
         DASSERT(s->sources[i],"");
-        struct QsFilter *filter = s->sources[i];
-        DASSERT(filter,"");
-        DASSERT(filter->input, "");
+        struct QsFilter *f = s->sources[i];
+        DASSERT(f,"");
+        DASSERT(f->input, "");
 
-        // TODO:  FLOW
+        // Get main thread specific data that we use in calls from
+        // f->input() to buffer access functions like: qsGetBuffer(),
+        // qsAdvanceInputs(), and qsOutputs().
+        //
+        struct QsInput *input = &s->app->input;
+        size_t len[f->numOutputs];
+        memset(input, 0, sizeof(*len)*f->numOutputs);
+        input->filter = f;
+        memset(len, 0, sizeof(*len)*f->numOutputs);
+        input->len = len;
 
-        // Check stream
+        int ret = f->input(0, 0, 0, f->numInputs, f->numOutputs);
 
-        DSPEW();
+        uint32_t isFlushing[f->numOutputs];
+        memset(isFlushing, 0, sizeof(isFlushing));
 
+        if(ret)
+            for(uint32_t i=0; i<f->numOutputs; ++i)
+                isFlushing[i] = true;
+
+        DSPEW("f=%p isFlushing[0]=%d", input->filter, isFlushing[0]);
     }
 
     return 0; // success

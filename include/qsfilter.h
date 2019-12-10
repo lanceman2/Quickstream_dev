@@ -239,12 +239,12 @@ void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
  * to have output to another filter module.
  *
  * \param lens array of lengths in bytes to advance the output buffers.
- * length may be 0 to cause the corresponding output filters input() functions to be
- * called with an input length of 0.  Setting a length to QS_NONE to stop the
- * corresponding output filters input() functions from being called.
- * Passing a len value of 0 will still trigger a call the listed output
- * filters input() function with an input length of 0, like it was a
- * source filter.
+ * length may be 0 to cause the corresponding output filters input()
+ * functions to be called with an input length of 0.  Setting a length to
+ * QS_NONE to stop the corresponding output filters input() functions from
+ * being called.  Passing a len value of 0 will still trigger a call the
+ * listed output filters input() function with an input length of 0, like
+ * it was a source filter.
  */
 extern
 void qsOutputs(const size_t lens[]);
@@ -264,9 +264,10 @@ void qsOutputs(const size_t lens[]);
  * This has no effect on output from the current filter.  This only
  * effects the current input port number that passed to input();
  *
- * \param lens advance the current input buffer lens bytes.  len can be less
- * than or equal to the corresponding length in bytes that was passed to
- * the input() call.  len greater than the input length will be clipped.
+ * \param lens advance the current input buffer lens bytes.  len can be
+ * less than or equal to the corresponding length in bytes that was passed
+ * to the input() call.  len greater than the input length will be
+ * clipped.
  */
 extern
 void qsAdvanceInputs(const size_t lens[]);

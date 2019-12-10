@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -eo pipefail
+
+in=$0.IN.tmp
+out=$0.OUT.tmp
+
+# dd count blocks  1 block = 512bytes
+
+dd if=/dev/urandom count=1 | hexdump > $in
+
+
+# This will call the tests/copy input() function lots more than all other
+# input() functions, checking the buffer advancement for the extreme case
+# with a single byte input() at a time.
+#
+../bin/quickstream -f stdin\
+ -f tests/copy [ --maxRead=7 ]\
+ -f stdout -c -R -d -r < $in
+
+#diff $in $out
+echo "$0 SUCCESS"

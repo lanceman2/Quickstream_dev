@@ -17,6 +17,27 @@
 // and avoid thread synchronization primitives, and other system calls.
 
 
+//
+// TODO: If an app makes a lot of threads that are not related to
+// quickstream, this could be wasteful, so we may want to allocate this.
+// Maybe these can be part of QsThread.
+//
+//
+// The current thread that corresponds with the filter who's input() is
+// being called now.
+//
+// This data struct is accessed via pthread_getspecific(app->key)
+//
+struct QsInput {
+
+    bool advanceInputs_wasCalled;
+    struct QsFilter *filter; // filter module having input() called.
+    size_t *len; // array of lengths that are read from the buffers.
+    uint32_t threadNum;
+};
+
+
+
 // App (QsApp) is the top level quickstream object.  It's a container for
 // filters and streams.  Perhaps there should only be one app in a
 // program, but we do not impose that.  There is no compelling reason to
@@ -34,6 +55,17 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
+
+
+    // input thingy that is seen in  qsGetBuffer(), qsAdvanceInputs(), and
+    // qsOutputs() for the main thread.
+    struct QsInput input;
+
+    // key used to get thread specific data for pthread that run flows.
+    //
+    // pthread_getspecific(app->key) returns a struct QsInput *input
+    //
+    pthread_key_t key;
 };
 
 
@@ -207,16 +239,31 @@ struct QsFilter {
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
     int (* input)(const void *buffer[], const size_t len[],
-            const uint32_t isFlushing[],
+            const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs);
 
 
     struct QsFilter *next; // next loaded filter in app list
 
-    // Set to true if this filter input() can be called by more than one
-    // thread at a time.
+
+    // This gets used at flow time to access writePtr, and all associated
+    // output::readPtr, for all outputs in this filter; then the filter
+    // that owns this buffer can run input() in more than one thread.  For
+    // thread safe filter input() functions; otherwise mutex=0.
     //
-    bool isThreadSafe;
+    pthread_mutex_t *mutex;
+    pthread_cond_t *cond;
+    //
+    // numThreads and lastThreadNum are accessed with mutex locked.
+    // threadNum is the number of threads currently calling
+    // filter->input().  nextThreadNum is the thread number of the next
+    // thread to call filter->input().  The leading thread number is
+    // then nextThreadNum - numThreads.   When a new thread calls
+    // filter->input() it's thread number will be nextThreadNum and then
+    // we add 1 to nextThreadNum.
+    //
+    uint32_t numThreads;
+    uint32_t nextThreadNum;
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -311,6 +358,7 @@ struct QsBuffer {  // all outputs have a circular buffer
     // Just a little faster access to the outputs that use this buffer.
     struct QsOutput **outputs;
 
+
     ///////////////////////////////////////////////////////////////////////
     // The rest of this structure stays constant while the stream is
     // flowing.
@@ -325,24 +373,6 @@ struct QsBuffer {  // all outputs have a circular buffer
     uint32_t refCount; // Number of writers pointing to this.
 };
 
-
-
-//
-// TODO: If an app makes a lot of threads that are not related to
-// quickstream, this could be wasteful, so we may want to allocate this.
-// Maybe these can be part of QsThread.
-//
-//
-// The current thread that corresponds with the filter who's input() is
-// being called now.
-extern
-__thread struct QsInput {
-
-    size_t len;
-    bool advanceInputs_wasCalled;
-    struct QsFilter *filter; // filter module having input() called.
-
-} _input;
 
 
 

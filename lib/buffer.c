@@ -107,24 +107,99 @@ void AllocateBuffer(struct QsFilter *f) {
 }
 
 
+// This is called when outputs exist, and after un-mapping memory.
+//
 void FreeBuffers(struct QsFilter *f) {
+    
+    DASSERT(f->outputs, "");
 
+    for(uint32_t i=0; i<f->numOutputs;++i) {
+        if(f->outputs[i].buffer) {
+            struct QsBuffer *b = f->outputs[i].buffer;
+            DASSERT(b->mem == 0, "");
+            // We just happen to keep a pointer back to output from the
+            // buffer structure, so we'll use it here to reach back and
+            // unset output->buffer before we free it.
+            struct QsOutput **outputs = b->outputs;
+            DASSERT(outputs, "");
+            // number of outputs that use this buffer
+            uint32_t numOutputs = 0;
+            // buffer
+            while(*outputs) {
+                DASSERT((*outputs)->buffer == b, "");
+                (*outputs)->buffer = 0;
+                ++outputs;
+                ++numOutputs;
+            }
+            outputs = b->outputs;
+#ifdef DEBUG
+            // b->outputs was a zero terminated array.
+            memset(outputs, 0, sizeof(*outputs)*(numOutputs+1));
+            memset(b, 0, sizeof(*b));
+#endif
+            free(outputs);
+            free(b);
+        }
+    }
 }
 
 
 void MapRingBuffers(struct QsFilter *f) {
 
+    DASSERT(f->outputs || f->numOutputs == 0, "");
+    DASSERT(f->numOutputs <= QS_MAX_CHANNELS, "");
+
+    if(f->outputs == 0) return;
+
+    for(uint32_t i=0; i<f->numOutputs;++i) {
+
+        struct QsBuffer *b = f->outputs[i].buffer;
+
+        DASSERT(b, "");
+        DASSERT(b->mapLength, "");
+        if(b->mem) continue;
+
+        b->overhangLength = b->mapLength;
+        b->mapLength *= 2;
+        b->mem = makeRingBuffer(&(b->mapLength), &(b->overhangLength));
+        b->writePtr = b->mem;
+        struct QsOutput **outputs = b->outputs;
+        DASSERT(outputs, "");
+        DASSERT(*outputs, "");
+        // Initialize all the output read pointers.
+        while(*outputs) (*outputs++)->readPtr = b->mem;
+    }
 }
 
 
 void UnmapRingBuffers(struct QsFilter *f) {
 
+    DASSERT(f->outputs, "");
+
+    for(uint32_t i=0; i<f->numOutputs;++i) {
+        DASSERT(f->outputs[i].buffer, "");
+        if(f->outputs[i].buffer->mem) {
+            struct QsBuffer *b = f->outputs[i].buffer;
+            freeRingBuffer(b->mem, b->mapLength, b->overhangLength);
+            b->mem = 0; // need this...
+#ifdef DEBUG
+            memset(b, 0, sizeof(*b));
+            struct QsOutput **outputs = b->outputs;
+            DASSERT(outputs, "");
+            DASSERT(*outputs, "");
+            // Zero all the output read pointers because that is undoing
+            // the effect of MapRingBuffers() above.
+            while(*outputs) (*outputs++)->readPtr = 0;
+#endif
+        }
+    }
 }
 
 
 
-
 void qsOutputs(const size_t lens[]) {
+
+
 
 }
 

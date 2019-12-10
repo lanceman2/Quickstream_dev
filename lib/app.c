@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <pthread.h>
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
@@ -27,6 +28,9 @@
 struct QsApp *qsAppCreate(void) {
 
     struct QsApp *app = calloc(1, sizeof(*app));
+
+    ASSERT(pthread_key_create(&app->key, NULL) == 0, "");
+    ASSERT(pthread_setspecific(app->key, &app->input) == 0, "");
 
     return app;
 }
@@ -47,6 +51,8 @@ int qsAppDestroy(struct QsApp *app) {
         FreeFilter(f);
         f = nextF;
     }
+
+    ASSERT(pthread_key_delete(app->key) == 0, "");
 
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
