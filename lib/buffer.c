@@ -197,18 +197,18 @@ void UnmapRingBuffers(struct QsFilter *f) {
 
 
 
-void qsOutputs(const size_t lens[]) {
+void qsOutput(uint32_t portNum, const size_t len) {
 
 
 
 }
 
-void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen) {
+void *qsGetOutputBuffer(uint32_t outputPortNum, size_t maxLen) {
 
     return 0;
 }
 
-void qsAdvanceInputs(const size_t lens[]) {
+void qsAdvanceInput(const size_t lens[]) {
 
 }
 
@@ -222,7 +222,7 @@ void qsSetInputMax(const size_t lens[]) {
 // Here we just allocate the output buffer structure.  Later we will
 // mmap() the ring buffers, after all the filter start()s are called.
 //
-void qsBufferCreate(size_t maxWriteLen,
+void qsCreateOutputBuffer(size_t maxWriteLen,
         const uint32_t outputPortNums_in[]) {
 
     DASSERT(_qsCurrentFilter, "");

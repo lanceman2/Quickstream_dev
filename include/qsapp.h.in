@@ -263,17 +263,17 @@ int qsStreamConnectFilters(struct QsStream *stream,
  *
  * \param to filter module that we connect to.
  *
- * \param fromPortNum is the output port number that the from filter will
+ * \param fromPortNum is the output port number that the "from" filter will
  * see for this connection.
  *
- * \param toPortNum is the input port number that the to filter will
+ * \param toPortNum is the input port number that the "to" filter will
  * see for this connection.
  *
  * \return 0 on success.  This function does not fail, though
  * qsStreamReady() can fail if connections made are not consistent.
  */
 extern
-int qsStreamConnectFiltersWithPorts(struct QsStream *stream,
+int qsStreamConnectFilters(struct QsStream *stream,
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum);
 

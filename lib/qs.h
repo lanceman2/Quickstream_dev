@@ -75,12 +75,16 @@ struct QsApp {
 // #include <stdatomic.h>
 // example: https://en.cppreference.com/w/c/language/atomic
 
-
-// QsThread is only in the QsStream struct
+// Threads get put into filters.  Threads call filter->input().
+//
+// Stream (QsStream) manages threads (QsThread).
 //
 struct QsThread {
 
     pthread_t pthread;
+
+    struct QsFilter *filter; // filter whos input() is called.
+
     struct QsThread *next;
 };
 
@@ -123,15 +127,6 @@ struct QsThread {
 // handle with "thread-safe" care.
 ///////////////////////////////////////////////////////////////////////////
 
-
-struct QsConnection {
-
-    struct QsFilter *from; // from filter
-    struct QsFilter *to;   // to filter
-
-    uint32_t fromPortNum; // output port number for from filter
-    uint32_t toPortNum;   // input port number for to filter
-};
 
 
 
@@ -202,8 +197,18 @@ struct QsStream {
     // are used when the stream is running.
     //
     // tallied filter connections:
+    struct QsConnection {
+
+        struct QsFilter *from; // from filter
+        struct QsFilter *to;   // to filter
+
+        uint32_t fromPortNum; // output port number for from filter
+        uint32_t toPortNum;   // input port number for to filter
+
+    } *connections; // malloc()ed array of connections
+
+
     uint32_t numConnections;// length of connections array
-    struct QsConnection *connections; // malloc()ed array of connections
 
 
     struct QsStream *next; // next stream in app list of streams
@@ -300,80 +305,97 @@ struct QsFilter {
 
 struct QsOutput {  // points to reader filters
 
-    // readPtr and writer->writePtr are the two only values in this struct
-    // that can change while the stream is in the flowing state.
-
-    // The "reading filter" (or access filter) that sees this output as
-    // input.
-    struct QsFilter *filter;
-
-    // The input port number that the filter being written to sees
-    // in it's input(,,portNum,) call.
-    uint32_t inputPortNum;
-
-
-    //
-    struct QsBuffer *buffer;
-
-
-    // read filter access pointer to the circular buffer.
-    //
     // ** Only the filter (and it's thread) that has a pointer to this
     // output can read and write this pointer, at flow time. **
     //
-    uint8_t *readPtr;
+    struct QsReader {
+
+        // readPtr points to a location in the mapped memory
+        uint8_t *readPtr;
+
+        // The filter the is reading.
+        struct QsFilter *filter;
+
+        // This threshold will trigger a filter->input() call, independent
+        // of the other inputs.
+        //
+        // The filter->input() may just return without advancing any input
+        // or output, effectively ignoring the input() call like the
+        // threshold trigger conditions where not reached.  In this way
+        // we may have arbitrarily complex threshold trigger conditions.
+        size_t thresholdLength;
+
+        
+        // The input port number that the filter being written to sees in
+        // it's input(,,portNum,) call.
+        uint32_t inputPortNum;
+
+    } *readers; // array of filter readers
+
+
+    uint32_t numReaders; // length of readers array
+
+
+    // If this a "pass through" output prev points to the 
+    // in another filter output that this output uses to
+    // buffer its' data.
+    //
+    // So if prev is none 0 this is a "pass through" output
+    // buffer.
+    struct QsOutput *prev;
+
+    // points to the next "pass through" output, if one it present.
+    struct QsOutput *next;
+
+
+    // If prev is set this is not set.
+    //
+    struct QsBuffer *buffer;
+
+    // newBuffer is the latest created buffer and memory mapping for
+    // this output.  This exist separately from buffer above for the
+    // case when it is found that the size of the memory mapping was
+    // not large enough in a call to qsGetOutputBuffer().
+    //
+    // The size of mapped memory in newBuffer should be larger than that
+    // in buffer above.
+    //
+    // After all readPtr and writePtr values are pointing to this
+    // buffer and none pointer to buffer above, this newBuffer is
+    // switched to buffer.
+    //
+    // If this newBuffer is found to be not large enough, than the
+    // calls to qsGetOutputBuffer() will block until all readPtr and
+    // writePtr pointers point to this newBuffer.
+    //
+    struct QsBuffer *newBuffer;
+
+
+    // points to the next "pass through" output, if one it present.
+    struct QsOutput *next;
+
+    // writePtr points to where to write next in mapped memory.
+    uint8_t *writePtr;
 
 
     // input() just returns 0 if a threshold is not reached.
-
-
-    // maxInput may be set in the reading filters start() function
-    // and does not change until the next start().
-    size_t
-        maxInput; // = 0 by default.  This reading filter will not read
-        // (input) more than this, if this is set.  The filter sets this
-        // so that the stream running does not call input() with more data
-        // than this.  This is a convenience, so the filter does not need
-        // to tell the stream running to not advance the buffer so far at
-        // every input() call had the input buffer length exceeded this
-        // number.  When there is much more readable data than this, the
-        // read filter input() will be called many times, with buffer read
-        // length values of maxInput or less.
 };
 
 
-
-struct QsBuffer {  // all outputs have a circular buffer
-
-    // Their can be many outputs pointing to this (using this) buffer.
-
-    // This is the next place a writing filter will write to in this
-    // memory.
-    uint8_t *writePtr;
-
-    // 0 terminated array of pointers to outputs
-    // 
-    // Example getting readPtr: ptr = outputs[i]->readPtr
-    // 
-    // Just a little faster access to the outputs that use this buffer.
-    struct QsOutput **outputs;
-
+struct QsBuffer {
 
     ///////////////////////////////////////////////////////////////////////
     // The rest of this structure stays constant while the stream is
     // flowing.
     //
     uint8_t *mem; // Pointer to start of mmap()ed memory.
+
     //
     // These two parameters make it a circular buffer or ring buffer.  See
     // makeRingBuffer.c.  The mapLength is the most the buffer can hold to
     // be read by a filter.
     size_t mapLength, overhangLength; // in bytes.
-    //
-    uint32_t refCount; // Number of writers pointing to this.
 };
-
-
 
 
 // The filter that is having construct(), start(), stop() or destroy()

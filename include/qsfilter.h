@@ -41,7 +41,7 @@
 /** get the default maximum length in bytes that may be written
  *
  * A filter that has output may set the maximum length in bytes that may
- * be written for a given qsOutputs() and qsGetBuffer() calls for a given
+ * be written for a given qsOutput() and qsGetBuffer() calls for a given
  * output port number.  If the value of the maximum length in bytes that
  * may be written was not set in the filter start() function it's value
  * will be QS_DEFAULT_maxWrite.
@@ -216,16 +216,22 @@ int stop(uint32_t numInPorts, uint32_t numOutPorts);
  * port numbers that are in the output port shared buffer group.
  *
  * \param maxLen is the maximum length in bytes that the filter will
- * output to the ring buffer.  If the filter has a thread safe input()
- * function, that maxLen must be the same as the corresponding length
- * passed to qsOutput(), otherwise there will be unwritten gaps in the
- * ring buffer.
+ * output to the ring buffer.
+ *
+ * \param minLen is the minimum length in bytes that the filter will
+ * output to the ring buffer.
+ *
+ * If the filter is thread-safe and maxLen equals minLen, than the ring
+ * buffer may be accessed by another thread calling qsGetBuffer(),
+ * otherwise if maxLen and minLen are not equal than another thread may
+ * not access the ring buffer until qsOutput() is called in the
+ * corresponding thread.
  *
  * \return a pointer to the first writable byte in the buffer.  The filter
  * may write at most \e maxLen bytes to this returned pointer.
  */
 extern
-void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
+void *qsGetOutputBuffer(uint32_t outputPortNum, size_t maxLen, size_t minLen);
 
 
 
@@ -233,21 +239,15 @@ void *qsGetBuffer(uint32_t outputPortNum, size_t maxLen);
  *
  * This stores the current buffer write offset by length len bytes.
  *
- * qsGetBuffer() must be called before qsOutputs().
+ * qsGetBuffer() must be called before qsOutput().
  *
- * qsOutputs() must be called in a filter module input() function in order
+ * qsOutput() must be called in a filter module input() function in order
  * to have output to another filter module.
  *
- * \param lens array of lengths in bytes to advance the output buffers.
- * length may be 0 to cause the corresponding output filters input()
- * functions to be called with an input length of 0.  Setting a length to
- * QS_NONE to stop the corresponding output filters input() functions from
- * being called.  Passing a len value of 0 will still trigger a call the
- * listed output filters input() function with an input length of 0, like
- * it was a source filter.
+ * \param len length in bytes to advance the output buffer.
  */
 extern
-void qsOutputs(const size_t lens[]);
+void qsOutput(uint32_t outputPortNum, size_t len);
 
 
 
@@ -270,29 +270,13 @@ void qsOutputs(const size_t lens[]);
  * clipped.
  */
 extern
-void qsAdvanceInputs(const size_t lens[]);
+void qsAdvanceInput(uint32_t inputPortNum, size_t len);
 
 
 
-/** Set the maximum buffer input read size passed to input()
- *
- * Filters may may request that an input port not input past a set
- * amount.  This is not required to be set because an input ports
- * buffer advancement may be set to any amount that is less than of equal
- * to the amount sent in the call to the corresponding filters input()
- * call via the accumulation of qsAdvanceInputs() function calls.
- *
- * qsSetInputMax() may only be called in filters start() function.
- *
- * \param len This reading filter will not read more than len bytes, if
- * this is set.  The filter sets this so that the stream running does not
- * call input() with more data than this.  This is a convenience, so the
- * filter does not need to tell the stream running to not advance the
- * buffer so far at every input() call had the input length exceeded this
- * number.
- */ 
 extern
-void qsSetInputMax(const size_t lens[]);
+void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
+
 
 
 
@@ -302,7 +286,7 @@ void qsSetInputMax(const size_t lens[]);
  * buffer will be shared between the output ports, and the data read by
  * all the receiving filters will be the same.
  *
- * qsBufferCreate() can only be called in the filter's start() function.
+ * qsOutputBufferCreate() can only be called in the filter's start() function.
  * 
  * The total amount of memory allocated for this ring buffer depends on
  * maxWrite, and other parameters set by other filters that may be
@@ -316,7 +300,14 @@ void qsSetInputMax(const size_t lens[]);
  * which is terminated with a value QS_ARRAYTERM.
  */
 extern
-void qsBufferCreate(size_t maxWriteLen, const uint32_t outputPortNums[]);
+void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
+
+
+
+extern
+void qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
+        size_t maxWriteLen);
+
 
 
 
