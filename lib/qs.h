@@ -17,26 +17,6 @@
 // and avoid thread synchronization primitives, and other system calls.
 
 
-//
-// TODO: If an app makes a lot of threads that are not related to
-// quickstream, this could be wasteful, so we may want to allocate this.
-// Maybe these can be part of QsThread.
-//
-//
-// The current thread that corresponds with the filter who's input() is
-// being called now.
-//
-// This data struct is accessed via pthread_getspecific(app->key)
-//
-struct QsInput {
-
-    bool advanceInputs_wasCalled;
-    struct QsFilter *filter; // filter module having input() called.
-    size_t *len; // array of lengths that are read from the buffers.
-    uint32_t threadNum;
-};
-
-
 
 // App (QsApp) is the top level quickstream object.  It's a container for
 // filters and streams.  Perhaps there should only be one app in a
@@ -57,10 +37,6 @@ struct QsApp {
     struct QsStream *streams;
 
 
-    // input thingy that is seen in  qsGetBuffer(), qsAdvanceInputs(), and
-    // qsOutputs() for the main thread.
-    struct QsInput input;
-
     // key used to get thread specific data for pthread that run flows.
     //
     // pthread_getspecific(app->key) returns a struct QsInput *input
@@ -75,18 +51,6 @@ struct QsApp {
 // #include <stdatomic.h>
 // example: https://en.cppreference.com/w/c/language/atomic
 
-// Threads get put into filters.  Threads call filter->input().
-//
-// Stream (QsStream) manages threads (QsThread).
-//
-struct QsThread {
-
-    pthread_t pthread;
-
-    struct QsFilter *filter; // filter whos input() is called.
-
-    struct QsThread *next;
-};
 
 
 //#define QS_STREAM_DEFAULTMAXTHTREADS (8)
@@ -147,7 +111,7 @@ struct QsStream {
     // in the graph.  flags does not change at flow/run time, so we need
     // no mutex to access it.
 
-    // We can define and set different flow() function that run the flow
+    // We can define and set different flow() functions that run the flow
     // graph different ways.  This function gets set in qsStreamReady().
     //
     uint32_t (*flow)(struct QsStream *s);
@@ -169,17 +133,49 @@ struct QsStream {
     // pthread_mutex_trylock() when we compile with DEBUG.
     //
     pthread_mutex_t mutex;
+    pthread_cont_t cond;
     //
     // number of pthreads that exist from this stream, be they idle or
     // flowing.
     uint32_t numThreads; // must have a mutex lock to access numThreads.
+    //
+    // We do not need to keep list of idle threads.  We just have all idle
+    // threads call pthread_cond_wait() with the above mutex and cond.
+    //
     // number of thread that at in the idle thread stack.
+    //
+    // numThreads - numIdleThreads = "number of threads in use".
     uint32_t numIdleThreads;
     //
-    // We keep a stack/pool of idle threads in idleThreads.  The running
+    // We keep a stack/pool of idle threads by having the idle threads
+    // call pthread_cond_wait() with the above cond/mutex.  The running
     // threads handle themselves and we do not keep a list of running
-    // pthreads.  We must have a mutex lock to access idleThreads.
-    struct QsThread *idleThreads;
+    // pthreads.  We must have a mutex lock to access numIdleThreads and
+    // numThreads.
+    //
+    //
+    struct QsJob {
+
+        // job (QsJob) is what working threads do
+        //
+        // job is passed to threads
+
+        QsFilter *filter; // filter's who's input() is called for this job
+
+        // The thread working on a given filter have an ID that is from a
+        // sequence counter.  This threadNum (ID) is gotten from
+        // filter->nextThreadNum++.  So the lowest numbered thread job for
+        // this filter is the oldest, except when the counter wraps
+        // through 0.  So really the oldest job is just the first in the
+        // threadNum count sequence, and we must use filter->nextThreadNum
+        // - filter->numThreads to get the oldest job threadNum.
+        //
+        // Hence, threadNum is respect to the filter.
+        uint32_t threadNum;
+
+    } job; // next job that the thread should run.
+    //
+    //
     //
     ///////////////////////////////////////////////////////////////////////
 
@@ -244,6 +240,8 @@ struct QsFilter {
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
     int (* input)(const void *buffer[], const size_t len[],
+            // If isFlushing[inPort]==true is this is the last bytes of
+            // data in that input port.
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs);
 
@@ -256,8 +254,8 @@ struct QsFilter {
     // that owns this buffer can run input() in more than one thread.  For
     // thread safe filter input() functions; otherwise mutex=0.
     //
-    pthread_mutex_t *mutex;
-    pthread_cond_t *cond;
+    pthread_mutex_t *mutex; // =0 for not thread safe filter input()
+    pthread_cond_t *cond;   // =0 for not thread safe filter input()
     //
     // numThreads and lastThreadNum are accessed with mutex locked.
     // threadNum is the number of threads currently calling
@@ -305,6 +303,64 @@ struct QsFilter {
 
 struct QsOutput {  // points to reader filters
 
+    // The "pass through" buffers are a double linked list with
+    // the "real" buffer in the first one in the list.  The "real"
+    // output buffer has prev==0.
+    //
+    // If this a "pass through" output prev points to the 
+    // in another filter output that this output uses to
+    // buffer its' data.
+    //
+    // So if prev is none 0 this is a "pass through" output
+    // buffer.
+    struct QsOutput *prev;
+    //
+    // points to the next "pass through" output, if one it present.
+    struct QsOutput *next;
+
+    // These pointer to the buffer owner filters' mutex/cond variables if
+    // this output has a buffer that may get accessed by more than one
+    // thread.  There are several cases when buffers may get accessed by
+    // more than one thread.  The cases depend on if an involved filters
+    // are thread safe.  We must look at filters "pass through" buffers
+    // too.
+    //
+    // mutex and cond get set to nonzero if their use is needed; otherwise
+    // they are set to 0.
+    //
+    pthread_mutex_t *mutex;
+    pthread_cond_t *cond;
+
+
+    // If prev is set this is not set and this output is a "pass through"
+    // buffer.
+    //
+    struct QsBuffer *buffer;
+    //
+    // newBuffer is the latest created buffer and memory mapping for
+    // this output.  This exists separately from buffer above for the
+    // case when it is found that the size of the memory mapping was
+    // not large enough in a call to qsGetOutputBuffer().
+    //
+    // The size of mapped memory in newBuffer should be larger than that
+    // in buffer above.
+    //
+    // After all readPtr and writePtr values are pointing to this
+    // buffer and none point to the buffer above, this newBuffer is
+    // switched with buffer.
+    //
+    // If this newBuffer is found to be a not large enough mapping, than
+    // the calls to qsGetOutputBuffer() will block until all readPtr and
+    // writePtr pointers point to this newBuffer.
+    //
+    struct QsBuffer *newBuffer;
+
+
+    // points to the next "pass through" output, if one it present.
+    struct QsOutput *next;
+
+    // writePtr points to where to write next in mapped memory.
+    uint8_t *writePtr;
     // ** Only the filter (and it's thread) that has a pointer to this
     // output can read and write this pointer, at flow time. **
     //
@@ -325,58 +381,13 @@ struct QsOutput {  // points to reader filters
         // we may have arbitrarily complex threshold trigger conditions.
         size_t thresholdLength;
 
-        
         // The input port number that the filter being written to sees in
         // it's input(,,portNum,) call.
         uint32_t inputPortNum;
 
     } *readers; // array of filter readers
 
-
     uint32_t numReaders; // length of readers array
-
-
-    // If this a "pass through" output prev points to the 
-    // in another filter output that this output uses to
-    // buffer its' data.
-    //
-    // So if prev is none 0 this is a "pass through" output
-    // buffer.
-    struct QsOutput *prev;
-
-    // points to the next "pass through" output, if one it present.
-    struct QsOutput *next;
-
-
-    // If prev is set this is not set.
-    //
-    struct QsBuffer *buffer;
-
-    // newBuffer is the latest created buffer and memory mapping for
-    // this output.  This exist separately from buffer above for the
-    // case when it is found that the size of the memory mapping was
-    // not large enough in a call to qsGetOutputBuffer().
-    //
-    // The size of mapped memory in newBuffer should be larger than that
-    // in buffer above.
-    //
-    // After all readPtr and writePtr values are pointing to this
-    // buffer and none pointer to buffer above, this newBuffer is
-    // switched to buffer.
-    //
-    // If this newBuffer is found to be not large enough, than the
-    // calls to qsGetOutputBuffer() will block until all readPtr and
-    // writePtr pointers point to this newBuffer.
-    //
-    struct QsBuffer *newBuffer;
-
-
-    // points to the next "pass through" output, if one it present.
-    struct QsOutput *next;
-
-    // writePtr points to where to write next in mapped memory.
-    uint8_t *writePtr;
-
 
     // input() just returns 0 if a threshold is not reached.
 };

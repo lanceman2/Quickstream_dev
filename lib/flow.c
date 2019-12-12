@@ -19,7 +19,7 @@ uint32_t singleThreadFlow(struct QsStream *s) {
         struct QsFilter *f = s->sources[i];
         DASSERT(f,"");
         DASSERT(f->input, "");
-
+#if 0
         // Get main thread specific data that we use in calls from
         // f->input() to buffer access functions like: qsGetBuffer(),
         // qsAdvanceInputs(), and qsOutputs().
@@ -41,8 +41,8 @@ uint32_t singleThreadFlow(struct QsStream *s) {
                 isFlushing[i] = true;
 
         DSPEW("f=%p isFlushing[0]=%d", input->filter, isFlushing[0]);
+#endif
     }
 
     return 0; // success
 }
-

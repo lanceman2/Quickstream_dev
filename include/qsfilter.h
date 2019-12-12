@@ -73,8 +73,6 @@ extern "C" {
 #endif
 
 
-struct QsOpts; 
-
 
 /** Required: print filter module help and command line argument options
  *
