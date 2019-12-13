@@ -28,10 +28,7 @@
 struct QsApp *qsAppCreate(void) {
 
     struct QsApp *app = calloc(1, sizeof(*app));
-
-    ASSERT(pthread_key_create(&app->key, NULL) == 0, "");
-    ASSERT(pthread_setspecific(app->key, &app->input) == 0, "");
-
+    ASSERT(app, "calloc(1,%zu) failed", sizeof(*app));
     return app;
 }
 
@@ -51,20 +48,22 @@ int qsAppDestroy(struct QsApp *app) {
         FreeFilter(f);
         f = nextF;
     }
-
-    ASSERT(pthread_key_delete(app->key) == 0, "");
-
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif
-
     // Now cleanup this app.
     free(app);
-
     return 0; // success
 }
 
 
+// In this case we print from the stream (QsStream) list of connections.
+// This stream->connections list is an intermediate step in setting up the
+// flow graph; it is not used when the stream is flowing.
+//
+// Returns clusterNum that is used for referencing subgraph clusters in
+// the dot output.
+//
 static inline uint32_t
 PrintStreamOutline(struct QsStream *s,
         uint32_t sNum /*stream number*/,
@@ -112,12 +111,18 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
 
 
     // Recurse
-    for(uint32_t i=0; i<filter->numOutputs; ++i)
-        // Skip unmarked filters.
-        if(filter->outputs[i].filter->mark)
-            // Recurse
-            clusterNum = PrintStreamFilter1(filter->outputs[i].filter,
-                    clusterNum, file);
+    for(uint32_t i=0; i<filter->numOutputs; ++i) {
+        struct QsOutput *output = &filter->outputs[i];
+        DASSERT(output, "");
+        DASSERT(output->readers || output->numReaders == 0, "");
+
+        for(uint32_t j=0; i<output->numReaders; ++j)
+            // Skip unmarked filters.
+            if(output->readers[j].filter->mark)
+                // Recurse
+                clusterNum = PrintStreamFilter1(output->readers[j].filter,
+                        clusterNum, file);
+    }
 
     return clusterNum;
 }
@@ -130,28 +135,14 @@ static inline uint32_t
 PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
         FILE *file) {
 
+    DASSERT(filter,"");
+    DASSERT(filter->numOutputs || filter->outputs == 0, "");
 
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
 
-        struct QsBuffer *buffer = filter->outputs[i].buffer;
-        // See if we've looked at this buffer before now.
-        uint32_t j;
-        for(j=0; j<i; ++j)
-            if(buffer == filter->outputs[j].buffer)
-                // We have looked at this buffer before in this i loop
-                // so we can skip it now.
-                break;
-        if(j < i)
-            // We have drawn this buffer before.
-            continue;
+        struct QsOutput *output = &filter->outputs[i];
 
-        // So now this buffer has not been graphed yet.  We draw all the
-        // outputs channels to it and all the input channels from it.  All
-        // the output nodes have been defined in the PrintStreamFilter1()
-        // call before this.
-        //
-
-        // Define the buffer graph node.
+        // Define a dot shape for the buffer.
         //
         fprintf(file, "\n    node [shape=\"parallelogram\","
                 "color=\"red\", label=\"buffer %" PRIu32 "\"];"
@@ -159,30 +150,29 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
                 numBuffers,
                 filter->name, numBuffers);
 
-        for(j=0; j<filter->numOutputs; ++j)
+        // Draw output -> buffer;
+        fprintf(file,"    "
+                "\"%s_output_%" PRIu32 "\" -> "
+                "\"%s_writer_%" PRIu32 "\""
+                " [label=\"%" PRIu32 "\"];\n",
+                filter->name, i,
+                filter->name, numBuffers, i);
+
+        DASSERT(output->numReaders, "");
+        DASSERT(output->readers, "");
+
+        for(uint32_t j=0; j<output->numReaders; ++j) {
+            struct QsReader *reader = &output->readers[j];
+            DASSERT(reader, "");
             //
-            // For all outputs that use this buffer:
-            //
-            if(buffer == filter->outputs[j].buffer) {
-
-                // Add to graph the two edges:
-
-                // output -> buffer;
-                fprintf(file,"    "
-                        "\"%s_output_%" PRIu32 "\" -> "
-                        "\"%s_writer_%" PRIu32 "\""
-                        " [label=\"%" PRIu32 "\"];\n",
-                        filter->name, j,
-                        filter->name, numBuffers, j);
-
-                // buffer -> input;
-                fprintf(file,"    "
-                        "\"%s_writer_%" PRIu32 "\" -> "
-                        "\"%s\" [label=\"%" PRIu32 "\"];\n",
-                        filter->name, numBuffers,
-                        filter->outputs[j].filter->name,
-                        filter->outputs[j].inputPortNum);
-            }
+            // Draw buffer -> input;
+            fprintf(file,"    "
+                    "\"%s_writer_%" PRIu32 "\" -> "
+                    "\"%s\" [label=\"%" PRIu32 "\"];\n",
+                    filter->name, numBuffers,
+                    reader->filter->name,
+                    reader->inputPortNum);
+        }
 
         // Count this buffer:
         //
@@ -192,12 +182,17 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
     filter->mark = false; // Mark this filter looked at (graphed).
 
     // Recurse
-    for(uint32_t i=0; i<filter->numOutputs; ++i)
-        // Skip unmarked filters.
-        if(filter->outputs[i].filter->mark)
-            // Recurse
-            numBuffers = PrintStreamFilterBuffer(filter->outputs[i].filter,
-                    numBuffers, file);
+    for(uint32_t i=0; i<filter->numOutputs; ++i) {
+        struct QsOutput *output = &filter->outputs[i];
+
+        for(uint32_t j=0; j<output->numReaders; ++j)
+            // Skip unmarked filters.
+            if(output->readers[j].filter->mark)
+                // Recurse
+                numBuffers = PrintStreamFilterBuffer(
+                        output->readers[j].filter,
+                        numBuffers, file);
+    }
 
     return numBuffers; // So we tally up the number of buffers.
 }

@@ -35,13 +35,6 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
-
-
-    // key used to get thread specific data for pthread that run flows.
-    //
-    // pthread_getspecific(app->key) returns a struct QsInput *input
-    //
-    pthread_key_t key;
 };
 
 
@@ -133,7 +126,7 @@ struct QsStream {
     // pthread_mutex_trylock() when we compile with DEBUG.
     //
     pthread_mutex_t mutex;
-    pthread_cont_t cond;
+    pthread_cond_t cond;
     //
     // number of pthreads that exist from this stream, be they idle or
     // flowing.
@@ -160,7 +153,8 @@ struct QsStream {
         //
         // job is passed to threads
 
-        QsFilter *filter; // filter's who's input() is called for this job
+        // filter's who's input() is called for this job
+        struct QsFilter *filter; 
 
         // The thread working on a given filter have an ID that is from a
         // sequence counter.  This threadNum (ID) is gotten from
@@ -331,7 +325,6 @@ struct QsOutput {  // points to reader filters
     pthread_mutex_t *mutex;
     pthread_cond_t *cond;
 
-
     // If prev is set this is not set and this output is a "pass through"
     // buffer.
     //
@@ -356,9 +349,6 @@ struct QsOutput {  // points to reader filters
     struct QsBuffer *newBuffer;
 
 
-    // points to the next "pass through" output, if one it present.
-    struct QsOutput *next;
-
     // writePtr points to where to write next in mapped memory.
     uint8_t *writePtr;
     // ** Only the filter (and it's thread) that has a pointer to this
@@ -369,7 +359,7 @@ struct QsOutput {  // points to reader filters
         // readPtr points to a location in the mapped memory
         uint8_t *readPtr;
 
-        // The filter the is reading.
+        // The filter that is reading.
         struct QsFilter *filter;
 
         // This threshold will trigger a filter->input() call, independent
