@@ -307,6 +307,19 @@ void qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen);
 
 
+/** Tell quickstream that the filters input() function is thread safe.
+ *
+ * This must be called in the filter construct() function.
+ *
+ * This will let more than one thread call the filter input() function at
+ * a time.
+ *
+ * By default, quickstream filter input() functions are assumed to not be
+ * thread safe, so, by default, there will only be one thread calling a
+ * filter input() function at a time.
+ */
+extern
+void qsSetThreadSafe(void);
 
 
 /** Get a float as an option argument.

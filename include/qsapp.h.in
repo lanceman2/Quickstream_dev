@@ -228,27 +228,6 @@ extern
 int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
 
 
-/** Connect two filters in the stream with the next available port numbers.
- *
- * The from filters output port number will be the next unused output port
- * number. The to filters output port number will be the next unused input
- * port number.  The order in which connections are made will determine
- * input and output port numbers.  Both input and output port numbers
- * start at 0 and sequentially increase from there.
- *
- * \param stream a stream object returned from \ref qsAppStreamCreate().
- *
- * \param from filter module that we connect from.
- *
- * \param to filter module that we connect to.
- *
- * \return 0 on success.  This function does not fail, though
- * qsStreamReady() can fail if connections made are not consistent.
- */
-extern
-int qsStreamConnectFilters(struct QsStream *stream,
-        struct QsFilter *from, struct QsFilter *to);
-
 
 /** Connect two filters in the stream specifying port numbers.
  *

@@ -251,7 +251,7 @@ struct QsFilter {
     pthread_mutex_t *mutex; // =0 for not thread safe filter input()
     pthread_cond_t *cond;   // =0 for not thread safe filter input()
     //
-    // numThreads and lastThreadNum are accessed with mutex locked.
+    // numThreads and nextThreadNum are accessed with mutex locked.
     // threadNum is the number of threads currently calling
     // filter->input().  nextThreadNum is the thread number of the next
     // thread to call filter->input().  The leading thread number is
