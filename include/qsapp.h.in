@@ -59,6 +59,19 @@
 // Change this QS_VERSION macro string to make a new version.
 #define QS_VERSION "@PACKAGE_VERSION@"
 
+
+/** The default maximum number of threads to run a stream.
+ *
+ */
+#define QS_DEFAULTMAXTHREADS  ((uint32_t) 0)
+
+
+/** Tells qsStreamConnectFilters() to use the next available port.
+ *
+ */
+#define QS_NEXTPORT  ((uint32_t) -2)
+
+
 /** Read the last quickstream error string
  *
  * Calling this function also clears the current error.  This interface is
@@ -185,10 +198,12 @@ int qsFilterUnload(struct QsFilter *filter);
  *
  * \param app the app that was returned from qsAppCreate().
  *
+ * \param maxThreads is the maximum number of threads to run the stream.
+ *
  * \return a pointer to a stream.
  */
 extern
-struct QsStream *qsAppStreamCreate(struct QsApp *app);
+struct QsStream *qsAppStreamCreate(struct QsApp *app, uint32_t maxThreads);
 
 
 /** allow or disallow loops in the stream\
@@ -211,11 +226,9 @@ void qsStreamAllowLoops(struct QsStream *stream, bool doAllow);
  * This will not unload the filters that are in the stream.
  *
  * /param stream to destroy.
- *
- * /return 0 on success.
  */
 extern
-int qsStreamDestroy(struct QsStream *stream);
+void qsStreamDestroy(struct QsStream *stream);
 
 /** Remove a filter and it's connections from a stream
  *
@@ -247,12 +260,9 @@ int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
  *
  * \param toPortNum is the input port number that the "to" filter will
  * see for this connection.
- *
- * \return 0 on success.  This function does not fail, though
- * qsStreamReady() can fail if connections made are not consistent.
  */
 extern
-int qsStreamConnectFilters(struct QsStream *stream,
+void qsStreamConnectFilters(struct QsStream *stream,
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum);
 

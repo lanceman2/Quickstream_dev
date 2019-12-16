@@ -75,7 +75,6 @@ struct QsApp {
 
 #define QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
 
-
 ///////////////////////////////////////////////////////////////////////////
 //                 THREAD SAFETY WARNING
 //
@@ -205,7 +204,6 @@ struct QsStream {
 };
 
 
-struct QsOutput;
 
 // The filter (QsFilter) is loaded by app as a module DSO (dynamic shared
 // object) plugin.  The filter after be loaded is added to a only one
@@ -243,24 +241,16 @@ struct QsFilter {
     struct QsFilter *next; // next loaded filter in app list
 
 
-    // This gets used at flow time to access writePtr, and all associated
-    // output::readPtr, for all outputs in this filter; then the filter
-    // that owns this buffer can run input() in more than one thread.  For
-    // thread safe filter input() functions; otherwise mutex=0.
-    //
-    pthread_mutex_t *mutex; // =0 for not thread safe filter input()
-    pthread_cond_t *cond;   // =0 for not thread safe filter input()
-    //
-    // numThreads and nextThreadNum are accessed with mutex locked.
+    // numThreads and nextThreadNum are accessed with stream mutex locked.
     // threadNum is the number of threads currently calling
     // filter->input().  nextThreadNum is the thread number of the next
-    // thread to call filter->input().  The leading thread number is
-    // then nextThreadNum - numThreads.   When a new thread calls
+    // thread to call filter->input().  The leading thread number is then
+    // nextThreadNum - numThreads.   When a new thread calls
     // filter->input() it's thread number will be nextThreadNum and then
     // we add 1 to nextThreadNum.
     //
-    uint32_t numThreads;
-    uint32_t nextThreadNum;
+    uint32_t numThreads;    // must have stream mutex locked.
+    uint32_t nextThreadNum; // must have stream mutex locked.
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -273,6 +263,8 @@ struct QsFilter {
     // when the stream is flowing.
     bool isSource;  // startup flag marking filter as a source
 
+    bool isThreadSafe;
+
 
     // This filter owns these output structs, in that it is the only
     // filter that may change the ring buffer pointers.
@@ -283,7 +275,7 @@ struct QsFilter {
     uint32_t numInputs; // number of connected input filters feeding this.
 
 
-    // TODO: It'd be nice not to have this extra data. It's not needed
+    // TODO: It'd be nice not to have this extra data.  It's not needed
     // when the stream is flowing.
     //
     // mark is extra data in this struct so that we can save a marker

@@ -121,19 +121,6 @@ void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
         // stream.
         qsStreamRemoveFilter(f->stream, f);
 
-    DASSERT((f->cond && f->mutex) || (!f->cond && !f->mutex), "");
-
-    if(f->mutex) {
-        ASSERT(pthread_mutex_destroy(f->mutex) == 0, "");
-        ASSERT(pthread_cond_destroy(f->cond) == 0, "");
-#ifdef DEBUG
-        memset(f->mutex, 0, sizeof(*f->mutex));
-        memset(f->cond, 0, sizeof(*f->cond));
-#endif
-        free(f->mutex);
-        free(f->cond);
-    }
-
     // Remove it from the app list.
     struct QsFilter *F = app->filters;
     struct QsFilter *prev = 0;
@@ -151,7 +138,6 @@ void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
         F = F->next;
     }
     DASSERT(F, "Filter was not found in app list");
-
 }
 
 

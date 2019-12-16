@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 // The public installed user interfaces:
 #include "../include/qsapp.h"
@@ -17,19 +18,17 @@
 //#define SPEW(fmt, ... ) /* empty macro */
 
 
-__thread struct QsInput _input;
 
-
-
-// The filter that is having start() called.
-// There is only one thread when start() is called.
+// The filter that is having start(), stop(), construct(), or destroy()
+// called.  There is only one thread when these functions are called.
 //
 struct QsFilter *_qsCurrentFilter = 0;
 
 
 
-struct QsStream *qsAppStreamCreate(struct QsApp *app) {
-    
+struct QsStream *qsAppStreamCreate(struct QsApp *app,
+        uint32_t maxThreads) {
+
     DASSERT(app, "");
 
     struct QsStream *s = calloc(1, sizeof(*s));
@@ -47,6 +46,16 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
         app->streams = s;
 
     s->app = app;
+    s->maxThreads = maxThreads;
+    s->flags = _QS_STREAM_DEFAULTFLAGS;
+    if(maxThreads) {
+        // If we use more than on thread we'll need to be able to control
+        // them with a condition variable and mutex.  We also will need to
+        // control access to some data using the mutex.
+        //
+        ASSERT(pthread_cond_init(&s->cond, 0) == 0, "");
+        ASSERT(pthread_mutex_init(&s->mutex, 0) == 0, "");
+    }
 
     return s;
 }
@@ -87,6 +96,10 @@ static inline void CleanupStream(struct QsStream *s) {
         s->connections = 0;
         s->numConnections = 0;
     }
+    if(s->maxThreads) {
+        ASSERT(pthread_mutex_destroy(&s->mutex) == 0, "");
+        ASSERT(pthread_cond_destroy(&s->cond) == 0, "");
+    }
 #ifdef DEBUG
     memset(s, 0, sizeof(*s));
 #endif
@@ -94,7 +107,7 @@ static inline void CleanupStream(struct QsStream *s) {
 }
 
 
-int qsStreamDestroy(struct QsStream *s) {
+void qsStreamDestroy(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
@@ -133,21 +146,17 @@ int qsStreamDestroy(struct QsStream *s) {
     }
 
     DASSERT(S, "stream was not found in the app object");
-
-    return 0; // success
 }
 
 
-#define _QS_NEXTPORT  ((uint32_t) -2)
 
-
-static int _qsStreamConnectFilters(struct QsStream *s,
+void qsStreamConnectFilters(struct QsStream *s,
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
-    DASSERT(from != to, "a filter cannot connect to itself");
+    ASSERT(from != to, "a filter cannot connect to itself");
     DASSERT(from, "");
     DASSERT(to, "");
     DASSERT(to->app, "");
@@ -157,11 +166,6 @@ static int _qsStreamConnectFilters(struct QsStream *s,
             "filter cannot be part of another stream");
     DASSERT(from->stream == s || !from->stream,
             "filter cannot be part of another stream");
-
-    if(from == to) {
-        ERROR("A filter cannot connect to itself");
-        return 1;
-    }
 
     // Grow the connections array:
     //
@@ -180,22 +184,6 @@ static int _qsStreamConnectFilters(struct QsStream *s,
     s->connections[numConnections].to ->stream = s;
     //
     ++s->numConnections;
-
-    return 0; // success
-}
-
-
-int qsStreamConnectFilters(struct QsStream *s,
-        struct QsFilter *from, struct QsFilter *to) {
-    return _qsStreamConnectFilters(s, from, to, _QS_NEXTPORT, _QS_NEXTPORT);
-}
-
-
-
-int qsStreamConnectFiltersWithPorts(struct QsStream *s,
-        struct QsFilter *from, struct QsFilter *to,
-        uint32_t fromPortNum, uint32_t toPortNum) {
-    return _qsStreamConnectFilters(s, from, to, fromPortNum, toPortNum);
 }
 
 
@@ -296,6 +284,7 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 }
 
 
+
 static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
@@ -388,27 +377,8 @@ static uint32_t CountFilterPath(struct QsStream *s,
 }
 
 
-#define _INVALID_PortNum  ((uint32_t) -1)
-
-
-// The output needs to have the input port number that the filter they
-// are feeding sees.
-static void
-CalculateFilterInputPortNums(struct QsStream *s, struct QsFilter *f) {
-
-    for(uint32_t i=0; i<f->numOutputs; ++i)
-        f->outputs[i].inputPortNum = f->outputs[i].filter->numInputs++;
-
-    for(uint32_t i=0; i<f->numOutputs; ++i) {
-        struct QsFilter *nextF = f->outputs[i].filter;
-        if(nextF->numOutputs > 0 &&
-                nextF->outputs[0].inputPortNum == _INVALID_PortNum)
-            CalculateFilterInputPortNums(s, nextF);
-    }
-}
-
-
-
+// Allocate the array filter->outputs
+//
 static
 void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
@@ -417,27 +387,58 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f->numOutputs == 0, "");
     DASSERT(f->numInputs == 0, "");
 
-    // count the number of filters that this filter connects to
+    if(f->mark)
+        // The outputs have been already allocated.
+        return;
+
+    f->mark = true; // Mark the filter output as dealt with.
+
+    DASSERT(f->outputs == 0, "");
+
+    // Count the number of filters that this filter connects to with a
+    // different output port number.
     uint32_t i;
     for(i=0; i<s->numConnections; ++i) {
-        if(s->connections[i].from == f)
-            ++f->numOutputs;
+        if(s->connections[i].from == f) {
+            // There can be many connections to one output.  We require
+            // that output port numbers be in a sequence, but some output
+            // ports feed more than one filter.  We are not dealing with
+            // input ports at this time.
+            if(s->connections[i].fromPortNum == f->numOutputs)
+                ++f->numOutputs;
+            else if(s->connections[i].fromPortNum + 1 == f->numOutputs)
+                continue;
+            else if(s->connections[i].fromPortNum == QS_NEXTPORT)
+                ++f->numOutputs;
+            else {
+                char *s = "filter \"%s\" has output port number % "
+                        PRIu32 " out of sequence; setting it to %"
+                        PRIu32;
+                // This is a bad output port number so we just do this
+                // default action instead of adding a failure mode, except
+                // in DEBUG.
+                WARN(s, s->connections[i].fromPortNum,
+                        f->numOutputs);
+                DASSERT(false, s, s->connections[i].fromPortNum,
+                        f->numOutputs);
+                s->connections[i].fromPortNum = f->numOutputs++;
+            }
+        }
     }
 
-    if(f->numOutputs == 0 || f->outputs)
+    if(f->numOutputs == 0) {
         // There are no outputs or the outputs have been already
         // allocated.
         return;
 
     // Make the output array
-    DASSERT(!f->outputs, "");
     ASSERT(f->numOutputs <= QS_MAX_CHANNELS,
             "%" PRIu32 " > %" PRIu32 " outputs",
             f->numOutputs, QS_MAX_CHANNELS);
+
     f->outputs = calloc(f->numOutputs, sizeof(*f->outputs));
     ASSERT(f->outputs, "calloc(%" PRIu32 ",%zu) failed",
             f->numOutputs, sizeof(*f->outputs));
-
 
     for(i=0; s->connections[i].from != f; ++i);
     //
@@ -445,6 +446,7 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t j=0; j<f->numOutputs;) {
 
+        HERE LANCEMAN
         f->outputs[j].filter = s->connections[i].to;
 
         // initialize to a known invalid value, so we can see later.
@@ -643,19 +645,9 @@ int qsStreamReady(struct QsStream *s) {
      *      Stage: Set up filter output connections in the filter structs
      *********************************************************************/
 
+    StreamSetFilterMarks(s, false);
     for(uint32_t i=0; i<s->numSources; ++i)
         AllocateFilterOutputsFrom(s, s->sources[i]);
-
-
-    /**********************************************************************
-     *      Stage: Set up filter output connections inputPortNum
-     *********************************************************************/
-
-    for(uint32_t i=0; i<s->numSources; ++i)
-        if(s->sources[i]->numOutputs > 0 &&
-                s->sources[i]->outputs[0].inputPortNum ==
-                _INVALID_PortNum)
-            CalculateFilterInputPortNums(s, s->sources[i]);
 
 
     /**********************************************************************

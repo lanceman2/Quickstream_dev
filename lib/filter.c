@@ -279,18 +279,7 @@ void qsSetThreadSafe(void) {
 
     ASSERT(_qsCurrentFilter,"qsSetThreadSafe() not called in construct()");
 
-    DASSERT(_qsCurrentFilter->mutex == 0, "");
-    DASSERT(_qsCurrentFilter->cond == 0, "");
-
-    _qsCurrentFilter->mutex = calloc(1, sizeof(*_qsCurrentFilter->mutex));
-    ASSERT(_qsCurrentFilter->mutex, "calloc(1, %zu) failed",
-            sizeof(*_qsCurrentFilter->mutex));
-    ASSERT(pthread_mutex_init(_qsCurrentFilter->mutex, 0) == 0, "");
-
-    _qsCurrentFilter->cond = calloc(1, sizeof(*_qsCurrentFilter->cond));
-    ASSERT(_qsCurrentFilter->cond, "calloc(1, %zu) failed",
-            sizeof(*_qsCurrentFilter->cond));
-    ASSERT(pthread_cond_init(_qsCurrentFilter->cond, 0) == 0, "");
+    _qsCurrentFilter->isThreadSafe = true;
 }
 
 
