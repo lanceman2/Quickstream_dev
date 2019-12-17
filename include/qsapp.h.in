@@ -72,6 +72,8 @@
 #define QS_NEXTPORT  ((uint32_t) -2)
 
 
+
+
 /** Read the last quickstream error string
  *
  * Calling this function also clears the current error.  This interface is

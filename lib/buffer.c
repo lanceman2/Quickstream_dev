@@ -60,6 +60,8 @@ void AllocateBuffer(struct QsFilter *f) {
 
 // This is called when outputs exist, and after un-mapping memory.
 //
+// Just this filters' buffers.
+//
 void FreeBuffers(struct QsFilter *f) {
     
     DASSERT(f->outputs, "");
@@ -75,6 +77,8 @@ void MapRingBuffers(struct QsFilter *f) {
 }
 
 
+// Just this filters' buffers' mappings.
+//
 void UnmapRingBuffers(struct QsFilter *f) {
 
     DASSERT(f->outputs, "");

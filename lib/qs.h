@@ -66,14 +66,19 @@ struct QsApp {
 
 // By limiting the number of channels possible, ports in or out we can use
 // stack allocation via alloca().
-#define QS_MAX_CHANNELS              ((uint32_t) (128))
+#define _QS_MAX_CHANNELS              ((uint32_t) (128))
 
 // So we don't run away mapping to much memory for ring-buffers.  There
 // just has to be some limit.
-#define QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
+#define _QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
 
 
-#define QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
+#define _QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
+
+
+#define _QS_DEFAULT_THRESHOLD         ((size_t) 1)
+
+
 
 ///////////////////////////////////////////////////////////////////////////
 //                 THREAD SAFETY WARNING
