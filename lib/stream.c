@@ -285,6 +285,10 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 
 
 
+// Note this is call FreeFilterRunResources; it does not free up all
+// filter resources, just some things that could change between stop() and
+// start().
+//
 static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
@@ -306,6 +310,11 @@ void FreeFilterRunResources(struct QsFilter *f) {
 }
 
 
+
+// Note this is call FreerRunResources; it does not free up all stream
+// resources, just some things that could change between stop() and
+// start().
+//
 static inline
 void FreeRunResources(struct QsStream *s) {
 
