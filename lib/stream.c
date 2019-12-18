@@ -300,7 +300,7 @@ void FreeFilterRunResources(struct QsFilter *f) {
 
         // For every output in this filter we free the readers, and
         // mutex and cond, if they were used.
-        for(uint32_t i=f->numOutputs-1; i!=-1 --i) {
+        for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
             struct QsOutput *output = &f->outputs[i];
             DASSERT(output->numReaders, "");
             DASSERT(output->readers, "");
@@ -423,8 +423,9 @@ static uint32_t CountFilterPath(struct QsStream *s,
 // Allocate the array filter->outputs, and recure to all filters in the
 // stream (s).
 //
-static
-void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
+static bool
+AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
+        bool ret) {
 
     // This will work if there are loops in the graph.
 
@@ -451,29 +452,32 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
             else if(s->connections[i].fromPortNum == QS_NEXTPORT)
                 ++f->numOutputs;
             else {
-                char *s = "filter \"%s\" has output port number % "
-                        PRIu32 " out of sequence; setting it to %"
-                        PRIu32;
                 // This is a bad output port number so we just do this
                 // default action instead of adding a failure mode, except
                 // in DEBUG we'll assert.
-                WARN(s, s->connections[i].fromPortNum,
+                DASSERT(false, "filter \"%s\" has output port number %" PRIu32
+                        " out of sequence; setting it to %" PRIu32,
+                        s->connections[i].from->name,
+                        s->connections[i].fromPortNum,
                         f->numOutputs);
-                DASSERT(false, s, s->connections[i].fromPortNum,
+                ERROR("filter \"%s\" has output port number %" PRIu32
+                        " out of sequence; setting it to %" PRIu32,
+                        s->connections[i].from->name,
+                        s->connections[i].fromPortNum,
                         f->numOutputs);
                 s->connections[i].fromPortNum = f->numOutputs++;
             }
         }
     }
 
-    if(f->numOutputs == 0) {
+    if(f->numOutputs == 0)
         // There are no outputs.
-        return;
+        return ret;
 
     // Make the output array
-    ASSERT(f->numOutputs <= QS_MAX_CHANNELS,
+    ASSERT(f->numOutputs <= _QS_MAX_CHANNELS,
             "%" PRIu32 " > %" PRIu32 " outputs",
-            f->numOutputs, QS_MAX_CHANNELS);
+            f->numOutputs, _QS_MAX_CHANNELS);
 
     f->outputs = calloc(f->numOutputs, sizeof(*f->outputs));
     ASSERT(f->outputs, "calloc(%" PRIu32 ",%zu) failed",
@@ -489,7 +493,7 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
         uint32_t numReaders = 0;
         for(i=0; i<s->numConnections; ++i)
             if(s->connections[i].from == f &&
-                    s->connection[i].fromPortNum == outputPortNum)
+                    s->connections[i].fromPortNum == outputPortNum)
                 ++numReaders;
 
         DASSERT(numReaders, "filter \"%s\" output port %"
@@ -499,33 +503,35 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
             calloc(numReaders, sizeof(*readers));
         ASSERT(readers, "calloc(%" PRIu32 ",%zu) failed",
                 numReaders, sizeof(*readers));
+        f->outputs[outputPortNum].readers = readers;
 
         // Now set the values in reader:
         uint32_t readerIndex = 0;
         for(i=0; i<s->numConnections; ++i)
             if(s->connections[i].from == f &&
                     s->connections[i].fromPortNum == outputPortNum) {
-                reader[readerIndex].filter = s->connections[i].to;
-                reader[readerIndex].thresholdLength = _QS_DEFAULT_THRESHOLD;
-                reader[readerIndex].inputPortNum = s->connections[i].toPortNum;
+                readers[readerIndex].filter = s->connections[i].to;
+                readers[readerIndex].thresholdLength = _QS_DEFAULT_THRESHOLD;
+                readers[readerIndex].inputPortNum = s->connections[i].toPortNum;
                 ++readerIndex;
             }
         DASSERT(readerIndex == numReaders, "");
-        DASSERT(QS_MAX_CHANNELS >= numReaders, "");
+        DASSERT(_QS_MAX_CHANNELS >= numReaders, "");
     }
 
     // Now recurse if we need to.
     //
     for(i=0; i<f->numOutputs; ++i) {
-        uint32_t numReaders = f->outputs[j].numReaders;
+        uint32_t numReaders = f->outputs[i].numReaders;
         for(uint32_t j=0; j<numReaders; ++j) {
-            struct QsFilter *f = f->outputs[j].readers[j].filter;
-            DASSERT(f, "");
-            if(f->marked)
-                AllocateFilterOutputsFrom(s, f);
+            struct QsFilter *filter = f->outputs[i].readers[j].filter;
+            DASSERT(filter, "");
+            if(filter->mark)
+                ret = AllocateFilterOutputsFrom(s, filter, ret);
         }
     }
 
+    return ret;
 }
 
 
@@ -533,13 +539,13 @@ void AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f) {
 static bool
 SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 
-    f->marked = false; // filter done
+    f->mark = false; // filter done
 
     DASSERT(f->numInputs == 0, "");
 
     // For every filter that has output:
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        struct QsFilter *outFilter = s->from[i];
+        struct QsFilter *outFilter = s->connections[i].from;
         DASSERT(outFilter, "");
         // Every output
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
@@ -556,7 +562,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         }
     }
 
-    DASSERT(f->numInputs <= QS_MAX_CHANNELS, "");
+    DASSERT(f->numInputs <= _QS_MAX_CHANNELS, "");
 
     // Now check the input port numbers.
 
@@ -566,7 +572,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 
     // For every filter that has output:
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        struct QsFilter *outFilter = s->from[i];
+        struct QsFilter *outFilter = s->connections[i].from;
         // Every output
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
             struct QsOutput *output = &outFilter->outputs[j];
@@ -590,19 +596,20 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
     for(uint32_t i=0; i<f->numInputs; ++i)
         if(inputPortNums[i] != 1) {
             ret = true;
-            WARN("filter \"%s\" has some bad output port numbers", f);
+            WARN("filter \"%s\" has some bad output port numbers",
+                    f->name);
             break; // nope
         }
 
-    
-    // Now recure to filters that read from this filter if we have not
+
+    // Now recurse to filters that read from this filter if we have not
     // already.
     for(uint32_t i=0; i<f->numOutputs; ++i) {
-        struct QsOutput *output = &outFilter->outputs[i];
+        struct QsOutput *output = &f->outputs[i];
         for(uint32_t j=0; j<output->numReaders; ++j) {
             // Every reader
             struct QsReader *reader = &output->readers[j];
-            if(reader->filter->marked)
+            if(reader->filter->mark)
                 ret = SetupInputPorts(s, reader->filter, ret);
         }
     }
@@ -786,7 +793,15 @@ int qsStreamReady(struct QsStream *s) {
 
     StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
-        AllocateFilterOutputsFrom(s, s->sources[i]);
+        if(AllocateFilterOutputsFrom(s, s->sources[i], false)) {
+//#ifdef DEBUG
+            qsAppDisplayFlowImage(s->app, 0, true);
+//#endif
+            FreeRunResources(s);
+            return -3; // error we have loops
+        }
+
+
 
 
     /**********************************************************************

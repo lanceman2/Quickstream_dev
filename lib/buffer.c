@@ -53,6 +53,8 @@ AdvanceReadPtr(struct QsOutput *output, size_t len) {
 // allocated already by the filter start() calling qsBufferCreate().  This
 // sets up the default buffering arrangement.
 //
+// This function will recurse.
+//
 void AllocateBuffer(struct QsFilter *f) {
 
 }
@@ -68,11 +70,12 @@ void FreeBuffers(struct QsFilter *f) {
 
 }
 
-
+// This function will recurse.
+//
 void MapRingBuffers(struct QsFilter *f) {
 
     DASSERT(f->outputs || f->numOutputs == 0, "");
-    DASSERT(f->numOutputs <= QS_MAX_CHANNELS, "");
+    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS, "");
 
 }
 
@@ -93,18 +96,23 @@ void qsOutput(uint32_t portNum, const size_t len) {
 
 }
 
-void *qsGetOutputBuffer(uint32_t outputPortNum, size_t maxLen) {
+
+void *qsGetOutputBuffer(uint32_t outputPortNum,
+        size_t maxLen, size_t minLen) {
 
     return 0;
 }
 
-void qsAdvanceInput(const size_t lens[]) {
+
+void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 
 }
+
 
 void qsSetInputMax(const size_t lens[]) {
 
 }
+
 
 // Outputs can share the same buffer.  The list of output ports is
 // in the QS_ARRAYTERM terminated array outputPortNums[].
@@ -112,10 +120,9 @@ void qsSetInputMax(const size_t lens[]) {
 // Here we just allocate the output buffer structure.  Later we will
 // mmap() the ring buffers, after all the filter start()s are called.
 //
-void qsCreateOutputBuffer(size_t maxWriteLen,
-        const uint32_t outputPortNums_in[]) {
+void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     DASSERT(_qsCurrentFilter, "");
-    ASSERT(_qsCurrentFilter->numOutputs <= QS_MAX_CHANNELS, "");
+    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS, "");
 
 }
