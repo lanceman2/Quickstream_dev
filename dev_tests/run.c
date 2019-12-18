@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include "../include/qsapp.h"
 
@@ -14,6 +15,7 @@
 static void catcher(int signum) {
 
     WARN("Caught signal %d\n", signum);
+    fprintf(stderr, "\n Try:  gdb -pid %u\n\n", getpid());
     while(1) usleep(10000);
 }
 
@@ -36,7 +38,7 @@ int main(void) {
     const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
     struct QsFilter *f[10];
     struct QsFilter *prevF = 0;
-    struct QsStream *s = qsAppStreamCreate(app);
+    struct QsStream *s = qsAppStreamCreate(app, 0);
     if(!s) goto fail;
     int i=0;
 
@@ -44,24 +46,18 @@ int main(void) {
         f[i] = qsAppFilterLoad(app, *n, 0, 0, 0);
         if(!f[i]) goto fail;
 
-        if(prevF && qsStreamConnectFilters(s, prevF, f[i]))
-            goto fail;
+        if(prevF)
+            qsStreamConnectFilters(s, prevF, f[i], 0, QS_NEXTPORT);
 
         prevF = f[i];
         ++i;
     }
 
     f[i] = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
-    if(qsStreamConnectFilters(s, f[0], f[i]))
-        goto fail;
-    if(qsStreamConnectFilters(s, f[i], f[2]))
-        goto fail;
-
-
-    if(qsStreamConnectFilters(s, f[0], f[i]))
-        goto fail;
-    if(qsStreamConnectFilters(s, f[i], f[2]))
-        goto fail;
+    qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
+    qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
+    qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
+    qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
 
 
     i++;

@@ -116,7 +116,7 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
         DASSERT(output, "");
         DASSERT(output->readers || output->numReaders == 0, "");
 
-        for(uint32_t j=0; i<output->numReaders; ++j)
+        for(uint32_t j=0; j<output->numReaders; ++j)
             // Skip unmarked filters.
             if(output->readers[j].filter->mark)
                 // Recurse

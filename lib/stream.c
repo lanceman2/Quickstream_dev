@@ -420,8 +420,8 @@ static uint32_t CountFilterPath(struct QsStream *s,
 
 
 
-// Allocate the array filter->outputs, and recure to all filters in the
-// stream (s).
+// Allocate the array filter->outputs and filter->outputs[].reader, and
+// recure to all filters in the stream (s).
 //
 static bool
 AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
@@ -465,10 +465,12 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                         s->connections[i].from->name,
                         s->connections[i].fromPortNum,
                         f->numOutputs);
+
                 s->connections[i].fromPortNum = f->numOutputs++;
             }
         }
     }
+
 
     if(f->numOutputs == 0)
         // There are no outputs.
@@ -486,7 +488,8 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
 
     // Now setup the readers array in each output
     //
-    for(uint32_t outputPortNum = 0; outputPortNum<f->numOutputs;) {
+    for(uint32_t outputPortNum = 0; outputPortNum<f->numOutputs;
+            ++outputPortNum) {
 
         // Count the number of readers for this output port
         // (outputPortNum):
@@ -504,6 +507,7 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         ASSERT(readers, "calloc(%" PRIu32 ",%zu) failed",
                 numReaders, sizeof(*readers));
         f->outputs[outputPortNum].readers = readers;
+        f->outputs[outputPortNum].numReaders = numReaders;
 
         // Now set the values in reader:
         uint32_t readerIndex = 0;
@@ -511,10 +515,13 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
             if(s->connections[i].from == f &&
                     s->connections[i].fromPortNum == outputPortNum) {
                 readers[readerIndex].filter = s->connections[i].to;
-                readers[readerIndex].thresholdLength = _QS_DEFAULT_THRESHOLD;
-                readers[readerIndex].inputPortNum = s->connections[i].toPortNum;
+                readers[readerIndex].thresholdLength =
+                    _QS_DEFAULT_THRESHOLD;
+                readers[readerIndex].inputPortNum =
+                    s->connections[i].toPortNum;
                 ++readerIndex;
             }
+
         DASSERT(readerIndex == numReaders, "");
         DASSERT(_QS_MAX_CHANNELS >= numReaders, "");
     }
@@ -536,12 +543,16 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
 
 
 // ret is a return value passed back from recusing.
+//
 static bool
 SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 
     f->mark = false; // filter done
 
     DASSERT(f->numInputs == 0, "");
+
+
+#define MARKER  ((uint8_t *)1)
 
     // For every filter that has output:
     for(uint32_t i=0; i<s->numConnections; ++i) {
@@ -556,8 +567,12 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
             for(uint32_t k=0; k<output->numReaders; ++k) {
                 // Every reader
                 struct QsReader *reader = &output->readers[k];
-                if(reader->filter == f)
+                if(reader->filter == f && reader->readPtr == 0) {
                     ++f->numInputs;
+                    // We borrow this readPtr variable to mark this reader
+                    // as counted.
+                    reader->readPtr = MARKER;
+                }
             }
         }
     }
@@ -579,24 +594,30 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
             for(uint32_t k=0; k<output->numReaders; ++k) {
                 // Every reader
                 struct QsReader *reader = &output->readers[k];
-                if(reader->filter == f) {
+                // We borrow this readPtr variable again to mark this reader
+                // as not counted; undoing the setting of readPtr.
+                if(reader->filter == f && reader->readPtr == MARKER) {
+                    // Undo the setting of readPtr.
+                    reader->readPtr = 0;
                     if(reader->inputPortNum == QS_NEXTPORT)
                         reader->inputPortNum = inputPortNum;
                     if(reader->inputPortNum < f->numInputs)
                         inputPortNums[reader->inputPortNum] = 1;
-                    //else
-                    //  We have a bad input port number.
+                    //else:  We have a bad input port number.
                     ++inputPortNum;
                 }
             }
         }
     }
 
+    DASSERT(inputPortNum == f->numInputs, "");
+
+
     // Check that we have all input port numbers being written to.
     for(uint32_t i=0; i<f->numInputs; ++i)
         if(inputPortNums[i] != 1) {
             ret = true;
-            WARN("filter \"%s\" has some bad output port numbers",
+            WARN("filter \"%s\" has some bad input port numbers",
                     f->name);
             break; // nope
         }
@@ -857,7 +878,7 @@ int qsStreamReady(struct QsStream *s) {
     // buffers that have not been explicitly allocated from the filter
     // start() calling qsBufferCreate().
     //
-    StreamSetFilterMarks(s, false);
+    StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
         AllocateBuffer(s->sources[i]);
 

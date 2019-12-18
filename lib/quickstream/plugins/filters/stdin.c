@@ -24,27 +24,22 @@ int input(const void *buffers[], const size_t lens[],
         uint32_t numInputs, uint32_t numOutputs) {
 
     // We'll assume there is no input data.
-    DASSERT(numInputs == 0, "");
+    ASSERT(numInputs == 0, "");
+    ASSERT(numOutputs == 1, "");
 
     // For output buffering.
-    void *buffer = qsGetBuffer(0, OutLen);
-
-    // TODO: handle the stream closing.
+    void *buffer = qsGetOutputBuffer(0, OutLen, 0);
 
     enum QsFilterInputReturn ret = QsFContinue;
 
     // Put data in the output buffer.
     size_t rd = fread(buffer, 1, OutLen, stdin);
 
+    // handle the stream closing.
     if(feof(stdin)) { ret = QsFFinished; }
 
-    // Output to all output channels
-    if(rd) {
-        size_t outLens[numOutputs];
-        for(uint32_t i=0; i<numOutputs; ++i)
-            outLens[i] = rd;
-        qsOutputs(outLens);
-    }
+    if(rd)
+        qsOutput(0, rd);
 
     return ret;
 }

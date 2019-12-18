@@ -27,13 +27,13 @@ int main(void) {
     INFO("hello quickstream version %s", QS_VERSION);
 
     struct QsApp *app = qsAppCreate();
-    struct QsStream *stream = qsAppStreamCreate(app);
+    struct QsStream *stream = qsAppStreamCreate(app, 0);
 
     struct QsFilter *f0 = qsAppFilterLoad(app, "stdin", 0, 0, 0);
     struct QsFilter *f1 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
     struct QsFilter *f2 = qsAppFilterLoad(app, "stdout.so", 0, 0, 0);
-    qsStreamConnectFilters(stream, f0, f1);
-    qsStreamConnectFilters(stream, f1, f2);
+    qsStreamConnectFilters(stream, f0, f1, 0, 0);
+    qsStreamConnectFilters(stream, f1, f2, 0, 0);
 
 
     qsStreamReady(stream);

@@ -251,11 +251,11 @@ void qsOutput(uint32_t outputPortNum, size_t len);
 
 /** Advance the current buffer input len bytes
  *
- * qsAdvanceInputs() can only be called in a filter input() function.
+ * qsAdvanceInput() can only be called in a filter input() function.
  *
  * In order to advance the input buffer a length that is not the length
- * that was passed into the input() call, this qsAdvanceInputs() function
- * must be called in the input() function.  If qsAdvanceInputs() is not
+ * that was passed into the input() call, this qsAdvanceInput() function
+ * must be called in the input() function.  If qsAdvanceInput() is not
  * called in input() than the input buffer will automatically be advanced
  * the length that was passed to input().
  *

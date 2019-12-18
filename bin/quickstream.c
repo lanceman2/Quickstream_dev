@@ -197,13 +197,14 @@ int main(int argc, const char * const *argv) {
                 //
                 //           filter connections ==> (0) -> (1) -> (2)
                 //
-        
+
                 if(!arg || arg[0] < '0' || arg[0] > '9') {
                     // There is no connection list, so by default we
                     // connect filters in the order they are loaded.
                     for(int i=1; i<numFilters; ++i) {
                         fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
-                        qsStreamConnectFilters(stream, filters[i-1], filters[i]);
+                        qsStreamConnectFilters(stream, filters[i-1], filters[i],
+                                QS_NEXTPORT, QS_NEXTPORT);
                     }
                     break;
                 }
@@ -233,10 +234,8 @@ int main(int argc, const char * const *argv) {
 
                     fprintf(stderr, "connecting: %ld -> %ld\n", from, to);
 
-                    if(qsStreamConnectFilters(stream, filters[from],
-                                filters[to])) {
-                        return 1; // failed
-                    }
+                    qsStreamConnectFilters(stream, filters[from],
+                                filters[to], QS_NEXTPORT, QS_NEXTPORT);
                     gotConnection = true;
                 }
 
@@ -281,7 +280,7 @@ int main(int argc, const char * const *argv) {
                 if(!app) {
                     app = qsAppCreate();
                     ASSERT(app, "");
-                    stream = qsAppStreamCreate(app);
+                    stream = qsAppStreamCreate(app, 0);
                     ASSERT(stream, "");
                 }
                 const char *name = 0;
@@ -396,9 +395,9 @@ int main(int argc, const char * const *argv) {
     if(!gotConnection) {
         // There is no connection list, so by default we
         // connect filters in the order they are loaded.
-        for(int i=1; i<numFilters; ++i) {
-            qsStreamConnectFilters(stream, filters[i-1], filters[i]);
-        }
+        for(int i=1; i<numFilters; ++i)
+            qsStreamConnectFilters(stream, filters[i-1], filters[i],
+                    QS_NEXTPORT, QS_NEXTPORT);
     }
 
 

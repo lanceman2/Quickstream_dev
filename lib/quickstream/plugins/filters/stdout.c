@@ -16,10 +16,14 @@ int input(const void *buffers[], const size_t lens[],
 
     DASSERT(lens, "");
     DASSERT(lens[0], "");
-    DASSERT(numInPorts, "");
+    DASSERT(numInPorts == 1, "");
+    DASSERT(numOutPorts == 0, "");
+
 
     fwrite(buffers[0], 1, lens[0], stdout);
     fflush(stdout);
+
+    qsAdvanceInput(0, lens[0]);
 
     return 0; // success
 }

@@ -36,7 +36,7 @@ int main(void) {
             return 1;
         }
 
-    struct QsStream *stream = qsAppStreamCreate(app);
+    struct QsStream *stream = qsAppStreamCreate(app, 0);
     if(!stream) {
         qsAppDestroy(app);
         return 1;
@@ -46,18 +46,13 @@ int main(void) {
     qsError();
 
     for(int i=0; i<numFilters-1; ++i)
-        if(qsStreamConnectFilters(stream, f[i], f[i+1])) {
-            qsAppDestroy(app);
-            return 1;
-        }
+        qsStreamConnectFilters(stream, f[i], f[i+1], 0, 0);
 
    // Clear the Qs error to test this again:
     qsError();
 
     // This should cause a recoverable error.
-    if(qsStreamConnectFilters(stream, f[0], f[0])) {
-        printf("\n\nqsError()=%s\n\n", qsError());
-    }
+    qsStreamConnectFilters(stream, f[0], f[0], 0, 0);
 
     printf("DONE\n");
 

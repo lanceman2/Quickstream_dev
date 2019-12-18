@@ -294,19 +294,22 @@ struct QsFilter {
 
 struct QsOutput {  // points to reader filters
 
-    // The "pass through" buffers are a double linked list with
-    // the "real" buffer in the first one in the list.  The "real"
-    // output buffer has prev==0.
+    // The "pass through" buffers are a double linked list with the "real"
+    // buffer in the first one in the list.  The "real" output buffer has
+    // prev==0.
     //
     // If this a "pass through" output prev points to the 
     // in another filter output that this output uses to
     // buffer its' data.
     //
-    // So if prev is none 0 this is a "pass through" output
-    // buffer.
+    // So if prev is NOT 0 this is a "pass through" output buffer and prev
+    // points toward the origin of the output thingy; if prev is 0 this is
+    // not a "pass through" buffer.
+    //
     struct QsOutput *prev;
     //
-    // points to the next "pass through" output, if one it present.
+    // points to the next "pass through" output, if one it present; else
+    // next is 0.
     struct QsOutput *next;
 
     // These pointer to the buffer owner filters' mutex/cond variables if

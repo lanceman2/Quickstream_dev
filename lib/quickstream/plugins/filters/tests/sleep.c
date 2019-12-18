@@ -21,29 +21,24 @@ void help(FILE *f) {
         "\n"
         "                       OPTIONS\n"
         "\n"
-        "      --maxRead BYTES       default value %zu\n"
-        "\n"
         "      --maxWrite BYTES      default value %zu\n"
         "\n"
         "\n    --period SEC         default value %lf seconds\n"
         "\n"
         "\n",
-        QS_DEFAULT_MAXINPUT,
         QS_DEFAULT_MAXWRITE,
         seconds
         );
 }
 
 
-static size_t maxRead, maxWrite;
+static size_t maxWrite;
 
 
 int construct(int argc, const char **argv) {
 
     DSPEW();
 
-    maxRead = qsOptsGetSizeT(argc, argv,
-            "maxRead", QS_DEFAULT_MAXINPUT);
     maxWrite = qsOptsGetSizeT(argc, argv,
             "maxWrite", QS_DEFAULT_MAXWRITE);
     seconds = qsOptsGetSizeT(argc, argv,
@@ -62,31 +57,9 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
     ASSERT(numInPorts, "");
     ASSERT(numOutPorts, "");
-    ASSERT(numInPorts == numOutPorts, "");
-
-
-    DSPEW("BASE_FILE=%s", __BASE_FILE__);
 
     DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
             count++, numInPorts, numOutPorts);
-
-    // We needed a start() to check for this error.
-    if(!numInPorts || !numOutPorts) {
-        ERROR("There must be 1 or more inputs and 1 or more outputs.\n");
-        return 1;
-    }
-
-    size_t lens[numOutPorts];
-    for(uint32_t i=0;i<numInPorts;++i)
-        lens[i] = maxRead;
-    qsSetInputMax(lens);
-
-    uint32_t ports[2];
-    ports[1] = QS_ARRAYTERM;
-    for(uint32_t i=0;i<numInPorts;++i) {
-        ports[0] = i;
-        qsBufferCreate(maxWrite, ports);
-    }
 
     return 0; // success
 }
@@ -94,26 +67,36 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
 int stop(uint32_t numInPorts, uint32_t numOutPorts) {
 
-    DSPEW();
+    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
+            count++, numInPorts, numOutPorts);
 
     return 0; // success
 }
 
 
-int input(const void *buffers[], const size_t lens_in[],
+int input(const void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {
 
-    // The filter module's stupid action, sleep.
     if(usecs)
+        // The filter module's stupid action, sleep.
         usleep(usecs);
 
-    qsAdvanceInputs(lens_in);
+    uint32_t outPortNum = 0;
 
-    for(uint32_t i=0; i<numInPorts; ++i)
-        memcpy(qsGetBuffer(i, lens_in[i]), buffers[i], lens_in[i]);
+    for(uint32_t i=0; i<numInPorts; ++i) {
+        size_t len = lens[i];
+        if(len > maxWrite)
+            len = maxWrite;
 
-    qsOutputs(lens_in);
+        memcpy(qsGetOutputBuffer(outPortNum, len, len),
+                buffers[i], len);
+        qsOutput(outPortNum, len);
+        if(outPortNum + 1 < numOutPorts)
+            ++outPortNum;
+
+        qsAdvanceInput(i, len);
+    }
 
     return 0; // success
 }
