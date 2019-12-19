@@ -22,7 +22,6 @@
 //
 void AllocateBuffer(struct QsFilter *f) {
 
-
     f->mark = false;
 
     DASSERT(f, "");
@@ -75,6 +74,7 @@ void FreeBuffers(struct QsFilter *f) {
 
         if(output->prev) {
             // This is a "pass through" buffer so we do not free it yet.
+            // This is freed by the output that owns this buffer.
             output->buffer = 0;
             continue;
         }
@@ -100,8 +100,9 @@ void MapRingBuffers(struct QsFilter *f) {
             DASSERT(output->buffer == 0, "");
 
             struct QsOutput *o = output->prev;
-            // This is a "pass through" buffer so we do not free it yet.
-            // Find the buffer from up the "pass through" buffer list.
+            // This is a "pass through" buffer so it does not have it's
+            // own mapping.  We find the buffer that will map memory
+            // looking up the "pass through" buffer list.
             while(o->prev) o = o->prev;
             // o is now the output with the buffer that owns the memory
             // for the buffer.  It's the original output that writes to
@@ -131,6 +132,7 @@ void MapRingBuffers(struct QsFilter *f) {
                     &output->buffer->overhangLength);
         }
 
+        // Initialize the writer
         output->writePtr = output->buffer->mem;
 
         for(uint32_t j=0; j<output->numReaders; ++j)
