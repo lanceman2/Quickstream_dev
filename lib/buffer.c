@@ -26,6 +26,7 @@ void AllocateBuffer(struct QsFilter *f) {
     f->mark = false;
 
     DASSERT(f, "");
+    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS, "");
     DASSERT((f->outputs && f->numOutputs) ||
             (!f->outputs && !f->numOutputs), "");
 
@@ -46,26 +47,95 @@ void AllocateBuffer(struct QsFilter *f) {
         ASSERT(output->buffer, "calloc(1,%zu) failed",
                 sizeof(*output->buffer));
     }
+
+    // Now recurse.
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsOutput *output = f->outputs + i;
+        for(uint32_t j=0; j<output->numReaders; ++j)
+            if(output->readers[j].filter->mark)
+                AllocateBuffer(output->readers[j].filter);
+    }
 }
 
 
 // This is called when outputs exist, and after un-mapping memory.
 //
-// Just this filters' buffers.
+// Just this filters' buffers.  No recursion.
 //
 void FreeBuffers(struct QsFilter *f) {
     
-    DASSERT(f->outputs, "");
+    DASSERT(f, "");
 
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsOutput *output = f->outputs + i;
+        DASSERT(output->numReaders, "");
+        DASSERT(output->readers, "");
+        DASSERT(output->newBuffer == 0, "");
+        DASSERT(output->buffer, "");
+
+        if(output->prev) {
+            // This is a "pass through" buffer so we do not free it yet.
+            output->buffer = 0;
+            continue;
+        }
+#ifdef DEBUG
+        memset(output->buffer, 0,  sizeof(*output->buffer));
+#endif
+        free(output->buffer);
+        output->buffer = 0;
+    }
 }
+
 
 // This function will recurse.
 //
 void MapRingBuffers(struct QsFilter *f) {
 
-    DASSERT(f->outputs || f->numOutputs == 0, "");
-    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS, "");
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsOutput *output = f->outputs + i;
 
+        if(output->prev) {
+
+            // This is a pass through buffer and it will not be set yet.
+            DASSERT(output->buffer == 0, "");
+
+            struct QsOutput *o = output->prev;
+            // This is a "pass through" buffer so we do not free it yet.
+            // Find the buffer from up the "pass through" buffer list.
+            while(o->prev) o = o->prev;
+            // o is now the output with the buffer that owns the memory
+            // for the buffer.  It's the original output that writes to
+            // the buffer first in the series of pass through buffers that
+            // share this buffer.
+            DASSERT(o->buffer, "");
+            if(o->buffer->mem == 0) {
+                o->buffer->mapLength = 1;
+                o->buffer->overhangLength = 1;
+                // makeRingBuffer() will round up mapLength and
+                // overhangLength to the nearest page.
+                o->buffer->mem = makeRingBuffer(
+                        &o->buffer->mapLength, &o->buffer->overhangLength);
+            }
+            output->buffer = o->buffer;
+        }
+
+        DASSERT(output->buffer, "");
+        
+        if(output->buffer->mem == 0) {
+            output->buffer->mapLength = 1;
+            output->buffer->overhangLength = 1;
+            // makeRingBuffer() will round up mapLength and
+            // overhangLength to the nearest page.
+            output->buffer->mem = makeRingBuffer(
+                    &output->buffer->mapLength,
+                    &output->buffer->overhangLength);
+        }
+
+        output->writePtr = output->buffer->mem;
+
+        for(uint32_t j=0; j<output->numReaders; ++j)
+            output->readers[j].readPtr = output->buffer->mem;
+    }
 }
 
 

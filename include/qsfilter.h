@@ -277,7 +277,7 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
 
 
 
-
+#if 0
 /** Create an output buffer that is associated with the listed ports
  *
  * If there is more than one output port number given than the ring
@@ -299,7 +299,7 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
  */
 extern
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
-
+#endif
 
 
 extern
