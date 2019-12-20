@@ -303,8 +303,23 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
 
 
 extern
-void qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
+int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen);
+
+
+// Because "C" does not know what a pointer is in
+// qsCreatePassThroughBufferDownstream() below.
+struct QsFilter;
+
+/** Make a downstream filter read from a pass through buffer.
+ *
+ * \return 0 on success, or -1 if there is already another downstream
+ * filter that is using this output port as a pass through buffer. 
+ */
+extern
+int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
+        struct QsFilter *toFilter, uint32_t toInputPort);
+
 
 
 /** Tell quickstream that the filters input() function is thread safe.

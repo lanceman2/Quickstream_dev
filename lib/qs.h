@@ -89,6 +89,16 @@ struct QsApp {
 ///////////////////////////////////////////////////////////////////////////
 
 
+#ifdef DEBUG
+extern
+pthread_t _qsMainThread;
+
+// We can use it like so:
+// DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+
+#endif
+
+
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
@@ -399,11 +409,20 @@ struct QsBuffer {
 };
 
 
-// The filter that is having construct(), start(), stop() or destroy()
-// called.  There is only one thread when they are called.  TODO: This
-// makes the API not thread-safe.
+// The filter that is having construct() or destroy() called.  There is
+// only one thread when they are called.
+//
+// TODO: This makes the API not thread-safe.
 extern
-struct QsFilter *_qsCurrentFilter;
+struct QsFilter *_qsConstructFilter;
+
+// The filter that is having start() or stop() called.  There is only one
+// thread when they are called.
+//
+// TODO: This makes the API not thread-safe.
+extern
+struct QsFilter *_qsStartFilter;
+
 
 
 
@@ -419,9 +438,6 @@ void FreeBuffers(struct QsFilter *f);
 extern
 void MapRingBuffers(struct QsFilter *f);
 
-
-extern
-void UnmapRingBuffers(struct QsFilter *f);
 
 extern
 int stream_run_0p_0t(struct QsStream *s);

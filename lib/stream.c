@@ -14,21 +14,23 @@
 
 // TEMPORARY DEBUGGING // TODELETE
 #define SPEW(fmt, ... )\
-    fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+    fprintf(stderr, "%s:line=%d: " fmt "\n", __FILE__,\
+            __LINE__, ##__VA_ARGS__)
 //#define SPEW(fmt, ... ) /* empty macro */
 
 
-
-// The filter that is having start(), stop(), construct(), or destroy()
-// called.  There is only one thread when these functions are called.
+// See comments in qs.h
 //
-struct QsFilter *_qsCurrentFilter = 0;
+struct QsFilter *_qsConstructFilter = 0;
+struct QsFilter *_qsStartFilter = 0;
+
 
 
 
 struct QsStream *qsAppStreamCreate(struct QsApp *app,
         uint32_t maxThreads) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app, "");
 
     struct QsStream *s = calloc(1, sizeof(*s));
@@ -63,6 +65,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app,
 
 void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
 
     if(doAllow)
@@ -109,6 +112,7 @@ static inline void CleanupStream(struct QsStream *s) {
 
 void qsStreamDestroy(struct QsStream *s) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(s->app, "");
     DASSERT(s->numConnections || s->connections == 0, "");
@@ -154,6 +158,7 @@ void qsStreamConnectFilters(struct QsStream *s,
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(s->app, "");
     ASSERT(from != to, "a filter cannot connect to itself");
@@ -255,6 +260,7 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
 int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(f, "");
     DASSERT(f->stream == s, "");
@@ -295,7 +301,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
     if(f->numOutputs) {
         DASSERT(f->outputs, "");
 
-        UnmapRingBuffers(f);
         FreeBuffers(f);
 
         // For every output in this filter we free the readers, and
@@ -305,12 +310,11 @@ void FreeFilterRunResources(struct QsFilter *f) {
             DASSERT(output->numReaders, "");
             DASSERT(output->readers, "");
             DASSERT((output->mutex && output->cond) ||
-                    (!output->mutex || !output->cond),"");
+                    (!output->mutex && !output->cond),"");
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
 #endif
-
             if(output->mutex) {
                 // We had multi-threaded access to this buffer.
                 ASSERT(pthread_mutex_destroy(output->mutex) == 0, "");
@@ -642,6 +646,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 // Do one source feed loop.
 uint32_t qsStreamFlow(struct QsStream *s) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(s->app, "");
     ASSERT(s->sources, "qsStreamReady() and qsStreamLaunch() "
@@ -660,6 +665,7 @@ int qsStreamLaunch(struct QsStream *s) {
     // Make other threads and processes.  Put the thread and processes
     // in a blocking call waiting for the flow.
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(s->app, "");
     ASSERT(s->sources, "qsStreamReady() must be successfully"
@@ -678,6 +684,7 @@ int qsStreamLaunch(struct QsStream *s) {
 
 int qsStreamStop(struct QsStream *s) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s->sources, "");
 
     s->flags &= (~_QS_STREAM_LAUNCHED);
@@ -695,9 +702,9 @@ int qsStreamStop(struct QsStream *s) {
 
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->stop) {
-            _qsCurrentFilter = f;
+            _qsStartFilter = f;
             f->stop(f->numInputs, f->numOutputs);
-            _qsCurrentFilter = 0;
+            _qsStartFilter = 0;
         }
 
     /**********************************************************************
@@ -716,6 +723,7 @@ int qsStreamStop(struct QsStream *s) {
 
 int qsStreamReady(struct QsStream *s) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s, "");
     DASSERT(s->app, "");
 
@@ -854,10 +862,10 @@ int qsStreamReady(struct QsStream *s) {
                 // We mark which filter we are calling the start() for so that
                 // if the filter start() calls any filter API function to get
                 // resources we know what filter these resources belong to.
-                _qsCurrentFilter = f;
+                _qsStartFilter = f;
                 // Call a filter start() function:
                 int ret = f->start(f->numInputs, f->numOutputs);
-                _qsCurrentFilter = 0;
+                _qsStartFilter = 0;
                 if(ret) {
                     // TODO: Should we call filter stop() functions?
                     //
@@ -887,6 +895,8 @@ int qsStreamReady(struct QsStream *s) {
      *     Stage: mmap() ring buffers to memory
      *********************************************************************/
 
+    // There may be some calculations needed from the buffer structure for
+    // the memory mapping, so we do this in a different loop.
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
 
@@ -898,7 +908,6 @@ int qsStreamReady(struct QsStream *s) {
     // TODO: vary this:
     //
     s->flow = singleThreadFlow;
-
 
 
 

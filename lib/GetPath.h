@@ -9,6 +9,7 @@ static inline char *GetPluginPathFromEnv(const char *category,
         const char *name)
 {
     char *env = 0;
+    size_t envLen = 0;
     char **envPaths = 0;
     {
         // TODO: We could find the longest directory path string in this
@@ -27,6 +28,8 @@ static inline char *GetPluginPathFromEnv(const char *category,
         // We are now done with the envs and stack memory pointers.
 
         if(!env) return env; // move on to the next method.
+
+        envLen = strlen(env);
 
         DASSERT(*env, "env QS_MODULE_PATH has zero length");
 
@@ -66,10 +69,10 @@ static inline char *GetPluginPathFromEnv(const char *category,
         // Now we have env and envPaths to free.
 
     }
-    
+
     // len = strlen("$env" + '/' + category + '/' + name + ".so")
     // More than long enough.
-    const ssize_t len = strlen(env) + strlen(category) +
+    const ssize_t len = envLen + strlen(category) +
             strlen(name) + 6/* for '//' and ".so" and '\0' */;
 
     // In case it's stupid long...
@@ -87,7 +90,7 @@ static inline char *GetPluginPathFromEnv(const char *category,
     // So now envPaths[] is an array of strings that is Null terminated.
     for(char **path = envPaths; *path; ++path)
     {
-        snprintf(buf, len, "%s/%s/%s%s", env, category, name, suffix);
+        snprintf(buf, len, "%s/%s/%s%s", *path, category, name, suffix);
 
         if(access(buf, R_OK) == 0)
         {

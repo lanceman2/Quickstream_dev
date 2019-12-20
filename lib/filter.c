@@ -67,10 +67,12 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         const char *fileName, const char *_loadName,
         int argc, const char **argv) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app, "");
     DASSERT(fileName, "");
     DASSERT(strlen(fileName) > 0, "");
     DASSERT(strlen(fileName) < 1024*2, "");
+
 
     char *loadName = (char *) _loadName;
 
@@ -124,8 +126,6 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     char *path = GetPluginPath("filters", fileName);
 
-    // It should be a full path now.
-    DASSERT(path[0] == '/', "");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
@@ -252,10 +252,34 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
     f->app = app;
     f->dlhandle = handle;
 
+
     if(construct) {
-        _qsCurrentFilter = f;
-        construct(argc, argv);
-        _qsCurrentFilter = 0;
+
+        // This code is only run in one thread, so this is not necessarily
+        // required to be thread safe, but it is and must be re-entrant.
+        // Currently this is not thread-safe; _qsConstructFilter is
+        // global.
+        struct QsFilter *old_qsConstructFilter = _qsConstructFilter;
+
+        // In this construct() call this function, qsAppFilterLoad(), may
+        // be called, so this function must be re-entrant.
+
+        _qsConstructFilter = f;
+        // When this construct() is called this filter struct is "all
+        // setup" and in the app object.  Therefore if this filter module
+        // is a super-module that loads other filters and adds
+        // connections, it will work.
+        int ret = construct(argc, argv);
+
+        _qsConstructFilter = old_qsConstructFilter;
+        
+        if(ret) {
+            // Failure.
+            //
+            ERROR("filter \"%s\" construct() failed", f->name);
+            goto cleanup;
+        }
+        //else Success.
     }
 
     INFO("Successfully loaded module Filter %s with name \"%s\"",
@@ -277,13 +301,18 @@ cleanup:
 
 void qsSetThreadSafe(void) {
 
-    ASSERT(_qsCurrentFilter,"qsSetThreadSafe() not called in construct()");
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    ASSERT(_qsConstructFilter,"qsSetThreadSafe() not called in construct()");
 
-    _qsCurrentFilter->isThreadSafe = true;
+    _qsConstructFilter->isThreadSafe = true;
 }
 
 
 int qsFilterUnload(struct QsFilter *f) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    ASSERT(_qsStartFilter == 0,
+            "This cannot be called in start() or stop()");
 
     DASSERT(f, "");
     DASSERT(f->app, "");

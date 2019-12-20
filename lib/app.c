@@ -24,8 +24,20 @@
 #include "./filterList.h"
 
 
+#ifdef DEBUG
+pthread_t _qsMainThread = 0;
+#endif
+
 
 struct QsApp *qsAppCreate(void) {
+
+#ifdef DEBUG
+    if(!_qsMainThread)
+        // We define this to be the main thread.
+        _qsMainThread = pthread_self();
+#endif
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
     struct QsApp *app = calloc(1, sizeof(*app));
     ASSERT(app, "calloc(1,%zu) failed", sizeof(*app));
@@ -36,7 +48,8 @@ struct QsApp *qsAppCreate(void) {
 int qsAppDestroy(struct QsApp *app) {
 
     DASSERT(app, "");
-
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    
     // Destroy the streams.  We assume they are not flowing.
     while(app->streams) qsStreamDestroy(app->streams);
 
@@ -237,6 +250,7 @@ PrintStreamDetail(struct QsStream *s,
 int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         FILE *file) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app, "");
     DASSERT(file, "");
 
@@ -284,6 +298,7 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
 int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
         bool waitForDisplay) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app, "");
 
     int fd[2];

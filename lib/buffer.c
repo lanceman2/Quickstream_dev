@@ -57,7 +57,9 @@ void AllocateBuffer(struct QsFilter *f) {
 }
 
 
-// This is called when outputs exist, and after un-mapping memory.
+// This is called when outputs exist.  This un-maps memory and frees the
+// buffer structure.  The buffer and mappings do not necessarily exist
+// when this is called.
 //
 // Just this filters' buffers.  No recursion.
 //
@@ -78,11 +80,26 @@ void FreeBuffers(struct QsFilter *f) {
             output->buffer = 0;
             continue;
         }
+
+        struct QsBuffer *b = output->buffer;
+        if(b) {
+            // There is no failure mode between allocating the buffer and
+            // mapping the memory, therefore:
+            DASSERT(b->mem, "");
+            DASSERT(b->mapLength, "");
+            DASSERT(b->overhangLength, "");
 #ifdef DEBUG
-        memset(output->buffer, 0,  sizeof(*output->buffer));
+            // TODO: Is this really useful?
+            memset(b->mem, 0, b->mapLength);
 #endif
-        free(output->buffer);
-        output->buffer = 0;
+            // freeRingBuffer() calls munmap() ...
+            freeRingBuffer(b->mem, b->mapLength, b->overhangLength);
+#ifdef DEBUG
+            memset(b, 0, sizeof(*b));
+#endif
+            free(b);
+            output->buffer = 0;
+        }
     }
 }
 
@@ -141,15 +158,6 @@ void MapRingBuffers(struct QsFilter *f) {
 }
 
 
-// Just this filters' buffers' mappings.
-//
-void UnmapRingBuffers(struct QsFilter *f) {
-
-    DASSERT(f->outputs, "");
-
-}
-
-
 void qsOutput(uint32_t portNum, const size_t len) {
 
 
@@ -169,6 +177,7 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 }
 
 
+#if 0
 // Outputs can share the same buffer.  The list of output ports is
 // in the QS_ARRAYTERM terminated array outputPortNums[].
 //
@@ -183,10 +192,23 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
 }
+#endif
 
 
-void
+int
 qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen) {
 
+    ASSERT(0, "Write this function");
+    return 0; // success
 }
+
+
+int
+qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
+        struct QsFilter *toFilter, uint32_t toInputPort) {
+
+    ASSERT(0, "Write this function");
+    return 0; // success
+}
+

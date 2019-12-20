@@ -61,11 +61,20 @@ void FreeFilter(struct QsFilter *f) {
     if(f->dlhandle) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
         if(destroy) {
-            _qsCurrentFilter = f;
+
+            // This FreeFilter() function must be re-entrant.  It may be
+            // called from a qsFilterUnload() call in a filter->destroy()
+            // call; for filters that are super-modules.  Super-modules
+            // are filters that load filters.
+            //
+            struct QsFilter *old_qsConstructFilter = _qsConstructFilter;
+            _qsConstructFilter = f;
             int ret = destroy();
-            _qsCurrentFilter = 0;
+            _qsConstructFilter = old_qsConstructFilter;
+
             if(ret) {
                 // TODO: what do we use this return value for??
+                // Maybe just to print this warning.
                 WARN("filter \"%s\" destroy() returned %d", f->name, ret);
             }
         }
