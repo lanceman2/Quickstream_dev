@@ -73,7 +73,6 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
     DASSERT(strlen(fileName) > 0, "");
     DASSERT(strlen(fileName) < 1024*2, "");
 
-
     char *loadName = (char *) _loadName;
 
     if(!loadName || !(*loadName)) {
