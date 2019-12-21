@@ -41,6 +41,13 @@ struct QsApp *qsAppCreate(void) {
 
     struct QsApp *app = calloc(1, sizeof(*app));
     ASSERT(app, "calloc(1,%zu) failed", sizeof(*app));
+
+    // key used for pthread_getspecific() and pthread_setspecific()
+    // a thread calls before filter::input() in the multi-threaded
+    // flow/run case.  We don't know if we are multi-threaded until
+    // flow start, so we make this now.
+    CHECK(pthread_key_create(&app->key, 0));
+
     return app;
 }
 
@@ -61,6 +68,9 @@ int qsAppDestroy(struct QsApp *app) {
         FreeFilter(f);
         f = nextF;
     }
+
+    CHECK(pthread_key_delete(app->key));
+
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif

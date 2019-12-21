@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <sys/mman.h>
 #include <alloca.h>
+#include <pthread.h>
 
 #include "./qs.h"
 #include "../include/qsfilter.h"
@@ -138,7 +139,7 @@ void MapRingBuffers(struct QsFilter *f) {
         }
 
         DASSERT(output->buffer, "");
-        
+
         if(output->buffer->mem == 0) {
             output->buffer->mapLength = 1;
             output->buffer->overhangLength = 1;
@@ -158,6 +159,13 @@ void MapRingBuffers(struct QsFilter *f) {
 }
 
 
+void CheckBufferThreadSync(struct QsStream *s, struct QsFilter *f) {
+
+    
+
+}
+
+
 void qsOutput(uint32_t portNum, const size_t len) {
 
 
@@ -168,7 +176,52 @@ void qsOutput(uint32_t portNum, const size_t len) {
 void *qsGetOutputBuffer(uint32_t outputPortNum,
         size_t maxLen, size_t minLen) {
 
-    return 0;
+    DASSERT(_qsStartFilter, "");
+    DASSERT(maxLen, "");
+    DASSERT(maxLen >= minLen, "");
+    DASSERT(_qsStartFilter->input, "");
+    DASSERT(_qsStartFilter->numOutputs, "");
+    DASSERT(_qsStartFilter->outputs, "");
+    DASSERT(_qsStartFilter->numOutputs >= outputPortNum, "");
+    struct QsOutput *o = _qsStartFilter->outputs + outputPortNum;
+    DASSERT(o->readers, "");
+    DASSERT(o->numReaders, "");
+
+
+    if(o->mutex) {
+        // There may be other threads accessing this output (o) structure.
+        CHECK(pthread_mutex_lock(o->mutex));
+    }
+
+
+    uint8_t *ret = 0;
+
+    // Check that the mmap()-ed memory is large enough.
+    // Look in each 
+    for(;o ;o=o->next){
+        // Iterate through all readers of this output
+
+
+
+        // Iterate through all readers of this output
+        struct QsReader *rEnd = o->readers + o->numReaders;
+        for(struct QsReader *r=o->readers; r<rEnd; ++r) {
+
+        }
+    }
+
+
+    if(o->mutex && maxLen == minLen)
+        // There may be other threads accessing the buffer.
+        CHECK(pthread_mutex_unlock(o->mutex));
+    else {
+        struct QsThreadData *threadData;
+        threadData = pthread_getspecific(_qsStartFilter->app->key);
+        DSPEW("threadData=%p", threadData);
+        threadData->mutex = o->mutex;
+    }
+
+    return ret;
 }
 
 
@@ -211,4 +264,3 @@ qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
     ASSERT(0, "Write this function");
     return 0; // success
 }
-

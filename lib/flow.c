@@ -5,10 +5,46 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <pthread.h>
 
 #include "./qs.h"
 #include "../include/qsfilter.h"
 #include "./debug.h"
+
+
+#if 1
+
+static void *StartThread(struct QsFilter *f) {
+
+    DASSERT(f, "");
+    DASSERT(f->app, "");
+
+    // This data will exist so long as this thread uses this call stack.
+    struct QsThreadData threadData;
+
+    CHECK(pthread_setspecific(f->app->key, &threadData));
+
+    return 0;
+}
+
+static void *FinishThread(void *ptr) {
+
+
+    return 0;
+}
+
+
+static void CreateThread(struct QsStream *s, struct QsFilter *f) {
+
+    pthread_t thread;
+
+    CHECK(pthread_create(&thread, 0,
+                (void *(*) (void *)) StartThread, f));
+
+
+}
+
+#endif
 
 
 

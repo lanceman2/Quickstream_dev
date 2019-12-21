@@ -17,6 +17,26 @@
 // and avoid thread synchronization primitives, and other system calls.
 
 
+// This CPP macro function CHECK() is just so we can call most pthread_*()
+// and maybe other functions that return 0 on success and an int error
+// number on failure, and asserts on failure printing errno (from
+// ASSERT()) and the return value.  This is not so bad given this does not
+// obscure what is being run.  Like for example:
+//
+//   CHECK(pthread_mutex_destroy(&s->mutex));
+//
+// You can totally tell what that is doing.  One line of code instead of
+// three.  Note (x) can only appear once in the macro expression,
+// otherwise (x) could get executed more than once, if it is listed more
+// than once.
+//
+#define CHECK(x) \
+    do { \
+        int ret = (x); \
+        ASSERT(ret == 0, #x "=%d FAILED", ret); \
+    } while(0)
+
+
 
 // App (QsApp) is the top level quickstream object.  It's a container for
 // filters and streams.  Perhaps there should only be one app in a
@@ -35,6 +55,20 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
+
+    // For pthread_getspecific() and pthread_setspecific().
+    pthread_key_t key;
+};
+
+
+// This will be the pthread_getspecific() data for each flow thread.
+//
+struct QsThreadData {
+
+    // If we have a output mutex lock in this thread this is set, if not
+    // it's not set.
+    //
+    pthread_mutex_t *mutex;
 };
 
 
@@ -453,6 +487,9 @@ void freeRingBuffer(void *x, size_t len, size_t overhang);
 extern
 uint32_t singleThreadFlow(struct QsStream *s);
 
+
+extern
+void CheckBufferThreadSync(struct QsStream *s, struct QsFilter *f);
 
 
 #if 0 // Not needed yet.

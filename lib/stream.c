@@ -26,7 +26,6 @@ struct QsFilter *_qsStartFilter = 0;
 
 
 
-
 struct QsStream *qsAppStreamCreate(struct QsApp *app,
         uint32_t maxThreads) {
 
@@ -55,8 +54,8 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app,
         // them with a condition variable and mutex.  We also will need to
         // control access to some data using the mutex.
         //
-        ASSERT(pthread_cond_init(&s->cond, 0) == 0, "");
-        ASSERT(pthread_mutex_init(&s->mutex, 0) == 0, "");
+        CHECK(pthread_cond_init(&s->cond, 0));
+        CHECK(pthread_mutex_init(&s->mutex, 0));
     }
 
     return s;
@@ -100,8 +99,8 @@ static inline void CleanupStream(struct QsStream *s) {
         s->numConnections = 0;
     }
     if(s->maxThreads) {
-        ASSERT(pthread_mutex_destroy(&s->mutex) == 0, "");
-        ASSERT(pthread_cond_destroy(&s->cond) == 0, "");
+        CHECK(pthread_mutex_destroy(&s->mutex));
+        CHECK(pthread_cond_destroy(&s->cond));
     }
 #ifdef DEBUG
     memset(s, 0, sizeof(*s));
@@ -317,8 +316,8 @@ void FreeFilterRunResources(struct QsFilter *f) {
 #endif
             if(output->mutex) {
                 // We had multi-threaded access to this buffer.
-                ASSERT(pthread_mutex_destroy(output->mutex) == 0, "");
-                ASSERT(pthread_cond_destroy(output->cond) == 0, "");
+                CHECK(pthread_mutex_destroy(output->mutex));
+                CHECK(pthread_cond_destroy(output->cond));
 #ifdef DEBUG
                 memset(output->mutex, 0, sizeof(*output->mutex));
                 memset(output->cond, 0, sizeof(*output->cond));
@@ -905,9 +904,32 @@ int qsStreamReady(struct QsStream *s) {
      *     Stage: set the flow function
      *********************************************************************/
 
-    // TODO: vary this:
+    // TODO: vary this, s->flow.  Setup an array with a list of possible
+    // functions.  Maybe the user could load their own function.
+    //
+    // Set the function that is the stream flower thingy.
     //
     s->flow = singleThreadFlow;
+
+
+    /**********************************************************************
+     *     Stage: setup buffers mutex and cond, if needed.
+     *********************************************************************/
+
+    // There may be some calculations needed from the buffer structure for
+    // the memory mapping, so we do this in a different loop.
+    //
+    // If s->flow != singleThreadFlow, then there is no chance that there
+    // will be more than one thread accessing a buffer, because there will
+    // only be one thread in existence.
+    //
+    if(s->flow != singleThreadFlow)
+        for(uint32_t i=0; i<s->numSources; ++i)
+            // Check and setup pthread synchronization primitives for the
+            // buffers.  In the case where writing to the buffer is not
+            // shared between filters or there is just one thread, the
+            // buffers will be lock-less shared buffers.
+            CheckBufferThreadSync(s, s->sources[i]);
 
 
 
