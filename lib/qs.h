@@ -62,13 +62,15 @@ struct QsApp {
 
 
 // This will be the pthread_getspecific() data for each flow thread.
+// Each thread just calls the filter (QsFilter) input() function.
+// When there is more than on thread calling a filter input() we need to
+// know things about that thread in that thread.
 //
 struct QsThreadData {
 
-    // If we have a output mutex lock in this thread this is set, if not
-    // it's not set.
-    //
-    pthread_mutex_t *mutex;
+    // haveFilterMutexLock with get set to the filter that we have the
+    // lock for.  We unset this when the thread is done.
+    struct QsFilter *haveFilterMutexLock;
 };
 
 
@@ -312,7 +314,16 @@ struct QsFilter {
     // when the stream is flowing.
     bool isSource;  // startup flag marking filter as a source
 
-    bool isThreadSafe;
+
+    // mutex and cond used when more than one thread accesses this filters
+    // outputs.
+    //
+    // mutex and cond get set to nonzero if their use is needed; otherwise
+    // they are set to 0 when the filter can only be run with on thread at
+    // a time.
+    //
+    pthread_mutex_t *mutex;
+    pthread_cond_t *cond;
 
 
     // This filter owns these output structs, in that it is the only
@@ -338,6 +349,9 @@ struct QsFilter {
 
 struct QsOutput {  // points to reader filters
 
+    // Outputs (QsOutputs) are only accessed by the filters (QSFilters)
+    // that own them.
+
     // The "pass through" buffers are a double linked list with the "real"
     // buffer in the first one in the list.  The "real" output buffer has
     // prev==0.
@@ -356,18 +370,6 @@ struct QsOutput {  // points to reader filters
     // next is 0.
     struct QsOutput *next;
 
-    // These pointer to the buffer owner filters' mutex/cond variables if
-    // this output has a buffer that may get accessed by more than one
-    // thread.  There are several cases when buffers may get accessed by
-    // more than one thread.  The cases depend on if an involved filters
-    // are thread safe.  We must look at filters "pass through" buffers
-    // too.
-    //
-    // mutex and cond get set to nonzero if their use is needed; otherwise
-    // they are set to 0.
-    //
-    pthread_mutex_t *mutex;
-    pthread_cond_t *cond;
 
     // If prev is set this is not set and this output is a "pass through"
     // buffer.

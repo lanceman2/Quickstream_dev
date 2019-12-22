@@ -12,7 +12,7 @@
 #include "./debug.h"
 
 
-#if 1
+#if 0
 
 static void *StartThread(struct QsFilter *f) {
 
@@ -21,6 +21,7 @@ static void *StartThread(struct QsFilter *f) {
 
     // This data will exist so long as this thread uses this call stack.
     struct QsThreadData threadData;
+    memset(&threadData, 0, sizeof(threadData));
 
     CHECK(pthread_setspecific(f->app->key, &threadData));
 

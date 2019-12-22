@@ -51,11 +51,18 @@ struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
     return 0; // not found
 }
 
+
+// Here is where we cleanup filter (QsFilter) data that is from loading
+// and not part of flow-time and stream resources.  Flow-time and stream
+// resources are like ring buffers and connections.
 static inline
 void FreeFilter(struct QsFilter *f) {
 
     DASSERT(f, "");
     DASSERT(f->name, "");
+    DASSERT(f->outputs == 0, "");
+    DASSERT(f->numOutputs == 0, "");
+    DASSERT((f->mutex && f->cond) || (!f->mutex && !f->cond), "");
 
     DSPEW("Freeing: %s", f->name);
     if(f->dlhandle) {
@@ -85,6 +92,21 @@ void FreeFilter(struct QsFilter *f) {
             // TODO: So what can I do.
 
     }
+
+    if(f->mutex) {
+        // Setting the filter as thread-safe is done at contruct() time
+        // thing.  It is not a flow setup thing.  So we cleanup the mutex
+        // and cond here.
+        CHECK(pthread_mutex_destroy(f->mutex));
+        CHECK(pthread_cond_destroy(f->cond));
+#ifdef DEBUG
+        memset(f->mutex, 0, sizeof(*f->mutex));
+        memset(f->cond, 0, sizeof(*f->cond));
+#endif
+        free(f->mutex);
+        free(f->cond);
+    }
+
 #ifdef DEBUG
     memset(f->name, 0, strlen(f->name));
 #endif

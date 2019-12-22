@@ -159,13 +159,6 @@ void MapRingBuffers(struct QsFilter *f) {
 }
 
 
-void CheckBufferThreadSync(struct QsStream *s, struct QsFilter *f) {
-
-    
-
-}
-
-
 void qsOutput(uint32_t portNum, const size_t len) {
 
 
@@ -183,14 +176,17 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     DASSERT(_qsStartFilter->numOutputs, "");
     DASSERT(_qsStartFilter->outputs, "");
     DASSERT(_qsStartFilter->numOutputs >= outputPortNum, "");
+    pthread_mutex_t *mutex = _qsStartFilter->mutex;
+
+    //pthread_cond_t *cond = _qsStartFilter->cond;
     struct QsOutput *o = _qsStartFilter->outputs + outputPortNum;
     DASSERT(o->readers, "");
     DASSERT(o->numReaders, "");
 
 
-    if(o->mutex) {
+    if(mutex) {
         // There may be other threads accessing this output (o) structure.
-        CHECK(pthread_mutex_lock(o->mutex));
+        CHECK(pthread_mutex_lock(mutex));
     }
 
 
@@ -211,15 +207,25 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     }
 
 
-    if(o->mutex && maxLen == minLen)
+    if(mutex) {
         // There may be other threads accessing the buffer.
-        CHECK(pthread_mutex_unlock(o->mutex));
-    else {
-        struct QsThreadData *threadData;
-        threadData = pthread_getspecific(_qsStartFilter->app->key);
-        DSPEW("threadData=%p", threadData);
-        threadData->mutex = o->mutex;
+        if(maxLen == minLen)
+            // Since the memory pointer positions are known we can
+            // let other threads get new write pointer positions
+            // by releasing this mutex lock and allowing parallel
+            // processing in this filter.
+            CHECK(pthread_mutex_unlock(mutex));
+        else {
+            // In this case we must hold the mutex lock until we know
+            // where the write pointer will end up.
+            struct QsThreadData *threadData;
+            threadData = pthread_getspecific(_qsStartFilter->app->key);
+            ASSERT(threadData, "");
+            threadData->haveFilterMutexLock = _qsStartFilter;
+        }
     }
+
+    
 
     return ret;
 }

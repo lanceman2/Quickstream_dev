@@ -301,9 +301,20 @@ cleanup:
 void qsSetThreadSafe(void) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    ASSERT(_qsConstructFilter,"qsSetThreadSafe() not called in construct()");
+    struct QsFilter *f = _qsConstructFilter;
+    ASSERT(f,"qsSetThreadSafe() not called in construct()");
 
-    _qsConstructFilter->isThreadSafe = true;
+    // If a filter can be called with multiple thread than we need
+    // a mutex and a condition variable pair in order to control how
+    // it accesses the filters output buffers.
+
+    f->mutex = calloc(1, sizeof(*f->mutex));
+    ASSERT(f->mutex, "calloc(1,%zu) failed", sizeof(*f->mutex));
+    CHECK(pthread_mutex_init(f->mutex, 0));
+
+    f->cond = calloc(1, sizeof(*f->cond));
+    ASSERT(f->cond, "calloc(1,%zu) failed", sizeof(*f->cond));
+    CHECK(pthread_cond_init(f->cond, 0));
 }
 
 

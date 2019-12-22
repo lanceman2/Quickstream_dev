@@ -302,30 +302,17 @@ void FreeFilterRunResources(struct QsFilter *f) {
 
         FreeBuffers(f);
 
-        // For every output in this filter we free the readers, and
-        // mutex and cond, if they were used.
+        // For every output in this filter we free the readers.
         for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
             struct QsOutput *output = &f->outputs[i];
             DASSERT(output->numReaders, "");
             DASSERT(output->readers, "");
-            DASSERT((output->mutex && output->cond) ||
-                    (!output->mutex && !output->cond),"");
+            DASSERT((f->mutex && f->cond) ||
+                    (!f->mutex && !f->cond),"");
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
 #endif
-            if(output->mutex) {
-                // We had multi-threaded access to this buffer.
-                CHECK(pthread_mutex_destroy(output->mutex));
-                CHECK(pthread_cond_destroy(output->cond));
-#ifdef DEBUG
-                memset(output->mutex, 0, sizeof(*output->mutex));
-                memset(output->cond, 0, sizeof(*output->cond));
-#endif
-                free(output->mutex);
-                free(output->cond);
-            }
-
             free(output->readers);
         }
 
@@ -910,26 +897,6 @@ int qsStreamReady(struct QsStream *s) {
     // Set the function that is the stream flower thingy.
     //
     s->flow = singleThreadFlow;
-
-
-    /**********************************************************************
-     *     Stage: setup buffers mutex and cond, if needed.
-     *********************************************************************/
-
-    // There may be some calculations needed from the buffer structure for
-    // the memory mapping, so we do this in a different loop.
-    //
-    // If s->flow != singleThreadFlow, then there is no chance that there
-    // will be more than one thread accessing a buffer, because there will
-    // only be one thread in existence.
-    //
-    if(s->flow != singleThreadFlow)
-        for(uint32_t i=0; i<s->numSources; ++i)
-            // Check and setup pthread synchronization primitives for the
-            // buffers.  In the case where writing to the buffer is not
-            // shared between filters or there is just one thread, the
-            // buffers will be lock-less shared buffers.
-            CheckBufferThreadSync(s, s->sources[i]);
 
 
 
