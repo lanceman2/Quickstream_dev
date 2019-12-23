@@ -28,6 +28,26 @@
 pthread_t _qsMainThread = 0;
 #endif
 
+pthread_key_t _qsKey = 0;
+static pthread_once_t key_once = PTHREAD_ONCE_INIT;
+static void make_key(void) {
+    CHECK(pthread_key_create(&_qsKey, 0));
+    
+    // We setup per thread data for the main thread.
+    SetPerThreadData(0);
+};
+
+
+void SetPerThreadData(struct QsJob *job) {
+    if(job == 0) {
+        job = calloc(1, sizeof(*job));
+        ASSERT(job, "calloc(1,%zu) failed", sizeof(*job));
+    }
+    CHECK(pthread_cond_init(&job->cond, 0));
+    CHECK(pthread_setspecific(_qsKey, job));
+}
+
+
 
 struct QsApp *qsAppCreate(void) {
 
@@ -45,8 +65,8 @@ struct QsApp *qsAppCreate(void) {
     // key used for pthread_getspecific() and pthread_setspecific()
     // a thread calls before filter::input() in the multi-threaded
     // flow/run case.  We don't know if we are multi-threaded until
-    // flow start, so we make this now.
-    CHECK(pthread_key_create(&app->key, 0));
+    // flow start.
+    CHECK(pthread_once(&key_once, make_key));
 
     return app;
 }
@@ -68,8 +88,6 @@ int qsAppDestroy(struct QsApp *app) {
         FreeFilter(f);
         f = nextF;
     }
-
-    CHECK(pthread_key_delete(app->key));
 
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));

@@ -169,25 +169,49 @@ void qsOutput(uint32_t portNum, const size_t len) {
 void *qsGetOutputBuffer(uint32_t outputPortNum,
         size_t maxLen, size_t minLen) {
 
-    DASSERT(_qsStartFilter, "");
+
+    // Get the filter.
+    struct QsJob *job = pthread_getspecific(_qsKey);
+    ASSERT(job, "thread_getspecific(_qsKey) failed");
+    struct QsFilter *f = job->filter;
+    DASSERT(f, "");
     DASSERT(maxLen, "");
     DASSERT(maxLen >= minLen, "");
-    DASSERT(_qsStartFilter->input, "");
-    DASSERT(_qsStartFilter->numOutputs, "");
-    DASSERT(_qsStartFilter->outputs, "");
-    DASSERT(_qsStartFilter->numOutputs >= outputPortNum, "");
-    pthread_mutex_t *mutex = _qsStartFilter->mutex;
+    DASSERT(f->input, "");
+    DASSERT(f->numOutputs, "");
+    DASSERT(f->outputs, "");
+    DASSERT(f->numOutputs >= outputPortNum, "");
+    pthread_mutex_t *mutex = f->mutex;
 
-    //pthread_cond_t *cond = _qsStartFilter->cond;
-    struct QsOutput *o = _qsStartFilter->outputs + outputPortNum;
+    //pthread_cond_t *cond = f->cond;
+    struct QsOutput *o = f->outputs + outputPortNum;
     DASSERT(o->readers, "");
     DASSERT(o->numReaders, "");
 
+    // First question: can there be more than one thread calling this
+    // function for this filter?
+    //
+    //   Yes, mutex is non-zero.
+    //
+    //   No, mutex is zero.
+    //
 
     if(mutex) {
         // There may be other threads accessing this output (o) structure.
         CHECK(pthread_mutex_lock(mutex));
     }
+    // Else: This is a lock-less ring buffer.  How nice.  There must not
+    //       be more than one thread calling this input().
+
+
+
+    // Second question: What kind of buffer is this?
+    //
+    //   1. "Head buffer" = not a pass through
+    //
+    //   2. "Pass-through buffer"
+    //
+
 
 
     uint8_t *ret = 0;
@@ -215,17 +239,8 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
             // by releasing this mutex lock and allowing parallel
             // processing in this filter.
             CHECK(pthread_mutex_unlock(mutex));
-        else {
-            // In this case we must hold the mutex lock until we know
-            // where the write pointer will end up.
-            struct QsThreadData *threadData;
-            threadData = pthread_getspecific(_qsStartFilter->app->key);
-            ASSERT(threadData, "");
-            threadData->haveFilterMutexLock = _qsStartFilter;
-        }
     }
 
-    
 
     return ret;
 }

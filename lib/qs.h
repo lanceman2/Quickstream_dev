@@ -38,50 +38,6 @@
 
 
 
-// App (QsApp) is the top level quickstream object.  It's a container for
-// filters and streams.  Perhaps there should only be one app in a
-// program, but we do not impose that.  There is no compelling reason to
-// limit the number apps that a program can have.  App is used to create
-// filters by loading module plugins.  App is used to create streams.
-//
-struct QsApp {
-
-    // List of filters.  Head of a singly linked list.
-    struct QsFilter *filters;
-
-    // We could have more than one stream.  We can't delete or edit one
-    // while it is running.  You could do something weird like configure
-    // one stream while another stream is running.
-    //
-    // List of streams.  Head of a singly linked list.
-    struct QsStream *streams;
-
-    // For pthread_getspecific() and pthread_setspecific().
-    pthread_key_t key;
-};
-
-
-// This will be the pthread_getspecific() data for each flow thread.
-// Each thread just calls the filter (QsFilter) input() function.
-// When there is more than on thread calling a filter input() we need to
-// know things about that thread in that thread.
-//
-struct QsThreadData {
-
-    // haveFilterMutexLock with get set to the filter that we have the
-    // lock for.  We unset this when the thread is done.
-    struct QsFilter *haveFilterMutexLock;
-};
-
-
-// https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
-// example: _sync_fetch_and_add()
-// Or use:
-// #include <stdatomic.h>
-// example: https://en.cppreference.com/w/c/language/atomic
-
-
-
 //#define QS_STREAM_DEFAULTMAXTHTREADS (8)
 #define _QS_STREAM_DEFAULTMAXTHTREADS (0)
 
@@ -123,6 +79,48 @@ struct QsThreadData {
 // stream is flowing.  Any variables that do change at flow time we must
 // handle with "thread-safe" care.
 ///////////////////////////////////////////////////////////////////////////
+
+
+
+// App (QsApp) is the top level quickstream object.  It's a container for
+// filters and streams.  Perhaps there should only be one app in a
+// program, but we do not impose that.  There is no compelling reason to
+// limit the number apps that a program can have.  App is used to create
+// filters by loading module plugins.  App is used to create streams.
+//
+struct QsApp {
+
+    // List of filters.  Head of a singly linked list.
+    struct QsFilter *filters;
+
+    // We could have more than one stream.  We can't delete or edit one
+    // while it is running.  You could do something weird like configure
+    // one stream while another stream is running.
+    //
+    // List of streams.  Head of a singly linked list.
+    struct QsStream *streams;
+
+};
+
+
+// For pthread_getspecific() and pthread_setspecific().  One hopes that
+// pthread_getspecific() and pthread_setspecific() are very fast and do
+// not cause a mode switch (system call).  The man page says "Performance
+// and ease-of-use of pthread_getspecific() are critical".  If they do
+// cause a mode switch we need to recode this.  One can't say without
+// looking at the code or running tests; for example look at how slow
+// system 5 semaphores are.
+extern
+pthread_key_t _qsKey;
+
+
+
+// https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
+// example: _sync_fetch_and_add()
+// Or use:
+// #include <stdatomic.h>
+// example: https://en.cppreference.com/w/c/language/atomic
+
 
 
 #ifdef DEBUG
@@ -199,12 +197,20 @@ struct QsStream {
     //
     struct QsJob {
 
-        // job (QsJob) is what working threads do
-        //
-        // job is passed to threads
+        // This will be the pthread_getspecific() data for each flow thread.
+        // Each thread just calls the filter (QsFilter) input() function.
+        // When there is more than on thread calling a filter input() we need to
+        // know things, QsJob, about that thread in that input() call.
 
         // filter's who's input() is called for this job
-        struct QsFilter *filter; 
+        struct QsFilter *filter;
+
+        // The threads must advance output buffers in the same order as the
+        // input buffers, which is the order in which input() is called.
+        uint32_t filterOrder;
+
+        pthread_cond_t cond;
+        pthread_mutex_t mutex;
 
         // The thread working on a given filter have an ID that is from a
         // sequence counter.  This threadNum (ID) is gotten from
@@ -217,7 +223,10 @@ struct QsStream {
         // Hence, threadNum is respect to the filter.
         uint32_t threadNum;
 
-    } job; // next job that the thread should run.
+    } *jobs; // next job that the thread should run.
+
+    // jobs[] is an array of length maxThreads.
+    //
     //
     //
     //
@@ -293,12 +302,14 @@ struct QsFilter {
 
 
     // numThreads and nextThreadNum are accessed with stream mutex locked.
-    // threadNum is the number of threads currently calling
+    //
+    // numThreads is the number of threads currently calling
     // filter->input().  nextThreadNum is the thread number of the next
     // thread to call filter->input().  The leading thread number is then
-    // nextThreadNum - numThreads.   When a new thread calls
-    // filter->input() it's thread number will be nextThreadNum and then
-    // we add 1 to nextThreadNum.
+    // nextThreadNum - numThreads.  Note this work when these numbers
+    // wrap through zero.  When a new thread calls filter->input() it's
+    // thread number will be nextThreadNum and then we add 1 to
+    // nextThreadNum.
     //
     uint32_t numThreads;    // must have stream mutex locked.
     uint32_t nextThreadNum; // must have stream mutex locked.
@@ -315,15 +326,10 @@ struct QsFilter {
     bool isSource;  // startup flag marking filter as a source
 
 
-    // mutex and cond used when more than one thread accesses this filters
+    // mutex used when more than one thread accesses this filters
     // outputs.
     //
-    // mutex and cond get set to nonzero if their use is needed; otherwise
-    // they are set to 0 when the filter can only be run with on thread at
-    // a time.
-    //
     pthread_mutex_t *mutex;
-    pthread_cond_t *cond;
 
 
     // This filter owns these output structs, in that it is the only
@@ -494,6 +500,11 @@ extern
 void CheckBufferThreadSync(struct QsStream *s, struct QsFilter *f);
 
 
+extern
+void SetPerThreadData(struct QsJob *job);
+
+
+
 #if 0 // Not needed yet.
 // Set filter->mark = val for every filter in the app.
 static inline
@@ -502,6 +513,7 @@ void AppSetFilterMarks(struct QsApp *app, bool val) {
         f->mark = val;
 }
 #endif
+
 // Set filter->mark = val for every filter in just this stream.
 static inline
 void StreamSetFilterMarks(struct QsStream *s, bool val) {
