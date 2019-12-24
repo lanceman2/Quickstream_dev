@@ -27,7 +27,7 @@ int main(void) {
     INFO("hello quickstream version %s", QS_VERSION);
 
     struct QsApp *app = qsAppCreate();
-    struct QsStream *stream = qsAppStreamCreate(app, 0);
+    struct QsStream *stream = qsAppStreamCreate(app);
 
     struct QsFilter *f0 = qsAppFilterLoad(app, "stdin", 0, 0, 0);
     struct QsFilter *f1 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
@@ -40,15 +40,11 @@ int main(void) {
 
     qsAppDisplayFlowImage(app, 3, false);
 
-    qsStreamLaunch(stream);
-
-
-    qsStreamFlow(stream);
+    qsStreamLaunch(stream, 1);
 
     qsStreamStop(stream);
 
     qsAppDestroy(app);
-
 
     WARN("SUCCESS");
 

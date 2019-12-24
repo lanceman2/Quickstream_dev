@@ -145,6 +145,8 @@ int main(int argc, const char * const *argv) {
     bool gotConnection = false;
     bool verbose = false;
     bool ready = false;
+    // TODO: option to change maxThreads.
+    uint32_t maxThreads = 5;
 
     int i = 1;
     const char *arg = 0;
@@ -280,7 +282,7 @@ int main(int argc, const char * const *argv) {
                 if(!app) {
                     app = qsAppCreate();
                     ASSERT(app, "");
-                    stream = qsAppStreamCreate(app, 0);
+                    stream = qsAppStreamCreate(app);
                     ASSERT(stream, "");
                 }
                 const char *name = 0;
@@ -364,14 +366,10 @@ int main(int argc, const char * const *argv) {
                         return 1;
                 }
 
-                if(qsStreamLaunch(stream)) {
+                if(qsStreamLaunch(stream, maxThreads)) {
                     // error
                     return 1;
                 }
-
-                // loop
-                while(qsStreamFlow(stream) == 0);
-                qsStreamFlow(stream);
 
 
                 if(qsStreamStop(stream))

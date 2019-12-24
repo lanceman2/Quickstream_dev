@@ -38,7 +38,7 @@ int main(void) {
     const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
     struct QsFilter *f[10];
     struct QsFilter *prevF = 0;
-    struct QsStream *s = qsAppStreamCreate(app, 0);
+    struct QsStream *s = qsAppStreamCreate(app);
     if(!s) goto fail;
     int i=0;
 

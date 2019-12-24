@@ -60,11 +60,6 @@
 #define QS_VERSION "@PACKAGE_VERSION@"
 
 
-/** The default maximum number of threads to run a stream.
- *
- */
-#define QS_DEFAULTMAXTHREADS  ((uint32_t) 0)
-
 
 /** Tells qsStreamConnectFilters() to use the next available port.
  *
@@ -205,7 +200,7 @@ int qsFilterUnload(struct QsFilter *filter);
  * \return a pointer to a stream.
  */
 extern
-struct QsStream *qsAppStreamCreate(struct QsApp *app, uint32_t maxThreads);
+struct QsStream *qsAppStreamCreate(struct QsApp *app);
 
 
 /** allow or disallow loops in the stream\
@@ -270,34 +265,11 @@ void qsStreamConnectFilters(struct QsStream *stream,
 
 
 
-
-/** Run the stream flow with one feed input() call to each \ref source
- * filter in this stream.
- *
- * Run one loop.
- *
- * This call may block, waiting for flow congestion, waiting for a filter
- * in a blocking system read call.
- *
- * \param stream the stream object that has the filters that are connected
- * and qsStreamLaunch() was called for this stream.
- *
- * \return 0 to signal that the stream can continue running, and non-zero
- * when \todo bla bla bla.
- */
-extern
-uint32_t qsStreamFlow(struct QsStream *stream);
-
-
 /** Launch threads and processes if they are needed, and get ready to
  * run the flow.
  *
  * Before returning, put the thread and processes in a blocking call
  * waiting for the flow.
- *
- * qsStreamLaunch() is called after qsStreamReady() and before
- * qsStreamFlow().  Usually qsStreamLaunch() is called once before many
- * calls to qsStreamFlow().
  *
  * \param stream the stream object that has the filters that are
  * connected.
@@ -305,7 +277,7 @@ uint32_t qsStreamFlow(struct QsStream *stream);
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
-int qsStreamLaunch(struct QsStream *stream);
+int qsStreamLaunch(struct QsStream *stream, uint32_t maxThreads);
 
 
 /** Make ready the stream.
@@ -314,12 +286,7 @@ int qsStreamLaunch(struct QsStream *stream);
  * processes.
  *
  * qsStreamReady() will call all the filter start() functions and setup
- * the resources needed to start the stream flow, but it will not begin
- * the filter input() calls.  qsStreamLaunch() must be called after
- * qsStreamReady() in order to launch threads and processes if they are
- * needed.  So the order of calls is qsStreamReady(), qsStreamLaunch(),
- * and loop calling qsStreamFlow() with user code sprinkled between
- * theses calls.
+ * the resources needed to start the stream flow.
  *
  * One could call qsAppDisplayFlowImage() after a call to
  * qsStreamPrestart() to have a look at the streams while they are setup,
@@ -340,10 +307,12 @@ int qsStreamReady(struct QsStream *stream);
 
 /** Stop the flow
  *
- * For a given stream qsStreamStop() be called after qsStreamReady() and
- * any number of calls to qsStreamFlow().
+ * For a given stream qsStreamStop() be called after qsStreamReady()
+ * and/or after qsStreamLaunch().
  *
- *
+ * \param stream the stream object that has the filters that are
+ * connected.
+
  * \return 0
  */
 extern

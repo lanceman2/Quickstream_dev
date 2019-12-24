@@ -32,21 +32,7 @@ pthread_key_t _qsKey = 0;
 static pthread_once_t key_once = PTHREAD_ONCE_INIT;
 static void make_key(void) {
     CHECK(pthread_key_create(&_qsKey, 0));
-    
-    // We setup per thread data for the main thread.
-    SetPerThreadData(0);
 };
-
-
-void SetPerThreadData(struct QsJob *job) {
-    if(job == 0) {
-        job = calloc(1, sizeof(*job));
-        ASSERT(job, "calloc(1,%zu) failed", sizeof(*job));
-    }
-    CHECK(pthread_cond_init(&job->cond, 0));
-    CHECK(pthread_setspecific(_qsKey, job));
-}
-
 
 
 struct QsApp *qsAppCreate(void) {

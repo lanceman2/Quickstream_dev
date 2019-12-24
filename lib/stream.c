@@ -26,16 +26,15 @@ struct QsFilter *_qsStartFilter = 0;
 
 
 
-struct QsStream *qsAppStreamCreate(struct QsApp *app,
-        uint32_t maxThreads) {
+struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app, "");
 
     struct QsStream *s = calloc(1, sizeof(*s));
     ASSERT(s, "calloc(1, %zu) failed", sizeof(*s));
-    s->maxThreads = _QS_STREAM_DEFAULTMAXTHTREADS;
     s->flags = _QS_STREAM_DEFAULTFLAGS;
+
 
     // Add this stream to the end of the app list
     //
@@ -47,16 +46,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app,
         app->streams = s;
 
     s->app = app;
-    s->maxThreads = maxThreads;
     s->flags = _QS_STREAM_DEFAULTFLAGS;
-    if(maxThreads) {
-        // If we use more than on thread we'll need to be able to control
-        // them with a condition variable and mutex.  We also will need to
-        // control access to some data using the mutex.
-        //
-        CHECK(pthread_cond_init(&s->cond, 0));
-        CHECK(pthread_mutex_init(&s->mutex, 0));
-    }
 
     return s;
 }
@@ -101,54 +91,21 @@ static inline void CleanupStream(struct QsStream *s) {
     if(s->maxThreads) {
         CHECK(pthread_mutex_destroy(&s->mutex));
         CHECK(pthread_cond_destroy(&s->cond));
+        struct QsJob *jobs = s->jobs;
+        DASSERT(jobs, "");
+        for(uint32_t i=0; i<s->maxThreads; ++i) {
+            CHECK(pthread_mutex_destroy(&(jobs+i)->mutex));
+            CHECK(pthread_cond_destroy(&(jobs+i)->cond));
+        }
+#ifdef DEBUG
+        memset(jobs, 0, sizeof(*jobs)*s->maxThreads);
+#endif
+        free(jobs);
     }
 #ifdef DEBUG
     memset(s, 0, sizeof(*s));
 #endif
     free(s);
-}
-
-
-void qsStreamDestroy(struct QsStream *s) {
-
-    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-    DASSERT(s->numConnections || s->connections == 0, "");
-
-    // Remove this stream from all the filters in the listed connections.
-    for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->connections[i].from, "");
-        DASSERT(s->connections[i].to, "");
-        DASSERT(s->connections[i].from->stream == s ||
-                s->connections[i].from->stream == 0, "");
-        DASSERT(s->connections[i].to->stream == s ||
-                s->connections[i].to->stream == 0, "");
-
-        s->connections[i].from->stream = 0;
-        s->connections[i].to->stream = 0;
-    }
-
-    // Find and remove this stream from the app.
-    //
-    struct QsStream *S = s->app->streams;
-    struct QsStream *prev = 0;
-    while(S) {
-        if(S == s) {
-
-            if(prev)
-                prev->next = s->next;
-            else
-                s->app->streams = s->next;
-
-            CleanupStream(s);
-            break;
-        }
-        prev = S;
-        S = S->next;
-    }
-
-    DASSERT(S, "stream was not found in the app object");
 }
 
 
@@ -307,8 +264,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
             struct QsOutput *output = &f->outputs[i];
             DASSERT(output->numReaders, "");
             DASSERT(output->readers, "");
-            DASSERT((f->mutex && f->cond) ||
-                    (!f->mutex && !f->cond),"");
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
@@ -331,8 +286,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
     f->numThreads = 0;
     f->nextThreadNum = 0;
 }
-
-
 
 // Note this is call FreerRunResources; it does not free up all stream
 // resources, just some things that could change between stop() and
@@ -363,6 +316,52 @@ void FreeRunResources(struct QsStream *s) {
         s->numSources = 0;
     }
 }
+
+
+void qsStreamDestroy(struct QsStream *s) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(s, "");
+    DASSERT(s->app, "");
+    DASSERT(s->numConnections || s->connections == 0, "");
+
+    FreeRunResources(s);
+
+    // Remove this stream from all the filters in the listed connections.
+    for(uint32_t i=0; i<s->numConnections; ++i) {
+        DASSERT(s->connections[i].from, "");
+        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].from->stream == s ||
+                s->connections[i].from->stream == 0, "");
+        DASSERT(s->connections[i].to->stream == s ||
+                s->connections[i].to->stream == 0, "");
+
+        s->connections[i].from->stream = 0;
+        s->connections[i].to->stream = 0;
+    }
+
+    // Find and remove this stream from the app.
+    //
+    struct QsStream *S = s->app->streams;
+    struct QsStream *prev = 0;
+    while(S) {
+        if(S == s) {
+
+            if(prev)
+                prev->next = s->next;
+            else
+                s->app->streams = s->next;
+
+            CleanupStream(s);
+            break;
+        }
+        prev = S;
+        S = S->next;
+    }
+
+    DASSERT(S, "stream was not found in the app object");
+}
+
 
 
 static uint32_t CountFilterPath(struct QsStream *s,
@@ -569,6 +568,10 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 
     DASSERT(f->numInputs <= _QS_MAX_CHANNELS, "");
 
+    if(s->maxInputPorts < f->numInputs)
+        s->maxInputPorts = f->numInputs;
+
+
     // Now check the input port numbers.
 
     uint32_t inputPortNums[f->numInputs];
@@ -629,45 +632,6 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 }
 
 
-// Do one source feed loop.
-uint32_t qsStreamFlow(struct QsStream *s) {
-
-    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-    ASSERT(s->sources, "qsStreamReady() and qsStreamLaunch() "
-            "must be called before this");
-    ASSERT(s->flags & _QS_STREAM_LAUNCHED,
-            "Stream has not been launched yet");
-
-    DASSERT(s->flow, "");
-
-    return s->flow(s);
-}
-
-
-int qsStreamLaunch(struct QsStream *s) {
-
-    // Make other threads and processes.  Put the thread and processes
-    // in a blocking call waiting for the flow.
-
-    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-    ASSERT(s->sources, "qsStreamReady() must be successfully"
-            " called before this");
-    ASSERT(!(s->flags & _QS_STREAM_LAUNCHED),
-            "Stream has been launched already");
-
-    // TODO: for the single thread case this does nothing.
-
-    s->flags |= _QS_STREAM_LAUNCHED;
-
-
-    return 0;
-}
-
-
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -693,11 +657,37 @@ int qsStreamStop(struct QsStream *s) {
             _qsStartFilter = 0;
         }
 
+
+    /**********************************************************************
+     *     Stage: cleanup the stream thread management stuff
+     *********************************************************************/
+
+    if(s->maxThreads) {
+
+        CHECK(pthread_cond_destroy(&s->cond));
+        CHECK(pthread_mutex_destroy(&s->mutex));
+        for(uint32_t i=0; i<s->maxThreads; ++i) {
+            struct QsJob *job = s->jobs + i;
+            CHECK(pthread_mutex_destroy(&job->mutex));
+            CHECK(pthread_cond_destroy(&job->cond));
+        }
+#ifdef DEBUG
+        memset(&s->mutex, 0, sizeof(s->mutex));
+        memset(&s->cond, 0, sizeof(s->cond));
+        memset(s->jobs, 0, s->maxThreads*sizeof(*s->jobs));
+#endif
+        free(s->jobs);
+        s->maxThreads = 0;
+    }
+
+
     /**********************************************************************
      *     Stage: cleanup
      *********************************************************************/
 
     FreeRunResources(s);
+
+
 
     s->flow = 0;
 
@@ -824,6 +814,7 @@ int qsStreamReady(struct QsStream *s) {
      *********************************************************************/
 
     StreamSetFilterMarks(s, true);
+    s->maxInputPorts = 0;
     for(uint32_t i=0; i<s->numSources; ++i)
         if(SetupInputPorts(s, s->sources[i], false)) {
             ERROR("stream has bad input port numbers");
@@ -883,6 +874,7 @@ int qsStreamReady(struct QsStream *s) {
 
     // There may be some calculations needed from the buffer structure for
     // the memory mapping, so we do this in a different loop.
+    StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
 
@@ -896,8 +888,7 @@ int qsStreamReady(struct QsStream *s) {
     //
     // Set the function that is the stream flower thingy.
     //
-    s->flow = singleThreadFlow;
-
+    s->flow = nThreadFlow;
 
 
     return 0; // success

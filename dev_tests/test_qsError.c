@@ -36,7 +36,7 @@ int main(void) {
             return 1;
         }
 
-    struct QsStream *stream = qsAppStreamCreate(app, 0);
+    struct QsStream *stream = qsAppStreamCreate(app);
     if(!stream) {
         qsAppDestroy(app);
         return 1;

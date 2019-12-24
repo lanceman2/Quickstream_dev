@@ -128,7 +128,7 @@ enum QsFilterInputReturn {
  *
  * \todo figure out more return codes and what they mean
  */
-int input(const void *buffer[], const size_t len[],
+int input(const void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts);
 

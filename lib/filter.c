@@ -311,10 +311,6 @@ void qsSetThreadSafe(void) {
     f->mutex = calloc(1, sizeof(*f->mutex));
     ASSERT(f->mutex, "calloc(1,%zu) failed", sizeof(*f->mutex));
     CHECK(pthread_mutex_init(f->mutex, 0));
-
-    f->cond = calloc(1, sizeof(*f->cond));
-    ASSERT(f->cond, "calloc(1,%zu) failed", sizeof(*f->cond));
-    CHECK(pthread_cond_init(f->cond, 0));
 }
 
 

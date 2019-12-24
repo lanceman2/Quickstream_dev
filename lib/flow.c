@@ -49,7 +49,7 @@ static void CreateThread(struct QsStream *s, struct QsFilter *f) {
 
 
 
-uint32_t singleThreadFlow(struct QsStream *s) {
+uint32_t nThreadFlow(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i) {
         DASSERT(s->sources[i],"");
@@ -82,4 +82,56 @@ uint32_t singleThreadFlow(struct QsStream *s) {
     }
 
     return 0; // success
+}
+
+
+int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
+
+    ASSERT(maxThreads!=0, "Write the code for the maxThread=0 case");
+    ASSERT(maxThreads <= _QS_STREAM_MAXMAXTHTREADS,
+            "maxThread=%" PRIu32 " is too large (> %" PRIu32 ")",
+            maxThreads, _QS_STREAM_MAXMAXTHTREADS);
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(s, "");
+    DASSERT(s->app, "");
+    ASSERT(s->sources, "qsStreamReady() must be successfully"
+            " called before this");
+    ASSERT(!(s->flags & _QS_STREAM_LAUNCHED),
+            "Stream has been launched already");
+
+    DASSERT(s->maxInputPorts, "");
+    DASSERT(s->maxInputPorts <= _QS_MAX_CHANNELS, "");
+
+
+    DASSERT(s->numSources, "");
+
+    s->flags |= _QS_STREAM_LAUNCHED;
+
+    s->maxThreads = maxThreads;
+
+    if(s->maxThreads) {
+
+        CHECK(pthread_cond_init(&s->cond, 0));
+        CHECK(pthread_mutex_init(&s->mutex, 0));
+
+        s->jobs = calloc(s->maxThreads, sizeof(*s->jobs));
+        ASSERT(s->jobs, "calloc(s->maxThreads,%zu) failed",
+                sizeof(*s->jobs));
+        for(uint32_t i=0; i<s->maxThreads; ++i) {
+            struct QsJob *job = s->jobs + i;
+            CHECK(pthread_mutex_init(&job->mutex, 0));
+            CHECK(pthread_cond_init(&job->cond, 0));
+
+            job->buffers = calloc(s->maxInputPorts, sizeof(*job->buffers));
+            ASSERT(
+
+
+        }
+    }
+
+    DASSERT(s->flow, "");
+
+
+    return s->flow(s);
 }

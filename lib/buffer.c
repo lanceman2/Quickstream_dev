@@ -109,6 +109,8 @@ void FreeBuffers(struct QsFilter *f) {
 //
 void MapRingBuffers(struct QsFilter *f) {
 
+    f->mark = false;
+
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
 
@@ -155,6 +157,17 @@ void MapRingBuffers(struct QsFilter *f) {
 
         for(uint32_t j=0; j<output->numReaders; ++j)
             output->readers[j].readPtr = output->buffer->mem;
+    }
+
+
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsOutput *output = f->outputs + i;
+        DASSERT(output->readers, "");
+        DASSERT(output->numReaders, "");
+        for(uint32_t j=0; j<output->numReaders; ++j)
+            if(output->readers[j].filter->mark)
+                // Recurse
+                MapRingBuffers(output->readers[j].filter);
     }
 }
 

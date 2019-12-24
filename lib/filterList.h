@@ -62,7 +62,6 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->name, "");
     DASSERT(f->outputs == 0, "");
     DASSERT(f->numOutputs == 0, "");
-    DASSERT((f->mutex && f->cond) || (!f->mutex && !f->cond), "");
 
     DSPEW("Freeing: %s", f->name);
     if(f->dlhandle) {
@@ -96,15 +95,12 @@ void FreeFilter(struct QsFilter *f) {
     if(f->mutex) {
         // Setting the filter as thread-safe is done at contruct() time
         // thing.  It is not a flow setup thing.  So we cleanup the mutex
-        // and cond here.
+        // here.
         CHECK(pthread_mutex_destroy(f->mutex));
-        CHECK(pthread_cond_destroy(f->cond));
 #ifdef DEBUG
         memset(f->mutex, 0, sizeof(*f->mutex));
-        memset(f->cond, 0, sizeof(*f->cond));
 #endif
         free(f->mutex);
-        free(f->cond);
     }
 
 #ifdef DEBUG

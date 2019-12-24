@@ -38,8 +38,7 @@
 
 
 
-//#define QS_STREAM_DEFAULTMAXTHTREADS (8)
-#define _QS_STREAM_DEFAULTMAXTHTREADS (0)
+#define _QS_STREAM_MAXMAXTHTREADS (80)
 
 // bit Flags for the stream
 //
@@ -212,6 +211,13 @@ struct QsStream {
         pthread_cond_t cond;
         pthread_mutex_t mutex;
 
+
+        // The arguments to pass to the input() call:
+        void **buffers;
+        size_t *lens;
+        bool *isFlushing;
+
+
         // The thread working on a given filter have an ID that is from a
         // sequence counter.  This threadNum (ID) is gotten from
         // filter->nextThreadNum++.  So the lowest numbered thread job for
@@ -258,6 +264,12 @@ struct QsStream {
 
 
     uint32_t numConnections;// length of connections array
+
+
+    // This is the maximum number of input ports for all filters in the
+    // stream.  This is computed before start.  We use it to allocate the
+    // input() arguments in jobs above.
+    uint32_t maxInputPorts;
 
 
     struct QsStream *next; // next stream in app list of streams
@@ -467,8 +479,11 @@ struct QsFilter *_qsStartFilter;
 
 
 
+// These below functions are not API user interfaces:'
 
-// These below functions are not API user interfaces:
+extern
+uint32_t nThreadFlow(struct QsStream *s);
+
 
 extern
 void AllocateBuffer(struct QsFilter *f);
@@ -476,6 +491,7 @@ void AllocateBuffer(struct QsFilter *f);
 
 extern
 void FreeBuffers(struct QsFilter *f);
+
 
 extern
 void MapRingBuffers(struct QsFilter *f);
@@ -490,10 +506,6 @@ void *makeRingBuffer(size_t *len, size_t *overhang);
 
 extern
 void freeRingBuffer(void *x, size_t len, size_t overhang);
-
-
-extern
-uint32_t singleThreadFlow(struct QsStream *s);
 
 
 extern
