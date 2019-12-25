@@ -146,6 +146,10 @@ struct QsStream {
     // flow/run time, so we need no mutex to access it.
     uint32_t maxThreads; // Will not create more pthreads than this.
 
+    // length of the jobs array.
+    uint32_t numJobs;
+
+
     uint32_t flags; // bit flags that configure the stream
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.  flags does not change at flow/run time, so we need
@@ -196,10 +200,13 @@ struct QsStream {
     //
     struct QsJob {
 
-        // This will be the pthread_getspecific() data for each flow thread.
-        // Each thread just calls the filter (QsFilter) input() function.
-        // When there is more than on thread calling a filter input() we need to
-        // know things, QsJob, about that thread in that input() call.
+        struct QsJob *next;
+
+        // This will be the pthread_getspecific() data for each flow
+        // thread.  Each thread just calls the filter (QsFilter) input()
+        // function.  When there is more than on thread calling a filter
+        // input() we need to know things, QsJob, about that thread in
+        // that input() call.
 
         // filter's who's input() is called for this job
         struct QsFilter *filter;
@@ -210,7 +217,6 @@ struct QsStream {
 
         pthread_cond_t cond;
         pthread_mutex_t mutex;
-
 
         // The arguments to pass to the input() call:
         void **buffers;
@@ -229,9 +235,17 @@ struct QsStream {
         // Hence, threadNum is respect to the filter.
         uint32_t threadNum;
 
-    } *jobs; // next job that the thread should run.
-
-    // jobs[] is an array of length maxThreads.
+    } *jobs; // The memory allocated for jobs in jobQueue, or unemployed.
+    //
+    // jobs[] is an array of length numJobs.
+    //
+    // jobs in a queue a thread can do.
+    struct QsJob *jobQueue;
+    //
+    // The rest of the allocated jobs array of memory that is not in the
+    // queue.
+    struct QsJob *unemployed;
+    //
     //
     //
     //

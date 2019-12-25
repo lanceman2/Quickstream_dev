@@ -110,16 +110,20 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
     s->maxThreads = maxThreads;
 
+
     if(s->maxThreads) {
+
+        // TODO: figure out what numJobs should be.
+        s->numJobs = 2*maxThreads + 2;
 
         CHECK(pthread_cond_init(&s->cond, 0));
         CHECK(pthread_mutex_init(&s->mutex, 0));
 
-        s->jobs = calloc(s->maxThreads, sizeof(*s->jobs));
-        ASSERT(s->jobs, "calloc(s->maxThreads,%zu) failed",
+        s->jobs = calloc(s->numJobs, sizeof(*s->jobs));
+        ASSERT(s->jobs, "calloc(s->numJobs,%zu) failed",
                 sizeof(*s->jobs));
 
-        for(uint32_t i=0; i<s->maxThreads; ++i) {
+        for(uint32_t i=0; i<s->numJobs; ++i) {
             struct QsJob *job = s->jobs + i;
             CHECK(pthread_mutex_init(&job->mutex, 0));
             CHECK(pthread_cond_init(&job->cond, 0));
@@ -142,6 +146,8 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
         }
     }
 
+
+    // There is a stream flow function.
     DASSERT(s->flow, "");
 
 

@@ -40,7 +40,7 @@ int main(void) {
 
     qsAppDisplayFlowImage(app, 3, false);
 
-    qsStreamLaunch(stream, 1);
+    qsStreamLaunch(stream, 1/*maxThreads*/);
 
     qsStreamStop(stream);
 

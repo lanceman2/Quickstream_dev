@@ -88,20 +88,6 @@ static inline void CleanupStream(struct QsStream *s) {
         s->connections = 0;
         s->numConnections = 0;
     }
-    if(s->maxThreads) {
-        CHECK(pthread_mutex_destroy(&s->mutex));
-        CHECK(pthread_cond_destroy(&s->cond));
-        struct QsJob *jobs = s->jobs;
-        DASSERT(jobs, "");
-        for(uint32_t i=0; i<s->maxThreads; ++i) {
-            CHECK(pthread_mutex_destroy(&(jobs+i)->mutex));
-            CHECK(pthread_cond_destroy(&(jobs+i)->cond));
-        }
-#ifdef DEBUG
-        memset(jobs, 0, sizeof(*jobs)*s->maxThreads);
-#endif
-        free(jobs);
-    }
 #ifdef DEBUG
     memset(s, 0, sizeof(*s));
 #endif
@@ -288,14 +274,45 @@ void FreeFilterRunResources(struct QsFilter *f) {
 }
 
 // Note this is call FreerRunResources; it does not free up all stream
-// resources, just some things that could change between stop() and
-// start().
+// resources, just things that could change between stop() and start().
 //
 static inline
 void FreeRunResources(struct QsStream *s) {
 
     DASSERT(s, "");
     DASSERT(s->app, "");
+
+    if(s->numJobs) {
+        /*********************************************************
+        *     Stage: cleanup the stream thread management stuff
+        **********************************************************/
+        CHECK(pthread_cond_destroy(&s->cond));
+        CHECK(pthread_mutex_destroy(&s->mutex));
+        for(uint32_t i=0; i<s->numJobs; ++i) {
+            struct QsJob *job = s->jobs + i;
+            CHECK(pthread_mutex_destroy(&job->mutex));
+            CHECK(pthread_cond_destroy(&job->cond));
+#ifdef DEBUG
+            memset(job->buffers, 0,
+                    s->maxInputPorts*sizeof(*job->buffers));
+            memset(job->lens, 0,
+                    s->maxInputPorts*sizeof(*job->lens));
+            memset(job->isFlushing, 0,
+                    s->maxInputPorts*sizeof(*job->isFlushing));
+#endif
+            free(job->buffers);
+            free(job->lens);
+            free(job->isFlushing);
+        }
+#ifdef DEBUG
+        memset(s->jobs, 0, s->numJobs*sizeof(*s->jobs));
+#endif
+        free(s->jobs);
+        s->maxThreads = 0;
+        s->numJobs = 0;
+        /*********************************************************/
+    }
+
 
     for(int32_t i=0; i<s->numConnections; ++i) {
         // These can handle being called more than once per filter.
@@ -658,41 +675,6 @@ int qsStreamStop(struct QsStream *s) {
         }
 
 
-    /**********************************************************************
-     *     Stage: cleanup the stream thread management stuff
-     *********************************************************************/
-
-    if(s->maxThreads) {
-
-        CHECK(pthread_cond_destroy(&s->cond));
-        CHECK(pthread_mutex_destroy(&s->mutex));
-        for(uint32_t i=0; i<s->maxThreads; ++i) {
-            struct QsJob *job = s->jobs + i;
-            CHECK(pthread_mutex_destroy(&job->mutex));
-            CHECK(pthread_cond_destroy(&job->cond));
-
-#ifdef DEBUG
-            memset(job->buffers, 0,
-                    s->maxInputPorts*sizeof(*job->buffers));
-            memset(job->lens, 0,
-                    s->maxInputPorts*sizeof(*job->lens));
-            memset(job->isFlushing, 0,
-                    s->maxInputPorts*sizeof(*job->isFlushing));
-#endif
-            free(job->buffers);
-            free(job->lens);
-            free(job->isFlushing);
-        }
-
-
-
-
-#ifdef DEBUG
-        memset(s->jobs, 0, s->maxThreads*sizeof(*s->jobs));
-#endif
-        free(s->jobs);
-        s->maxThreads = 0;
-    }
 
 
     /**********************************************************************
