@@ -118,15 +118,27 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
         s->jobs = calloc(s->maxThreads, sizeof(*s->jobs));
         ASSERT(s->jobs, "calloc(s->maxThreads,%zu) failed",
                 sizeof(*s->jobs));
+
         for(uint32_t i=0; i<s->maxThreads; ++i) {
             struct QsJob *job = s->jobs + i;
             CHECK(pthread_mutex_init(&job->mutex, 0));
             CHECK(pthread_cond_init(&job->cond, 0));
 
+            // Allocate the largest array length of the three input()
+            // arguments.
+            //
             job->buffers = calloc(s->maxInputPorts, sizeof(*job->buffers));
-            ASSERT(
-
-
+            ASSERT(job->buffers, "calloc(%" PRIu32 ",%zu) failed",
+                    s->maxInputPorts, sizeof(*job->buffers));
+            //
+            job->lens = calloc(s->maxInputPorts, sizeof(*job->lens));
+            ASSERT(job->lens, "calloc(%" PRIu32 ",%zu) failed",
+                    s->maxInputPorts, sizeof(*job->lens));
+            //
+            job->isFlushing = calloc(s->maxInputPorts,
+                    sizeof(*job->isFlushing));
+            ASSERT(job->isFlushing, "calloc(%" PRIu32 ",%zu) failed",
+                    s->maxInputPorts, sizeof(*job->isFlushing));
         }
     }
 

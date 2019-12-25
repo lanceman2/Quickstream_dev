@@ -670,10 +670,24 @@ int qsStreamStop(struct QsStream *s) {
             struct QsJob *job = s->jobs + i;
             CHECK(pthread_mutex_destroy(&job->mutex));
             CHECK(pthread_cond_destroy(&job->cond));
-        }
+
 #ifdef DEBUG
-        memset(&s->mutex, 0, sizeof(s->mutex));
-        memset(&s->cond, 0, sizeof(s->cond));
+            memset(job->buffers, 0,
+                    s->maxInputPorts*sizeof(*job->buffers));
+            memset(job->lens, 0,
+                    s->maxInputPorts*sizeof(*job->lens));
+            memset(job->isFlushing, 0,
+                    s->maxInputPorts*sizeof(*job->isFlushing));
+#endif
+            free(job->buffers);
+            free(job->lens);
+            free(job->isFlushing);
+        }
+
+
+
+
+#ifdef DEBUG
         memset(s->jobs, 0, s->maxThreads*sizeof(*s->jobs));
 #endif
         free(s->jobs);
