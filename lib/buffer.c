@@ -25,10 +25,10 @@ void AllocateBuffer(struct QsFilter *f) {
 
     f->mark = false;
 
-    DASSERT(f, "");
-    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS, "");
+    DASSERT(f);
+    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS);
     DASSERT((f->outputs && f->numOutputs) ||
-            (!f->outputs && !f->numOutputs), "");
+            (!f->outputs && !f->numOutputs));
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
@@ -66,14 +66,14 @@ void AllocateBuffer(struct QsFilter *f) {
 //
 void FreeBuffers(struct QsFilter *f) {
     
-    DASSERT(f, "");
+    DASSERT(f);
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
-        DASSERT(output->numReaders, "");
-        DASSERT(output->readers, "");
-        DASSERT(output->newBuffer == 0, "");
-        DASSERT(output->buffer, "");
+        DASSERT(output->numReaders);
+        DASSERT(output->readers);
+        DASSERT(output->newBuffer == 0);
+        DASSERT(output->buffer);
 
         if(output->prev) {
             // This is a "pass through" buffer so we do not free it yet.
@@ -187,19 +187,19 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     struct QsJob *job = pthread_getspecific(_qsKey);
     ASSERT(job, "thread_getspecific(_qsKey) failed");
     struct QsFilter *f = job->filter;
-    DASSERT(f, "");
-    DASSERT(maxLen, "");
-    DASSERT(maxLen >= minLen, "");
-    DASSERT(f->input, "");
-    DASSERT(f->numOutputs, "");
-    DASSERT(f->outputs, "");
-    DASSERT(f->numOutputs >= outputPortNum, "");
+    DASSERT(f);
+    DASSERT(maxLen);
+    DASSERT(maxLen >= minLen);
+    DASSERT(f->input);
+    DASSERT(f->numOutputs);
+    DASSERT(f->outputs);
+    DASSERT(f->numOutputs >= outputPortNum);
     pthread_mutex_t *mutex = f->mutex;
 
     //pthread_cond_t *cond = f->cond;
     struct QsOutput *o = f->outputs + outputPortNum;
-    DASSERT(o->readers, "");
-    DASSERT(o->numReaders, "");
+    DASSERT(o->readers);
+    DASSERT(o->numReaders);
 
     // First question: can there be more than one thread calling this
     // function for this filter?
@@ -273,9 +273,9 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 //
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
-    DASSERT(_qsCurrentFilter, "");
+    DASSERT(_qsCurrentFilter);
     ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS, "");
-    DASSERT(_qsCurrentFilter->numOutputs, "");
+    DASSERT(_qsCurrentFilter->numOutputs);
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
 }

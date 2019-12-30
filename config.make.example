@@ -16,7 +16,7 @@ PREFIX = /usr/local/encap/quickstream
 # SPEW_LEVEL_WARN   -->  WARN() ERROR()
 # SPEW_LEVEL_ERROR  -->  ERROR()
 #
-# always on are     -->  ASSERT() FAIL()
+# always on is      -->  ASSERT()
 
 
 # Example:

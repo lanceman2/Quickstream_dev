@@ -1,31 +1,3 @@
-// It would appear that all (most) the implementations of things like red
-// black trees, singly and doubly linked lists, and other generic lists,
-// use an allocation that is separate from the allocation of the element
-// that is being stored.  So to make and add and element you must do two
-// separate allocations one for the element and one for the list pointers.
-// That seems wasteful to me.  If the element being stored has the list
-// data structure in it, then we can add an element with just one
-// allocation.  This is an obvious optimization.  We also get one less
-// layer of pointer indirection when we get the element from the list, and
-// we get the element typed at compile time, and do not access another
-// pointer.
-//
-// For lists in quickstream, we insist that the access to the list be
-// quick when the stream is in a "run" state, and the lists are not edited
-// while it is in a "run" state.
-//
-// Arrays may be the quickest list data structure that there is, and
-// quicker than a hash table, given that we do not calculate a hash
-// function to index into the table.
-
-
-//
-// TODO: Maybe make this into a red black tree with the same interfaces.
-// They maybe needed when lookup by name string is needed by (filter API)
-// user code.
-//
-
-
 #ifndef __qsapp_h__
 #  error "qsapp.h needs to be included before this file."
 #endif
@@ -58,14 +30,13 @@ struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
 static inline
 void FreeFilter(struct QsFilter *f) {
 
-    DASSERT(f, "");
-    DASSERT(f->name, "");
-    DASSERT(f->outputs == 0, "");
-    DASSERT(f->numOutputs == 0, "");
-    DASSERT(f->args, "");
-
+    DASSERT(f);
+    DASSERT(f->name);
+    DASSERT(f->outputs == 0);
+    DASSERT(f->numOutputs == 0);
 
     DSPEW("Freeing: %s", f->name);
+
     if(f->dlhandle) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
         if(destroy) {
@@ -94,24 +65,10 @@ void FreeFilter(struct QsFilter *f) {
 
     }
 
-    if(f->mutex) {
-        // Setting the filter as thread-safe is done at contruct() time
-        // thing.  It is not a flow setup thing.  So we cleanup the mutex
-        // here.
-        CHECK(pthread_mutex_destroy(f->mutex));
-#ifdef DEBUG
-        memset(f->mutex, 0, sizeof(*f->mutex));
-#endif
-        free(f->mutex);
-    }
-
-    DASSERT(f->args->buffers == 0, "");
 
 #ifdef DEBUG
-    memset(f->args, 0, f->maxThreads*sizeof(*f->args));
     memset(f->name, 0, strlen(f->name));
 #endif
-    free(f->args);
     free(f->name);
     memset(f, 0, sizeof(*f));
     free(f);
@@ -120,8 +77,8 @@ void FreeFilter(struct QsFilter *f) {
 
 static inline
 struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
-    DASSERT(app, "");
-    DASSERT(handle, "");
+    DASSERT(app);
+    DASSERT(handle);
 
     for(struct QsFilter *f = app->filters; f; f = f->next)
         if(f->dlhandle == handle)
@@ -139,9 +96,9 @@ struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
 static inline
 void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
 
-    DASSERT(app, "");
-    DASSERT(app->filters, "");
-    DASSERT(f, "");
+    DASSERT(app);
+    DASSERT(app->filters);
+    DASSERT(f);
 
     // Remove any stream filter connections that may include this filter.
     if(f->stream)
@@ -178,9 +135,9 @@ static inline
 struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         const char *name) {
 
-    DASSERT(app, "");
-    DASSERT(name, "");
-    DASSERT(name[0], "");
+    DASSERT(app);
+    DASSERT(name);
+    DASSERT(name[0]);
     struct QsFilter *f = calloc(1, sizeof(*f));
     ASSERT(f, "calloc(1, %zu) failed", sizeof(*f));
 
@@ -198,7 +155,7 @@ struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
                 break;
         }
         // I can't imagine that there will be ~ 1000000 filters.
-        DASSERT(count < 1000000, "");
+        DASSERT(count < 1000000);
     } else
         f->name = strdup(name);
 

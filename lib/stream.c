@@ -29,7 +29,7 @@ struct QsFilter *_qsStartFilter = 0;
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(app, "");
+    DASSERT(app);
 
     struct QsStream *s = calloc(1, sizeof(*s));
     ASSERT(s, "calloc(1, %zu) failed", sizeof(*s));
@@ -55,7 +55,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
+    DASSERT(s);
 
     if(doAllow)
         s->flags |= _QS_STREAM_ALLOWLOOPS;
@@ -66,12 +66,12 @@ void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
 
 static inline void CleanupStream(struct QsStream *s) {
 
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-    DASSERT(s->numConnections || s->connections == 0, "");
+    DASSERT(s);
+    DASSERT(s->app);
+    DASSERT(s->numConnections || s->connections == 0);
 
     if(s->sources) {
-        DASSERT(s->numSources, "");
+        DASSERT(s->numSources);
 #ifdef DEBUG
         memset(s->sources, 0, sizeof(*s->sources)*s->numSources);
 #endif
@@ -80,7 +80,7 @@ static inline void CleanupStream(struct QsStream *s) {
 
     if(s->numConnections) {
 
-        DASSERT(s->connections, "");
+        DASSERT(s->connections);
 #ifdef DEBUG
         memset(s->connections, 0, sizeof(*s->connections)*s->numConnections);
 #endif
@@ -101,12 +101,12 @@ void qsStreamConnectFilters(struct QsStream *s,
         uint32_t fromPortNum, uint32_t toPortNum) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
+    DASSERT(s);
+    DASSERT(s->app);
     ASSERT(from != to, "a filter cannot connect to itself");
-    DASSERT(from, "");
-    DASSERT(to, "");
-    DASSERT(to->app, "");
+    DASSERT(from);
+    DASSERT(to);
+    DASSERT(to->app);
     DASSERT(from->app == s->app, "wrong app");
     DASSERT(to->app == s->app, "wrong app");
     DASSERT(to->stream == s || !to->stream,
@@ -137,9 +137,9 @@ void qsStreamConnectFilters(struct QsStream *s,
 
 static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
-    DASSERT(s, "");
-    DASSERT(i < -1, "");
-    DASSERT(s->numConnections > i, "");
+    DASSERT(s);
+    DASSERT(i < -1);
+    DASSERT(s->numConnections > i);
 
     // This is how many connections there will be after this function
     --s->numConnections;
@@ -147,15 +147,15 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
     struct QsFilter *from = s->connections[i].from;
     struct QsFilter *to = s->connections[i].to;
 
-    DASSERT(from, "");
-    DASSERT(to, "");
-    DASSERT(from->stream == s, "");
-    DASSERT(to->stream == s, "");
+    DASSERT(from);
+    DASSERT(to);
+    DASSERT(from->stream == s);
+    DASSERT(to->stream == s);
     // Outputs should not be allocated yet.
-    DASSERT(from->outputs == 0, "");
-    DASSERT(to->outputs == 0, "");
-    DASSERT(from->numOutputs == 0, "");
-    DASSERT(to->numOutputs == 0, "");
+    DASSERT(from->outputs == 0);
+    DASSERT(to->outputs == 0);
+    DASSERT(from->numOutputs == 0);
+    DASSERT(to->numOutputs == 0);
 
     if(s->numConnections == 0) {
 
@@ -203,18 +203,18 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(f, "");
-    DASSERT(f->stream == s, "");
-    DASSERT(s->numConnections || s->connections == 0, "");
+    DASSERT(s);
+    DASSERT(f);
+    DASSERT(f->stream == s);
+    DASSERT(s->numConnections || s->connections == 0);
 
     bool gotOne = false;
 
     for(uint32_t i=0; i<s->numConnections;) {
-        DASSERT(s->connections, "");
-        DASSERT(s->connections[i].to, "");
-        DASSERT(s->connections[i].from, "");
-        DASSERT(s->connections[i].to != s->connections[i].from, "");
+        DASSERT(s->connections);
+        DASSERT(s->connections[i].to);
+        DASSERT(s->connections[i].from);
+        DASSERT(s->connections[i].to != s->connections[i].from);
         //
         if(s->connections[i].from == f || s->connections[i].to == f) {
             RemoveConnection(s, i);
@@ -240,16 +240,58 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
 static inline
 void FreeFilterRunResources(struct QsFilter *f) {
 
+    if(f->jobs) {
+
+        DASSERT(f->stream);
+        DASSERT(f->stream->maxThreads);
+        DASSERT(f->mutex);
+
+        uint32_t numJobs = f->maxThreads + 1;
+
+        for(uint32_t i=0; i<numJobs; ++i) {
+
+            struct QsJob *job = f->jobs + i;
+
+            DASSERT(job->buffers);
+            DASSERT(job->lens);
+            DASSERT(job->isFlushing);
+#ifdef DEBUG
+            memset(job->buffers, 0, f->numInputs*sizeof(*job->buffers));
+            memset(job->lens, 0, f->numInputs*sizeof(*job->lens));
+            memset(job->isFlushing, 0, f->numInputs*sizeof(*job->isFlushing));
+#endif
+            free(job->buffers);
+            free(job->lens);
+            free(job->isFlushing);
+        }
+
+        CHECK(pthread_mutex_destroy(f->mutex));
+
+#ifdef DEBUG
+        memset(f->jobs, 0, numJobs*sizeof(*f->jobs));
+        memset(f->mutex, 0, sizeof(*f->mutex));
+#endif
+        free(f->jobs);
+        free(f->mutex);
+
+        f->jobs = 0;
+        f->mutex = 0;
+        f->queue = 0;
+        f->unused = 0;
+        f->numThreads = 0;
+        f->nextThreadNum = 0;
+    }
+
     if(f->numOutputs) {
-        DASSERT(f->outputs, "");
+        DASSERT(f->outputs);
 
         FreeBuffers(f);
 
         // For every output in this filter we free the readers.
         for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
             struct QsOutput *output = &f->outputs[i];
-            DASSERT(output->numReaders, "");
-            DASSERT(output->readers, "");
+            DASSERT(output->numReaders);
+            DASSERT(output->readers);
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
@@ -269,9 +311,8 @@ void FreeFilterRunResources(struct QsFilter *f) {
     }
 
     f->numInputs = 0;
-    f->numThreads = 0;
-    f->nextThreadNum = 0;
 }
+
 
 // Note this is call FreerRunResources; it does not free up all stream
 // resources, just things that could change between stop() and start().
@@ -279,50 +320,28 @@ void FreeFilterRunResources(struct QsFilter *f) {
 static inline
 void FreeRunResources(struct QsStream *s) {
 
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-
-    if(s->numJobs) {
-        /*********************************************************
-        *     Stage: cleanup the stream thread management stuff
-        **********************************************************/
-        CHECK(pthread_cond_destroy(&s->cond));
-        CHECK(pthread_mutex_destroy(&s->mutex));
-        for(uint32_t i=0; i<s->numJobs; ++i) {
-            struct QsJob *job = s->jobs + i;
-            CHECK(pthread_mutex_destroy(&job->mutex));
-            CHECK(pthread_cond_destroy(&job->cond));
-#ifdef DEBUG
-            memset(job->buffers, 0,
-                    s->maxInputPorts*sizeof(*job->buffers));
-            memset(job->lens, 0,
-                    s->maxInputPorts*sizeof(*job->lens));
-            memset(job->isFlushing, 0,
-                    s->maxInputPorts*sizeof(*job->isFlushing));
-#endif
-            free(job->buffers);
-            free(job->lens);
-            free(job->isFlushing);
-        }
-#ifdef DEBUG
-        memset(s->jobs, 0, s->numJobs*sizeof(*s->jobs));
-#endif
-        free(s->jobs);
-        s->maxThreads = 0;
-        s->numJobs = 0;
-
-        s->jobQueue = 0;
-        s->last = 0;
-        s->unused = 0;
-        /*********************************************************/
-    }
-
+    DASSERT(s);
+    DASSERT(s->app);
 
     for(int32_t i=0; i<s->numConnections; ++i) {
         // These can handle being called more than once per filter.
         FreeFilterRunResources(s->connections[i].from);
         FreeFilterRunResources(s->connections[i].to);
     }
+
+    if(s->maxThreads) {
+
+        CHECK(pthread_mutex_destroy(&s->mutex));
+        CHECK(pthread_cond_destroy(&s->cond));
+#ifdef DEBUG
+        memset(&s->mutex, 0, sizeof(s->mutex));
+        memset(&s->cond, 0, sizeof(s->cond));
+#endif
+        s->maxThreads = 0;
+        s->numThreads = 0;
+        s->numIdleThreads = 0;
+    }
+
 
 
     if(s->numSources) {
@@ -342,20 +361,20 @@ void FreeRunResources(struct QsStream *s) {
 void qsStreamDestroy(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
-    DASSERT(s->numConnections || s->connections == 0, "");
+    DASSERT(s);
+    DASSERT(s->app);
+    DASSERT(s->numConnections || s->connections == 0);
 
     FreeRunResources(s);
 
     // Remove this stream from all the filters in the listed connections.
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->connections[i].from, "");
-        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].from);
+        DASSERT(s->connections[i].to);
         DASSERT(s->connections[i].from->stream == s ||
-                s->connections[i].from->stream == 0, "");
+                s->connections[i].from->stream == 0);
         DASSERT(s->connections[i].to->stream == s ||
-                s->connections[i].to->stream == 0, "");
+                s->connections[i].to->stream == 0);
 
         s->connections[i].from->stream = 0;
         s->connections[i].to->stream = 0;
@@ -439,12 +458,12 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
 
     // This will work if there are loops in the graph.
 
-    DASSERT(f->numOutputs == 0, "");
-    DASSERT(f->numInputs == 0, "");
+    DASSERT(f->numOutputs == 0);
+    DASSERT(f->numInputs == 0);
 
     f->mark = false; // Mark the filter output as dealt with.
 
-    DASSERT(f->outputs == 0, "");
+    DASSERT(f->outputs == 0);
 
     // Count the number of filters that this filter connects to with a
     // different output port number.
@@ -505,12 +524,13 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         // (outputPortNum):
         uint32_t numReaders = 0;
         for(i=0; i<s->numConnections; ++i)
-            if(s->connections[i].from == f &&
-                    s->connections[i].fromPortNum == outputPortNum)
+            if(s->connections[i].from == f && (
+                    s->connections[i].fromPortNum == outputPortNum ||
+                    s->connections[i].fromPortNum == QS_NEXTPORT)
+              )
                 ++numReaders;
 
-        DASSERT(numReaders, "filter \"%s\" output port %"
-                PRIu32 " has no readers", f->name, outputPortNum);
+        DASSERT(numReaders);
 
         struct QsReader *readers =
             calloc(numReaders, sizeof(*readers));
@@ -522,18 +542,24 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         // Now set the values in reader:
         uint32_t readerIndex = 0;
         for(i=0; i<s->numConnections; ++i)
-            if(s->connections[i].from == f &&
-                    s->connections[i].fromPortNum == outputPortNum) {
-                readers[readerIndex].filter = s->connections[i].to;
-                readers[readerIndex].thresholdLength =
-                    _QS_DEFAULT_THRESHOLD;
-                readers[readerIndex].inputPortNum =
-                    s->connections[i].toPortNum;
+            if(s->connections[i].from == f && (
+                    s->connections[i].fromPortNum == outputPortNum ||
+                    s->connections[i].fromPortNum == QS_NEXTPORT)
+                    ) {
+                struct QsReader *reader = readers + readerIndex;
+                reader->filter = s->connections[i].to;
+                reader->thresholdLength = _QS_DEFAULT_THRESHOLD;
+                if(s->connections[i].toPortNum == QS_NEXTPORT)
+                    reader->inputPortNum = readerIndex;
+                else {
+                    DASSERT(s->connections[i].toPortNum == readerIndex);
+                    reader->inputPortNum = readerIndex;
+                }
                 ++readerIndex;
             }
 
-        DASSERT(readerIndex == numReaders, "");
-        DASSERT(_QS_MAX_CHANNELS >= numReaders, "");
+        DASSERT(readerIndex == numReaders);
+        DASSERT(_QS_MAX_CHANNELS >= numReaders);
     }
 
     // Now recurse if we need to.
@@ -542,7 +568,7 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         uint32_t numReaders = f->outputs[i].numReaders;
         for(uint32_t j=0; j<numReaders; ++j) {
             struct QsFilter *filter = f->outputs[i].readers[j].filter;
-            DASSERT(filter, "");
+            DASSERT(filter);
             if(filter->mark)
                 ret = AllocateFilterOutputsFrom(s, filter, ret);
         }
@@ -567,13 +593,13 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
     // For every filter that has output:
     for(uint32_t i=0; i<s->numConnections; ++i) {
         struct QsFilter *outFilter = s->connections[i].from;
-        DASSERT(outFilter, "");
+        DASSERT(outFilter);
         // Every output
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
             struct QsOutput *output = &outFilter->outputs[j];
-            DASSERT(output, "");
-            DASSERT(output->numReaders, "");
-            DASSERT(output->readers, "");
+            DASSERT(output);
+            DASSERT(output->numReaders);
+            DASSERT(output->readers);
             for(uint32_t k=0; k<output->numReaders; ++k) {
                 // Every reader
                 struct QsReader *reader = &output->readers[k];
@@ -587,11 +613,10 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         }
     }
 
-    DASSERT(f->numInputs <= _QS_MAX_CHANNELS, "");
+DSPEW("------------------ filter \"%s\" has numInputs=%"
+            PRIu32, f->name, f->numInputs);
 
-    if(s->maxInputPorts < f->numInputs)
-        s->maxInputPorts = f->numInputs;
-
+    DASSERT(f->numInputs <= _QS_MAX_CHANNELS);
 
     // Now check the input port numbers.
 
@@ -606,16 +631,20 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
             struct QsOutput *output = &outFilter->outputs[j];
             for(uint32_t k=0; k<output->numReaders; ++k) {
+                DSPEW("  HERE   -------------------");
                 // Every reader
-                struct QsReader *reader = &output->readers[k];
+                struct QsReader *reader = output->readers + k;
                 // We borrow this readPtr variable again to mark this reader
                 // as not counted; undoing the setting of readPtr.
                 if(reader->filter == f && reader->readPtr == MARKER) {
                     // Undo the setting of readPtr.
                     reader->readPtr = 0;
-                    if(reader->inputPortNum == QS_NEXTPORT)
+                    if(reader->inputPortNum == QS_NEXTPORT) {
                         reader->inputPortNum = inputPortNum;
+                        DSPEW("+++++++++++++++++ filter \"%s\" input %" PRIu32, f->name, inputPortNum);
+                    }
                     if(reader->inputPortNum < f->numInputs)
+                        // Mark inputPortNums[] as gotten.
                         inputPortNums[reader->inputPortNum] = 1;
                     //else:  We have a bad input port number.
                     ++inputPortNum;
@@ -624,7 +653,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         }
     }
 
-    DASSERT(inputPortNum == f->numInputs, "");
+    DASSERT(inputPortNum == f->numInputs);
 
 
     // Check that we have all input port numbers being written to.
@@ -656,7 +685,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s->sources, "");
+    DASSERT(s->sources);
 
     s->flags &= (~_QS_STREAM_LAUNCHED);
 
@@ -700,8 +729,8 @@ int qsStreamStop(struct QsStream *s) {
 int qsStreamReady(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s, "");
-    DASSERT(s->app, "");
+    DASSERT(s);
+    DASSERT(s->app);
 
     ///////////////////////////////////////////////////////////////////////
     //                                                                   //
@@ -724,7 +753,7 @@ int qsStreamReady(struct QsStream *s) {
      *      Stage: Find source filters
      *********************************************************************/
 
-    DASSERT(s->numSources == 0,"");
+    DASSERT(s->numSources == 0);
 
     for(uint32_t i=0; i < s->numConnections; ++i) {
 
@@ -770,7 +799,7 @@ int qsStreamReady(struct QsStream *s) {
                 s->sources[j++] = s->connections[i].from;
         }
 
-    DASSERT(j == s->numSources, "");
+    DASSERT(j == s->numSources);
 
 
     /**********************************************************************
@@ -807,14 +836,11 @@ int qsStreamReady(struct QsStream *s) {
         }
 
 
-
-
     /**********************************************************************
      *      Stage: Set up filter input ports
      *********************************************************************/
 
     StreamSetFilterMarks(s, true);
-    s->maxInputPorts = 0;
     for(uint32_t i=0; i<s->numSources; ++i)
         if(SetupInputPorts(s, s->sources[i], false)) {
             ERROR("stream has bad input port numbers");

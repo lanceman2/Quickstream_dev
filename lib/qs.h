@@ -231,13 +231,6 @@ struct QsStream {
 
     uint32_t numConnections;// length of connections array
 
-
-    // This is the maximum number of input ports for all filters in the
-    // stream.  This is computed before start.  We use it to allocate the
-    // input() arguments in jobs above.
-    uint32_t maxInputPorts;
-
-
     struct QsStream *next; // next stream in app list of streams
 };
 
@@ -338,9 +331,9 @@ struct QsFilter {
     // lens, and isFlushing will be allocated on the stack that is running
     // this flow.
     //
+    // We exclude the case maxThreads=0 and use maxThreads=1.
+    //
     uint32_t maxThreads; // per this filter.
-
-
 
 
     // numThreads and nextThreadNum are accessed with stream mutex locked.
@@ -353,7 +346,8 @@ struct QsFilter {
     // thread number will be nextThreadNum and then we add 1 to
     // nextThreadNum.
     //
-    // We must have stream mutex locked to read or write.
+    // We must have stream mutex locked to read or write numThreads or
+    // nextThreadNum.
     uint32_t numThreads;
     uint32_t nextThreadNum;
 
@@ -401,9 +395,8 @@ struct QsOutput {  // points to reader filters
     // buffer in the first one in the list.  The "real" output buffer has
     // prev==0.
     //
-    // If this a "pass through" output prev points to the 
-    // in another filter output that this output uses to
-    // buffer its' data.
+    // If this a "pass through" output prev points to the in another
+    // filter output that this output uses to buffer its' data.
     //
     // So if prev is NOT 0 this is a "pass through" output buffer and prev
     // points toward the origin of the output thingy; if prev is 0 this is

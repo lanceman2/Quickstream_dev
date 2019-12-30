@@ -36,7 +36,7 @@ int main(void) {
     const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
     struct QsFilter *f[10];
     struct QsFilter *prevF = 0;
-    struct QsStream *s = qsAppStreamCreate(app, 1);
+    struct QsStream *s = qsAppStreamCreate(app);
     if(!s) goto fail;
     int i=0;
 
@@ -68,12 +68,14 @@ int main(void) {
     i++;
 
 
-    
-    qsAppPrintDotToFile(app, QSPrintDebug, stdout);
-    qsStreamReady(s);
-    qsAppDisplayFlowImage(app, 0, false);
-    qsAppDisplayFlowImage(app, QSPrintDebug, false);
 
+    qsStreamReady(s);
+    qsAppPrintDotToFile(app, QSPrintDebug, stdout);
+    qsAppDisplayFlowImage(app, 0, true);
+    qsAppDisplayFlowImage(app, QSPrintDebug, true);
+
+
+    //qsStreamDestroy(s);
 
     qsAppDestroy(app);
 

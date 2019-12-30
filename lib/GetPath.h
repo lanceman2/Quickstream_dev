@@ -76,10 +76,10 @@ static inline char *GetPluginPathFromEnv(const char *category,
             strlen(name) + 6/* for '//' and ".so" and '\0' */;
 
     // In case it's stupid long...
-    DASSERT(len > 0 && len < 1024*1024, "");
+    DASSERT(len > 0 && len < 1024*1024);
 
     char *buf = (char *) malloc(len);
-    ASSERT(buf, "malloc() failed");
+    ASSERT(buf, "malloc(%zu) failed", len);
 
     const char *suffix;
     if(!strcmp(&name[strlen(name)-3], ".so"))
@@ -125,7 +125,7 @@ static inline char *GetPluginPathFromEnv(const char *category,
 // The returned pointer must be free()ed.
 static inline char *GetPluginPath(const char *category, const char *name)
 {
-    DASSERT(name && strlen(name) >= 1, "");
+    DASSERT(name && strlen(name) >= 1);
     
     if(name[0] == DIR_CHAR) {
         char *path;
@@ -144,7 +144,7 @@ static inline char *GetPluginPath(const char *category, const char *name)
     }
 
 
-    DASSERT(category && strlen(category) >= 1, "");
+    DASSERT(category && strlen(category) >= 1);
 
     char *buf;
 
@@ -155,15 +155,15 @@ static inline char *GetPluginPath(const char *category, const char *name)
     const ssize_t postLen =
         strlen(PRE) + strlen(category) +
         strlen(name) + 5/* for '/' and ".so" and '\0' */;
-    DASSERT(postLen > 0 && postLen < 1024*1024, "");
+    DASSERT(postLen > 0 && postLen < 1024*1024);
     ssize_t bufLen = 128 + postLen;
     buf = (char *) malloc(bufLen);
-    ASSERT(buf, "malloc() failed");
+    ASSERT(buf, "malloc(%zu) failed", bufLen);
     ssize_t rl = readlink("/proc/self/exe", buf, bufLen);
     ASSERT(rl > 0, "readlink(\"/proc/self/exe\",,) failed");
     while(rl + postLen >= bufLen)
     {
-        DASSERT(bufLen < 1024*1024, ""); // it should not get this large.
+        DASSERT(bufLen < 1024*1024); // it should not get this large.
         buf = (char *) realloc(buf, bufLen += 128);
         ASSERT(buf, "realloc() failed");
         rl = readlink("/proc/self/exe", buf, bufLen);
@@ -180,10 +180,10 @@ static inline char *GetPluginPath(const char *category, const char *name)
     //
     --rl;
     while(rl > 5 && buf[rl] != '/') --rl; // one '/'
-    ASSERT(buf[rl] == '/', "");
+    ASSERT(buf[rl] == '/');
     --rl;
     while(rl > 5 && buf[rl] != '/') --rl; // two '/'
-    ASSERT(buf[rl] == '/', "");
+    ASSERT(buf[rl] == '/');
     buf[rl] = '\0'; // null terminate string
 
     // Now
@@ -201,7 +201,7 @@ static inline char *GetPluginPath(const char *category, const char *name)
 
     DASSERT(strlen(buf) + strlen(PRE) +
             strlen(category) + strlen("/") +
-            strlen(name) + 1 < (size_t) bufLen, "");
+            strlen(name) + 1 < (size_t) bufLen);
 
     strcat(buf, PRE);
     strcat(buf, category);
@@ -216,6 +216,3 @@ static inline char *GetPluginPath(const char *category, const char *name)
 
     return buf;
 }
-
-
-

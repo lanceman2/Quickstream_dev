@@ -2,9 +2,9 @@
 #define __debug_h__
 
 
-/** This file provides some CPP (C pre processor) macro debug functions:
+/** This file provides some CPP (C pre processor) macro debug function:
  *
- *    ASSERT() FAIL()
+ *    ASSERT()
  *
  * and compile time conditionally:
  *
@@ -25,7 +25,7 @@
 // SPEW_LEVEL_WARN   -->  WARN() ERROR()
 // SPEW_LEVEL_ERROR  -->  ERROR()
 //
-// always on are     --> ASSERT() FAIL()
+// always on is      --> ASSERT()
 //
 // If a macro function is not live it becomes a empty macro with no code.
 //
@@ -35,8 +35,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 //
-// Setting SPEW_LEVEL_NONE with still have ASSERT() FAIL() spewing
-// and ERROR() will not spew but will still set the qsError string
+// Setting SPEW_LEVEL_NONE with still have ASSERT() spewing and ERROR()
+// will not spew but will still set the qsError string
 //
 
 
@@ -61,16 +61,6 @@ extern "C" {
 
 #define SPEW_FILE stderr
 
-///////////////////////////////////////////////////////////////////////////
-//
-// ##__VA_ARGS__ comma not eaten with -std=c++0x
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=44317
-//
-// There is a GCC bug where GCC wrongly warns about ##__VA_ARGS__, so using
-// #pragma GCC system_header suppresses these warnings.  Should this GCC
-// bug get fixed, it'd be good to remove this next code line.
-// See also: https://gcc.gnu.org/onlinedocs/cpp/System-Headers.html
-#pragma GCC system_header
 
 // We would like to be able to just call DSPEW() with no arguments
 // which can make a zero length printf format.
@@ -79,8 +69,11 @@ extern "C" {
 
 extern void qs_spew(FILE *stream, int errn, const char *pre, const char *file,
         int line, const char *func, bool bufferIt, const char *fmt, ...)
-         // check printf format errors at compile time:
-        __attribute__ ((format (printf, 8, 9)));
+#ifdef __GNUC__
+        // check printf format errors at compile time:
+        __attribute__ ( ( format (printf, 8, 9 ) ) )
+#endif
+        ;
 
 extern void qs_assertAction(FILE *stream);
 
@@ -88,22 +81,16 @@ extern void qs_assertAction(FILE *stream);
 
 #  define _SPEW(stream, errn, bufferIt, pre, fmt, ... )\
      qs_spew(stream, errn, pre, __BASE_FILE__, __LINE__,\
-        __func__, bufferIt, fmt "\n", ##__VA_ARGS__)
+        __func__, bufferIt, fmt, ##__VA_ARGS__)
 
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
-            _SPEW(SPEW_FILE, errno, true, "ASSERT("#val") failed: ", ##__VA_ARGS__);\
+            _SPEW(SPEW_FILE, errno, true, "ASSERT("#val") failed: ", "" __VA_ARGS__);\
             qs_assertAction(SPEW_FILE);\
         }\
     }\
     while(0)
-
-#  define FAIL(fmt, ...) \
-    do {\
-        _SPEW(SPEW_FILE, errno, true, "FAIL: ", fmt, ##__VA_ARGS__);\
-        qs_assertAction(SPEW_FILE);\
-    } while(0)
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -140,41 +127,40 @@ extern void qs_assertAction(FILE *stream);
 
 
 
-
 #ifdef DEBUG
-#  define DASSERT(val, fmt, ...) ASSERT(val, fmt, ##__VA_ARGS__)
+#  define DASSERT(val, ...) ASSERT(val, ##__VA_ARGS__)
 #else
-#  define DASSERT(val, fmt, ...) /*empty marco*/
+#  define DASSERT(val, ...) /*empty marco*/
 #endif
 
 #ifdef SPEW_LEVEL_NONE
-#define ERROR(fmt, ...) _SPEW(0/*no spew stream*/, errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+#define ERROR(...) _SPEW(0/*no spew stream*/, errno, true, "ERROR: ", "" __VA_ARGS__)
 #else
-#define ERROR(fmt, ...) _SPEW(SPEW_FILE, errno, true, "ERROR: ", fmt, ##__VA_ARGS__)
+#define ERROR(...) _SPEW(SPEW_FILE, errno, true, "ERROR: ", "" __VA_ARGS__)
 #endif
 
 #ifdef SPEW_LEVEL_WARN
-#  define WARN(fmt, ...) _SPEW(SPEW_FILE, errno, false, "WARN: ", fmt, ##__VA_ARGS__)
+#  define WARN(...) _SPEW(SPEW_FILE, errno, false, "WARN: ", "" __VA_ARGS__)
 #else
-#  define WARN(fmt, ...) /*empty macro*/
+#  define WARN(...) /*empty macro*/
 #endif 
 
 #ifdef SPEW_LEVEL_NOTICE
-#  define NOTICE(fmt, ...) _SPEW(SPEW_FILE, errno, false, "NOTICE: ", fmt, ##__VA_ARGS__)
+#  define NOTICE(...) _SPEW(SPEW_FILE, errno, false, "NOTICE: ", "" __VA_ARGS__)
 #else
-#  define NOTICE(fmt, ...) /*empty macro*/
+#  define NOTICE(...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_INFO
-#  define INFO(fmt, ...)   _SPEW(SPEW_FILE, 0, false, "INFO: ", fmt, ##__VA_ARGS__)
+#  define INFO(...)   _SPEW(SPEW_FILE, 0, false, "INFO: ", "" __VA_ARGS__)
 #else
-#  define INFO(fmt, ...) /*empty macro*/
+#  define INFO(...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_DEBUG
-#  define DSPEW(fmt, ...)  _SPEW(SPEW_FILE, 0, false, "DEBUG: ", fmt, ##__VA_ARGS__)
+#  define DSPEW(...)  _SPEW(SPEW_FILE, 0, false, "DEBUG: ", "" __VA_ARGS__)
 #else
-#  define DSPEW(fmt, ...) /*empty macro*/
+#  define DSPEW(...) /*empty macro*/
 #endif
 
 

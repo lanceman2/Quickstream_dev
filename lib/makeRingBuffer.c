@@ -79,7 +79,7 @@ static size_t pagesize = 0;
 //
 static inline void bumpSize(size_t *len)
 {
-    DASSERT(pagesize, "");
+    DASSERT(pagesize);
 
     if((*len) > (size_t) pagesize)
     {
@@ -93,13 +93,13 @@ static inline void bumpSize(size_t *len)
 
 void *makeRingBuffer(size_t *len, size_t *overhang)
 {
-    DASSERT(len, "");
-    DASSERT(overhang, "");
+    DASSERT(len);
+    DASSERT(overhang);
 
     if(!pagesize) {
         pagesize = getpagesize();
         // Lets see if this ever changes:
-        DASSERT(pagesize == 4*1024, "");
+        DASSERT(pagesize == 4*1024);
     }
 
     // This is not thread safe.  We expect that this is only
@@ -107,7 +107,7 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
     //
     static uint32_t segmentCount = 0;
 
-    DASSERT((*len) >= (*overhang), "");
+    DASSERT((*len) >= (*overhang));
 
     bumpSize(len);
     bumpSize(overhang);
@@ -140,7 +140,7 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
     // Make a hole of size "overhang" in the mapping.  If we did not make
     // the original mapping larger than we'd have no way to make the
     // second mapping be next to the first mapping.
-    ASSERT(0 == munmap(x + (*len), *overhang), "");
+    ASSERT(0 == munmap(x + (*len), *overhang));
 
     // Fill the hole with the starting memory of the last mapping using
     // the start of the file to make it be at the start.
@@ -152,7 +152,7 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
             fd,  0/*file offset*/),
             "mmap() failed to return the address we wanted");
 
-    ASSERT(close(fd) == 0, "");
+    ASSERT(close(fd) == 0);
 
     ASSERT(shm_unlink(tmp) == 0, "shm_unlink(\"%s\") failed", tmp);
 
@@ -162,12 +162,12 @@ void *makeRingBuffer(size_t *len, size_t *overhang)
 
 void freeRingBuffer(void *x, size_t len, size_t overhang)
 {
-    DASSERT(x, "");
-    DASSERT(len, "");
-    DASSERT(overhang, "");
-    DASSERT(len%pagesize == 0, "");
-    DASSERT(overhang%pagesize == 0, "");
+    DASSERT(x);
+    DASSERT(len);
+    DASSERT(overhang);
+    DASSERT(len%pagesize == 0);
+    DASSERT(overhang%pagesize == 0);
 
-    ASSERT(0 == munmap(x, len), "");
-    ASSERT(0 == munmap((uint8_t *) x + len, overhang), "");
+    ASSERT(0 == munmap(x, len));
+    ASSERT(0 == munmap((uint8_t *) x + len, overhang));
 }

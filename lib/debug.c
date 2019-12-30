@@ -58,7 +58,7 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
         const char *fmt, va_list ap)
 {
     // We try to buffer this so that prints do not get intermixed with
-    // other prints.
+    // other prints in multi-threaded programs.
     char buffer[BUFLEN];
     int len;
 
@@ -96,12 +96,26 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
                         getpid(), syscall(SYS_gettid), func);
         }
 
-        vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
+        int ret;
+        ret = vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
+        if(ret > 0) len += ret;
+        if(len + 1 < BUFLEN) {
+            // Add newline to the end.
+            buffer[len] = '\n';
+            buffer[len+1] = '\0';
+        }
 
         return;
     }
 
-    vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
+    int ret;
+    ret = vsnprintf(&buffer[len], BUFLEN - len,  fmt, ap);
+    if(ret > 0) len += ret;
+    if(len + 1 < BUFLEN) {
+        // Add newline to the end.
+        buffer[len] = '\n';
+        buffer[len+1] = '\0';
+    }
 
     if(stream)
         fputs(buffer, stream);
