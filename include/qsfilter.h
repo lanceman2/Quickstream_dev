@@ -329,12 +329,15 @@ int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
  * This will let more than one thread call the filter input() function at
  * a time.
  *
+ * \param maxThreads the maximum number of thread that will call the
+ * filters input() function.
+ *
  * By default, quickstream filter input() functions are assumed to not be
  * thread safe, so, by default, there will only be one thread calling a
  * filter input() function at a time.
  */
 extern
-void qsSetThreadSafe(void);
+void qsSetThreadSafe(uint32_t maxThreads);
 
 
 /** Get a float as an option argument.

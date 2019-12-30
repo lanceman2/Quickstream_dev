@@ -285,6 +285,10 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
             path, f->name);
     free(path);
 
+    f->args = calloc(1, sizeof(*f->args));
+    ASSERT(f->args, "calloc(1,%zu) failed", sizeof(*f->args));
+
+
     return f; // success
 
 cleanup:
@@ -298,20 +302,29 @@ cleanup:
 }
 
 
-void qsSetThreadSafe(void) {
+// maxThread that may run in the current filter.
+void qsSetThreadSafe(uint32_t maxThreads) {
 
+    DASSERT(maxThreads, "maxThreads cannot be 0");
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     struct QsFilter *f = _qsConstructFilter;
     ASSERT(f,"qsSetThreadSafe() not called in construct()");
+    DASSERT(f->args, "");
+    DASSERT(f->args->buffers == 0, "");
+
+    f->maxThreads = maxThreads;
+    free(f->args);
+    f->args = calloc(maxThreads, sizeof(*f->args));
+    ASSERT(f->args, "calloc(%" PRIu32 ",%zu) failed",
+            maxThreads, sizeof(*f->args));
 
     // If a filter can be called with multiple thread than we need
-    // a mutex and a condition variable pair in order to control how
-    // it accesses the filters output buffers.
+    // a mutex.
 
     f->mutex = calloc(1, sizeof(*f->mutex));
     ASSERT(f->mutex, "calloc(1,%zu) failed", sizeof(*f->mutex));
     CHECK(pthread_mutex_init(f->mutex, 0));
-}
+}}
 
 
 int qsFilterUnload(struct QsFilter *f) {

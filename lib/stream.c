@@ -310,6 +310,10 @@ void FreeRunResources(struct QsStream *s) {
         free(s->jobs);
         s->maxThreads = 0;
         s->numJobs = 0;
+
+        s->jobQueue = 0;
+        s->last = 0;
+        s->unused = 0;
         /*********************************************************/
     }
 

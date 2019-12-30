@@ -62,6 +62,8 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->name, "");
     DASSERT(f->outputs == 0, "");
     DASSERT(f->numOutputs == 0, "");
+    DASSERT(f->args, "");
+
 
     DSPEW("Freeing: %s", f->name);
     if(f->dlhandle) {
@@ -103,16 +105,15 @@ void FreeFilter(struct QsFilter *f) {
         free(f->mutex);
     }
 
+    DASSERT(f->args->buffers == 0, "");
+
 #ifdef DEBUG
+    memset(f->args, 0, f->maxThreads*sizeof(*f->args));
     memset(f->name, 0, strlen(f->name));
 #endif
-
+    free(f->args);
     free(f->name);
-
-#ifdef DEBUG
     memset(f, 0, sizeof(*f));
-#endif
-
     free(f);
 }
 
