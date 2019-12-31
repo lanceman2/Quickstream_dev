@@ -33,8 +33,6 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     struct QsStream *s = calloc(1, sizeof(*s));
     ASSERT(s, "calloc(1, %zu) failed", sizeof(*s));
-    s->flags = _QS_STREAM_DEFAULTFLAGS;
-
 
     // Add this stream to the end of the app list
     //
@@ -480,15 +478,16 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
             // with input port numbers at this time.
             if(s->connections[i].fromPortNum == f->numOutputs)
                 ++f->numOutputs;
-            else if(s->connections[i].fromPortNum + 1 == f->numOutputs)
-                continue;
             else if(s->connections[i].fromPortNum == QS_NEXTPORT)
                 ++f->numOutputs;
+            else if(s->connections[i].fromPortNum < f->numOutputs)
+                continue;
             else {
                 // This is a bad output port number so we just do this
                 // default action instead of adding a failure mode, except
                 // in DEBUG we'll assert.
-                DASSERT(false, "filter \"%s\" has output port number %" PRIu32
+                DASSERT(false, "filter \"%s\" has output port number %"
+                        PRIu32
                         " out of sequence; setting it to %" PRIu32,
                         s->connections[i].from->name,
                         s->connections[i].fromPortNum,
@@ -721,7 +720,6 @@ int qsStreamStop(struct QsStream *s) {
     FreeRunResources(s);
 
 
-
     s->flow = 0;
 
 
@@ -908,17 +906,6 @@ int qsStreamReady(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
 
-
-    /**********************************************************************
-     *     Stage: set the flow function
-     *********************************************************************/
-
-    // TODO: vary this, s->flow.  Setup an array with a list of possible
-    // functions.  Maybe the user could load their own function.
-    //
-    // Set the function that is the stream flower thingy.
-    //
-    s->flow = nThreadFlow;
 
 
     return 0; // success

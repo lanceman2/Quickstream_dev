@@ -18,16 +18,17 @@
 
 
 // This CPP macro function CHECK() is just so we can call most pthread_*()
-// and maybe other functions that return 0 on success and an int error
-// number on failure, and asserts on failure printing errno (from
-// ASSERT()) and the return value.  This is not so bad given this does not
-// obscure what is being run.  Like for example:
+// (pthread_mutex_init() for example) and maybe other functions that
+// return 0 on success and an int error number on failure, and asserts on
+// failure printing errno (from ASSERT()) and the return value.  This is
+// not so bad given this does not obscure what is being run.  Like for
+// example:
 //
 //   CHECK(pthread_mutex_destroy(&s->mutex));
 //
 // You can totally tell what that is doing.  One line of code instead of
 // three.  Note (x) can only appear once in the macro expression,
-// otherwise (x) could get executed more than once, if it is listed more
+// otherwise (x) could get executed more than once, if it was listed more
 // than once.
 //
 #define CHECK(x) \
@@ -38,7 +39,10 @@
 
 
 
-#define _QS_STREAM_MAXMAXTHTREADS (80)
+// For qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) it is the
+// maximum of maxThreads.  This value is somewhat arbitrary.
+//
+#define _QS_STREAM_MAXMAXTHREADS (213)
 
 // bit Flags for the stream
 //
@@ -56,17 +60,24 @@
 #define _QS_STREAM_LAUNCHED          (02)
 
 // By limiting the number of channels possible, ports in or out we can use
-// stack allocation via alloca().
+// stack allocation via alloca().  We do not do something stupid like make
+// arrays of this size.  We figured that a streaming API that allowed a
+// million ports would not be that useful.
+//
 #define _QS_MAX_CHANNELS              ((uint32_t) (128))
 
 // So we don't run away mapping to much memory for ring-buffers.  There
 // just has to be some limit.
+//
 #define _QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
 
-
+// This is a parameter used in calculating ring buffer sizes.
+//
 #define _QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
 
-
+// In general the idea of threshold is related to input triggering.
+// In the simplest case we can set a input channel threshold.
+//
 #define _QS_DEFAULT_THRESHOLD         ((size_t) 1)
 
 
@@ -104,11 +115,11 @@ struct QsApp {
 
 // For pthread_getspecific() and pthread_setspecific().  One hopes that
 // pthread_getspecific() and pthread_setspecific() are very fast and do
-// not cause a mode switch (system call).  The man page says "Performance
-// and ease-of-use of pthread_getspecific() are critical".  If they do
-// cause a mode switch we need to recode this.  One can't say without
-// looking at the code or running tests; for example look at how slow
-// system 5 semaphores are.
+// not cause a mode switch (system call) each time they are called.  The
+// man page says "Performance and ease-of-use of pthread_getspecific() are
+// critical".  If they do cause a mode switch we need to recode this.  One
+// can't say without looking at the code or running tests; for example
+// look at how slow system 5 semaphores are.
 extern
 pthread_key_t _qsKey;
 
@@ -128,16 +139,19 @@ pthread_t _qsMainThread;
 
 // We can use it like so:
 // DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+// This may be needed for non-debug building in the future.
 
 #endif
 
 
+// QsThread, so we may keep lists of threads with what they are doing.
+//
 struct QsThread {
 
     struct QsStream *stream;
     struct QsJob *job;  // job=0 for an idle thread
-    struct QsThread *next;
-    struct QsThread *prev;
+    struct QsThread *next; // doubly linked list.
+    struct QsThread *prev; // doubly linked list.
 };
 
 
@@ -151,13 +165,13 @@ struct QsStream {
 
     // maxThreads=0 means do not start any.  maxThreads does not change at
     // flow/run time, so we need no mutex to access it.
-    uint32_t maxThreads; // Will not create more pthreads than this.
+    uint32_t maxThreads; // We will not create more pthreads than this.
 
 
     uint32_t flags; // bit flags that configure the stream
     // example the bit _QS_STREAM_ALLOWLOOPS may be set to allow loops
     // in the graph.  flags does not change at flow/run time, so we need
-    // no mutex to access it.
+    // no mutex to access it at flow/run time.
 
     // We can define and set different flow() functions that run the flow
     // graph different ways.  This function gets set in qsStreamReady().
@@ -188,7 +202,7 @@ struct QsStream {
     // be they idle or in the process of calling input().  We must have a
     // stream mutex lock to access numThreads.
     uint32_t numThreads;
-
+    //
     // We do not need to keep list of idle threads.  We just have all idle
     // threads call pthread_cond_wait() with the above mutex and cond.
     //
@@ -207,10 +221,13 @@ struct QsStream {
 
     // The array list of sources is created at start:
     uint32_t numSources;       // length of sources
+    //
     // We also use sources==0 (or source != 0) as a flag that shows that
     // the stream flow-time resources have not been allocated yet (or
     // not), in place of introducing another flag.
-    struct QsFilter **sources; // array of filter sources
+    //
+    // malloc()ed array of filter without input connections
+    struct QsFilter **sources;
 
     // This list of filter connections is not used while the stream is
     // running (flowing).  It's queried a stream start, and the QsFilter
@@ -435,6 +452,11 @@ struct QsOutput {  // points to reader filters
 
     // writePtr points to where to write next in mapped memory.
     uint8_t *writePtr;
+    // oldWritePtr is used to check for writes after filter input()
+    // calls.
+    uint8_t *oldWritePtr;
+
+
     // ** Only the filter (and it's thread) that has a pointer to this
     // output can read and write this pointer, at flow time. **
     //
@@ -501,8 +523,6 @@ struct QsFilter *_qsStartFilter;
 
 // These below functions are not API user interfaces:'
 
-extern
-uint32_t nThreadFlow(struct QsStream *s);
 
 
 extern
@@ -550,7 +570,7 @@ void AppSetFilterMarks(struct QsApp *app, bool val) {
 }
 #endif
 
-// Set filter->mark = val for every filter in just this stream.
+// Set filter->mark = val for every filter in this stream.
 static inline
 void StreamSetFilterMarks(struct QsStream *s, bool val) {
 

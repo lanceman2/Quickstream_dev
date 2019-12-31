@@ -205,8 +205,8 @@ int main(int argc, const char * const *argv) {
                     // connect filters in the order they are loaded.
                     for(int i=1; i<numFilters; ++i) {
                         fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
-                        qsStreamConnectFilters(stream, filters[i-1], filters[i],
-                                QS_NEXTPORT, QS_NEXTPORT);
+                        qsStreamConnectFilters(stream, filters[i-1],
+                                filters[i], QS_NEXTPORT, QS_NEXTPORT);
                     }
                     break;
                 }
@@ -267,9 +267,9 @@ int main(int argc, const char * const *argv) {
                             "loaded to display\n");
                     break; // nothing to display yet.
                 }
-                qsAppDisplayFlowImage(app, QSPrintDebug, true/*waitForDisplay*/);
+                qsAppDisplayFlowImage(app, QSPrintDebug,
+                        true/*waitForDisplay*/);
                 break;
-             
 
             case 'f': // Load filter module
                 if(!arg) {
@@ -356,7 +356,8 @@ int main(int argc, const char * const *argv) {
             case 'r':
 
                 if(!app) {
-                    fprintf(stderr, "option --ready with no filters loaded\n");
+                    fprintf(stderr, "option --ready with no"
+                            " filters loaded\n");
                     return 1;
                 }
 

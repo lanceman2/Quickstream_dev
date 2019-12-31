@@ -48,7 +48,14 @@ static void CreateThread(struct QsStream *s, struct QsFilter *f) {
 #endif
 
 
+void AppendToFilterJob(struct QsFilter *f) {
 
+    
+
+}
+
+
+static
 uint32_t nThreadFlow(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i) {
@@ -56,6 +63,7 @@ uint32_t nThreadFlow(struct QsStream *s) {
         struct QsFilter *f = s->sources[i];
         DASSERT(f);
         DASSERT(f->input);
+
 
 
 
@@ -133,9 +141,9 @@ void AllocateFilterJobs(struct QsFilter *f) {
 int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
     ASSERT(maxThreads!=0, "Write the code for the maxThread=0 case");
-    ASSERT(maxThreads <= _QS_STREAM_MAXMAXTHTREADS,
+    ASSERT(maxThreads <= _QS_STREAM_MAXMAXTHREADS,
             "maxThread=%" PRIu32 " is too large (> %" PRIu32 ")",
-            maxThreads, _QS_STREAM_MAXMAXTHTREADS);
+            maxThreads, _QS_STREAM_MAXMAXTHREADS);
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s);
@@ -151,8 +159,10 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
     s->maxThreads = maxThreads;
 
-
     if(s->maxThreads) {
+
+        // Set a stream flow function.
+        s->flow = nThreadFlow;
 
         CHECK(pthread_cond_init(&s->cond, 0));
         CHECK(pthread_mutex_init(&s->mutex, 0));
@@ -162,8 +172,9 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
             AllocateFilterJobs(s->sources[i]);
     }
 
-    // There is a stream flow function.
-    DASSERT(s->flow);
+
+    ASSERT(s->flow, "Did not set a stream flow function. "
+            "Write this code");
 
     return s->flow(s);
 }

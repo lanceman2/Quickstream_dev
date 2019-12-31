@@ -54,7 +54,7 @@ int main(void) {
     f[i] = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
     qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
-    qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
+    qsStreamConnectFilters(s, f[0], f[i], 1, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
 
     i++;
@@ -71,8 +71,8 @@ int main(void) {
 
     qsStreamReady(s);
     qsAppPrintDotToFile(app, QSPrintDebug, stdout);
-    qsAppDisplayFlowImage(app, 0, true);
-    qsAppDisplayFlowImage(app, QSPrintDebug, true);
+    qsAppDisplayFlowImage(app, 0, false);
+    qsAppDisplayFlowImage(app, QSPrintDebug, false);
 
 
     //qsStreamDestroy(s);

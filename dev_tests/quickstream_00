@@ -16,7 +16,7 @@ dd if=/dev/urandom count=1 | hexdump > $in
 #
 ../bin/quickstream -f stdin\
  -f tests/copy [ --maxRead=7 ]\
- -f stdout -c -R -d -r < $in
+ -f stdout -c -R -d -r < $in > $out
 
 #diff $in $out
 echo "$0 SUCCESS"

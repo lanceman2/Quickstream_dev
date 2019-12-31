@@ -32,10 +32,10 @@ void AllocateBuffer(struct QsFilter *f) {
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
-        DASSERT(output->numReaders, "");
-        DASSERT(output->readers, "");
-        DASSERT(output->newBuffer == 0, "");
-        DASSERT(output->buffer == 0, "");
+        DASSERT(output->numReaders);
+        DASSERT(output->readers);
+        DASSERT(output->newBuffer == 0);
+        DASSERT(output->buffer == 0);
 
         if(output->prev)
             // Set from a qsCreatePassThroughBuffer() call in the filter
@@ -65,7 +65,7 @@ void AllocateBuffer(struct QsFilter *f) {
 // Just this filters' buffers.  No recursion.
 //
 void FreeBuffers(struct QsFilter *f) {
-    
+
     DASSERT(f);
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
@@ -86,9 +86,9 @@ void FreeBuffers(struct QsFilter *f) {
         if(b) {
             // There is no failure mode between allocating the buffer and
             // mapping the memory, therefore:
-            DASSERT(b->mem, "");
-            DASSERT(b->mapLength, "");
-            DASSERT(b->overhangLength, "");
+            DASSERT(b->mem);
+            DASSERT(b->mapLength);
+            DASSERT(b->overhangLength);
 #ifdef DEBUG
             // TODO: Is this really useful?
             memset(b->mem, 0, b->mapLength);
@@ -105,6 +105,22 @@ void FreeBuffers(struct QsFilter *f) {
 }
 
 
+static inline
+void CheckMakeRingBuffer(struct QsBuffer *b,
+        size_t len, size_t overhang) {
+
+    DASSERT(b);
+    
+    if(b->mem != 0) return;
+
+    b->mapLength = len;
+    b->overhangLength = overhang;
+    // makeRingBuffer() will round up mapLength and
+    // overhangLength to the nearest page.
+    b->mem = makeRingBuffer(&b->mapLength, &b->overhangLength);
+}
+
+
 // This function will recurse.
 //
 void MapRingBuffers(struct QsFilter *f) {
@@ -117,7 +133,7 @@ void MapRingBuffers(struct QsFilter *f) {
         if(output->prev) {
 
             // This is a pass through buffer and it will not be set yet.
-            DASSERT(output->buffer == 0, "");
+            DASSERT(output->buffer == 0);
 
             struct QsOutput *o = output->prev;
             // This is a "pass through" buffer so it does not have it's
@@ -127,43 +143,29 @@ void MapRingBuffers(struct QsFilter *f) {
             // o is now the output with the buffer that owns the memory
             // for the buffer.  It's the original output that writes to
             // the buffer first in the series of pass through buffers that
-            // share this buffer.
-            DASSERT(o->buffer, "");
-            if(o->buffer->mem == 0) {
-                o->buffer->mapLength = 1;
-                o->buffer->overhangLength = 1;
-                // makeRingBuffer() will round up mapLength and
-                // overhangLength to the nearest page.
-                o->buffer->mem = makeRingBuffer(
-                        &o->buffer->mapLength, &o->buffer->overhangLength);
-            }
+            // share this buffers memory mapping.
+            DASSERT(o->buffer);
+            CheckMakeRingBuffer(o->buffer, 1, 1);
             output->buffer = o->buffer;
         }
 
-        DASSERT(output->buffer, "");
-
-        if(output->buffer->mem == 0) {
-            output->buffer->mapLength = 1;
-            output->buffer->overhangLength = 1;
-            // makeRingBuffer() will round up mapLength and
-            // overhangLength to the nearest page.
-            output->buffer->mem = makeRingBuffer(
-                    &output->buffer->mapLength,
-                    &output->buffer->overhangLength);
-        }
+        DASSERT(output->buffer);
+        CheckMakeRingBuffer(output->buffer, 1, 1);
 
         // Initialize the writer
-        output->writePtr = output->buffer->mem;
+        output->oldWritePtr = output->writePtr = output->buffer->mem;
 
+        DASSERT(output->numReaders && output->readers);
         for(uint32_t j=0; j<output->numReaders; ++j)
+            // Initialize the readers
             output->readers[j].readPtr = output->buffer->mem;
     }
 
 
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
-        DASSERT(output->readers, "");
-        DASSERT(output->numReaders, "");
+        DASSERT(output->readers);
+        DASSERT(output->numReaders);
         for(uint32_t j=0; j<output->numReaders; ++j)
             if(output->readers[j].filter->mark)
                 // Recurse
@@ -274,7 +276,7 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     DASSERT(_qsCurrentFilter);
-    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS, "");
+    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
     DASSERT(_qsCurrentFilter->numOutputs);
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
