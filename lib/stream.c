@@ -246,22 +246,27 @@ void FreeFilterRunResources(struct QsFilter *f) {
 
         uint32_t numJobs = f->maxThreads + 1;
 
-        for(uint32_t i=0; i<numJobs; ++i) {
+        if(f->numInputs)
+            for(uint32_t i=0; i<numJobs; ++i) {
 
-            struct QsJob *job = f->jobs + i;
+                // Free the input() arguments:
+                struct QsJob *job = f->jobs + i;
 
-            DASSERT(job->buffers);
-            DASSERT(job->lens);
-            DASSERT(job->isFlushing);
+                DASSERT(job->buffers);
+                DASSERT(job->lens);
+                DASSERT(job->isFlushing);
 #ifdef DEBUG
-            memset(job->buffers, 0, f->numInputs*sizeof(*job->buffers));
-            memset(job->lens, 0, f->numInputs*sizeof(*job->lens));
-            memset(job->isFlushing, 0, f->numInputs*sizeof(*job->isFlushing));
+                memset(job->buffers, 0,
+                        f->numInputs*sizeof(*job->buffers));
+                memset(job->lens, 0,
+                        f->numInputs*sizeof(*job->lens));
+                memset(job->isFlushing, 0,
+                        f->numInputs*sizeof(*job->isFlushing));
 #endif
-            free(job->buffers);
-            free(job->lens);
-            free(job->isFlushing);
-        }
+                free(job->buffers);
+                free(job->lens);
+                free(job->isFlushing);
+            }
 
         CHECK(pthread_mutex_destroy(f->mutex));
 
@@ -342,9 +347,8 @@ void FreeRunResources(struct QsStream *s) {
         s->maxThreads = 0;
         s->numThreads = 0;
         s->numIdleThreads = 0;
+        s->job = 0;
     }
-
-
 
     if(s->numSources) {
         // Free the stream sources list
@@ -709,8 +713,6 @@ int qsStreamStop(struct QsStream *s) {
             f->stop(f->numInputs, f->numOutputs);
             _qsStartFilter = 0;
         }
-
-
 
 
     /**********************************************************************

@@ -47,11 +47,71 @@ static void CreateThread(struct QsStream *s, struct QsFilter *f) {
 
 #endif
 
+// The output, o, is one of the output from a filter feeding filter f.
+//
+// If output o is 0 then f is a source filter.
+//
+// This is for multi-thread flow.
+//
+void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
-void AppendToFilterJob(struct QsFilter *f) {
+    // TODO: remove some of these debug asserts after testing.
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(f);
+    DASSERT(f->input);
+    DASSERT(f->queue);
+    DASSERT(f->mutex);
 
-    
+    struct QsSream *s;
+    s = f->stream;
+    DASSERT(s);
 
+    if(o) {
+        DSPEW("%p", f->queue);
+    } else {
+        // This f is a source
+    }
+
+    CHECK(pthread_mutex_lock(&s->mutex));
+
+    if(s->job) {
+
+        // There should be no worker threads waiting for work.
+
+        // Wait for the last job to get picked up by a worker thread.
+        CHECK(pthread_cond_wait(&s->cond, &s->mutex));
+
+    }
+
+    s->job = f->queue;
+
+    if(numIdleThreads) {
+        // Watch out for "spurious wakeup" which is where more than one
+        // thread can wait up from one pthread_cond_signal() call.
+        //
+        // send job to the idle thread.  Any idle thread will do.
+        CHECK(pthread_cond_signal(&s->cond));
+
+    } else if(s->numThreads < s->maxThreads) {
+
+        // make a new thread and give is this one stream job.
+        pthread_t thread;
+        struct QsThread *td;
+        td = calloc(1,sizeof(*td));
+        ASSERT(td, "calloc(1,%zu) failed", sizeof(*td));
+        td->stream = s;
+
+        CHECK(pthread_create(&thread, 0, StartThread, td));
+
+
+
+    } else {
+
+        // We must wait for a working thread to take this job after they
+        // finish their current job.
+    }
+
+    CHECK(pthread_mutex_unlock(&f->stream->mutex));
 }
 
 
@@ -59,17 +119,31 @@ static
 uint32_t nThreadFlow(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i) {
-        DASSERT(s->sources[i]);
-        struct QsFilter *f = s->sources[i];
-        DASSERT(f);
-        DASSERT(f->input);
 
-
+        AppendOutputToFilterJobs(0, s->sources[i]);
 
 
     }
 
     return 0; // success
+}
+
+
+// Allocate the input arguments or so called job arguments.
+static inline
+void AllocateJobArgs(struct QsJob *job, uint32_t numInputs) {
+
+    if(numInputs == 0) return;
+
+    job->buffers = calloc(numInputs, sizeof(*job->buffers));
+    ASSERT(job->buffers, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*job->buffers));
+    job->lens = calloc(numInputs, sizeof(*job->lens));
+    ASSERT(job->lens, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*job->lens));
+    job->isFlushing = calloc(numInputs, sizeof(*job->isFlushing));
+    ASSERT(job->isFlushing, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*job->isFlushing));
 }
 
 
@@ -93,37 +167,32 @@ void AllocateFilterJobs(struct QsFilter *f) {
     CHECK(pthread_mutex_init(f->mutex, 0));
 
 
-    if(f->numInputs) {
+    uint32_t numJobs = f->maxThreads + 1;
+    uint32_t numInputs = f->numInputs;
 
-        uint32_t numJobs = f->maxThreads + 1;
-        uint32_t numInputs = f->numInputs;
+    f->jobs = calloc(numJobs, sizeof(*f->jobs));
+    ASSERT(f->jobs, "calloc(%" PRIu32 ",%zu) failed",
+            numJobs, sizeof(*f->jobs));
 
-        f->jobs = calloc(numJobs, sizeof(*f->jobs));
-        ASSERT(f->jobs, "calloc(%" PRIu32 ",%zu) failed",
-                numJobs, sizeof(*f->jobs));
+    for(uint32_t i=0; i<numJobs; ++i) {
 
-        for(uint32_t i=0; i<numJobs; ++i) {
-            struct QsJob *job = f->jobs + i;
-
-            job->buffers = calloc(numInputs, sizeof(*job->buffers));
-            ASSERT(job->buffers, "calloc(%" PRIu32 ",%zu) failed",
-                    numInputs, sizeof(*job->buffers));
-            job->lens = calloc(numInputs, sizeof(*job->lens));
-            ASSERT(job->lens, "calloc(%" PRIu32 ",%zu) failed",
-                    numInputs, sizeof(*job->lens));
-            job->isFlushing = calloc(numInputs, sizeof(*job->isFlushing));
-            ASSERT(job->isFlushing, "calloc(%" PRIu32 ",%zu) failed",
-                    numInputs, sizeof(*job->isFlushing));
-
-            // Initialize the unused job stack:
-            if(i)
-                (job - 1)->next = job;
-            else
-                f->unused = job;
-        }
-        // Initialize the job queue:
-        f->queue = 0;
+        AllocateJobArgs(f->jobs + i, numInputs);
+        // Initialize the unused job stack:
+        if(i >= 2)
+            // Note: the top of f->jobs[] is used as the queue.  It's just
+            // how we choice to initialize this data.
+            (f->jobs + i - 1)->next = f->jobs + i;
     }
+ 
+    // Initialize the job queue with one empty job.
+    f->queue = f->jobs;
+    // Set the top of the unused job stack.
+    f->unused = f->jobs + 1;
+
+    // I'm I a stupid-head?
+    DASSERT(f->jobs->next == 0);
+    DASSERT((f->jobs+numJobs-1)->next == 0);
+
 
     // Recurse if we need to.
     for(uint32_t i=0; i<f->numOutputs; ++i) {

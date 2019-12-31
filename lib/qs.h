@@ -149,9 +149,9 @@ pthread_t _qsMainThread;
 struct QsThread {
 
     struct QsStream *stream;
-    struct QsJob *job;  // job=0 for an idle thread
-    struct QsThread *next; // doubly linked list.
-    struct QsThread *prev; // doubly linked list.
+    //struct QsJob *job;  // job=0 for an idle thread
+    //struct QsThread *next; // doubly linked list.
+    //struct QsThread *prev; // doubly linked list.
 };
 
 
@@ -215,6 +215,11 @@ struct QsStream {
     // numThreads - numIdleThreads = "number of threads in use".
     uint32_t numIdleThreads;
     //
+    // jobQueue is the job that is being passed from the main thread to a
+    // worker thread.
+    struct QsJob *jobQueue; // next job in the streams job queue
+    struct QsJob *jobLast; // last job in the streams job queue
+
     //
     ///////////////////////////////////////////////////////////////////////
 
@@ -295,7 +300,10 @@ struct QsFilter {
         // A thread when the job is being acted on in a thread.
         struct QsThread *thread;
 
-        struct QsJob *next; // in the unused job list or 0
+        struct QsJob *next; // in the filters unused job list or 0
+
+        struct QsJob *streamNext; // used by the streams job queue
+
 
         // This will be the pthread_getspecific() data for each flow
         // thread.  Each thread just calls the filter (QsFilter) input()
@@ -303,7 +311,8 @@ struct QsFilter {
         // input() we need to know things, QsJob, about that thread in
         // that input() call.
 
-        // filter's who's input() is called for this job
+        // filter's who's input() is called for this job.
+        // This filter is the filter structure that this job is in.
         struct QsFilter *filter;
 
         // The number of inputs can change before start and after stop,
