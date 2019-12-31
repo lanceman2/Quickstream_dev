@@ -285,7 +285,11 @@ void FreeFilterRunResources(struct QsFilter *f) {
     if(f->numOutputs) {
         DASSERT(f->outputs);
 
-        FreeBuffers(f);
+        // We do not free buffers if they have not been allocated;
+        // as in a qsStreamReady() failure case.
+        if(f->outputs->buffer)
+            FreeBuffers(f);
+
 
         // For every output in this filter we free the readers.
         for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
@@ -549,12 +553,13 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                 struct QsReader *reader = readers + readerIndex;
                 reader->filter = s->connections[i].to;
                 reader->thresholdLength = _QS_DEFAULT_THRESHOLD;
-                if(s->connections[i].toPortNum == QS_NEXTPORT)
-                    reader->inputPortNum = readerIndex;
-                else {
-                    DASSERT(s->connections[i].toPortNum == readerIndex);
-                    reader->inputPortNum = readerIndex;
-                }
+
+                // We'll set the reader->inputPortNum later in
+                // SetupInputPorts(), if inputPortNum is QS_NEXTPORT.
+                // We don't now because we are not counting input filters
+                // now.
+                //
+                reader->inputPortNum = s->connections[i].toPortNum;
                 ++readerIndex;
             }
 
@@ -602,7 +607,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
             DASSERT(output->readers);
             for(uint32_t k=0; k<output->numReaders; ++k) {
                 // Every reader
-                struct QsReader *reader = &output->readers[k];
+                struct QsReader *reader = output->readers + k;
                 if(reader->filter == f && reader->readPtr == 0) {
                     ++f->numInputs;
                     // We borrow this readPtr variable to mark this reader
@@ -613,8 +618,6 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         }
     }
 
-DSPEW("------------------ filter \"%s\" has numInputs=%"
-            PRIu32, f->name, f->numInputs);
 
     DASSERT(f->numInputs <= _QS_MAX_CHANNELS);
 
@@ -631,7 +634,6 @@ DSPEW("------------------ filter \"%s\" has numInputs=%"
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
             struct QsOutput *output = &outFilter->outputs[j];
             for(uint32_t k=0; k<output->numReaders; ++k) {
-                DSPEW("  HERE   -------------------");
                 // Every reader
                 struct QsReader *reader = output->readers + k;
                 // We borrow this readPtr variable again to mark this reader
@@ -639,14 +641,14 @@ DSPEW("------------------ filter \"%s\" has numInputs=%"
                 if(reader->filter == f && reader->readPtr == MARKER) {
                     // Undo the setting of readPtr.
                     reader->readPtr = 0;
-                    if(reader->inputPortNum == QS_NEXTPORT) {
+
+                    if(reader->inputPortNum == QS_NEXTPORT)
                         reader->inputPortNum = inputPortNum;
-                        DSPEW("+++++++++++++++++ filter \"%s\" input %" PRIu32, f->name, inputPortNum);
-                    }
                     if(reader->inputPortNum < f->numInputs)
                         // Mark inputPortNums[] as gotten.
                         inputPortNums[reader->inputPortNum] = 1;
                     //else:  We have a bad input port number.
+
                     ++inputPortNum;
                 }
             }
@@ -656,7 +658,8 @@ DSPEW("------------------ filter \"%s\" has numInputs=%"
     DASSERT(inputPortNum == f->numInputs);
 
 
-    // Check that we have all input port numbers being written to.
+    // Check that we have all input port numbers, 0 to N-1, being written
+    // to.
     for(uint32_t i=0; i<f->numInputs; ++i)
         if(inputPortNums[i] != 1) {
             ret = true;
@@ -674,6 +677,7 @@ DSPEW("------------------ filter \"%s\" has numInputs=%"
             // Every reader
             struct QsReader *reader = &output->readers[j];
             if(reader->filter->mark)
+                // Recurse
                 ret = SetupInputPorts(s, reader->filter, ret);
         }
     }
