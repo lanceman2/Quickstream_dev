@@ -196,12 +196,12 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     DASSERT(f->numOutputs);
     DASSERT(f->outputs);
     DASSERT(f->numOutputs >= outputPortNum);
-    pthread_mutex_t *mutex = f->mutex;
 
     //pthread_cond_t *cond = f->cond;
     struct QsOutput *o = f->outputs + outputPortNum;
     DASSERT(o->readers);
     DASSERT(o->numReaders);
+    pthread_mutex_t *mutex = o->mutex;
 
     // First question: can there be more than one thread calling this
     // function for this filter?

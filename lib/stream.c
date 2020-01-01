@@ -242,7 +242,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
 
         DASSERT(f->stream);
         DASSERT(f->stream->maxThreads);
-        DASSERT(f->mutex);
 
         uint32_t numJobs = f->maxThreads + 1;
 
@@ -268,17 +267,12 @@ void FreeFilterRunResources(struct QsFilter *f) {
                 free(job->isFlushing);
             }
 
-        CHECK(pthread_mutex_destroy(f->mutex));
-
 #ifdef DEBUG
         memset(f->jobs, 0, numJobs*sizeof(*f->jobs));
-        memset(f->mutex, 0, sizeof(*f->mutex));
 #endif
         free(f->jobs);
-        free(f->mutex);
 
         f->jobs = 0;
-        f->mutex = 0;
         f->queue = 0;
         f->unused = 0;
         f->numThreads = 0;
@@ -299,6 +293,14 @@ void FreeFilterRunResources(struct QsFilter *f) {
             struct QsOutput *output = &f->outputs[i];
             DASSERT(output->numReaders);
             DASSERT(output->readers);
+            if(output->mutex) {
+                CHECK(pthread_mutex_destroy(output->mutex));
+#ifdef DEBUG
+                memset(output->mutex, 0, sizeof(*output->mutex));
+#endif
+                free(output->mutex);
+            }
+
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
@@ -347,7 +349,8 @@ void FreeRunResources(struct QsStream *s) {
         s->maxThreads = 0;
         s->numThreads = 0;
         s->numIdleThreads = 0;
-        s->job = 0;
+        s->jobFirst = 0;
+        s->jobLast = 0;
     }
 
     if(s->numSources) {

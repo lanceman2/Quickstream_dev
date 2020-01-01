@@ -12,22 +12,20 @@
 #include "./debug.h"
 
 
-#if 0
 
-static void *StartThread(struct QsFilter *f) {
+static void *StartThread(struct QsThread *td) {
 
-    DASSERT(f);
-    DASSERT(f->app);
+    DASSERT(td);
+    DASSERT(td->stream);
 
-    // This data will exist so long as this thread uses this call stack.
-    struct QsThreadData threadData;
-    memset(&threadData, 0, sizeof(threadData));
+    CHECK(pthread_setspecific(_qsKey, td));
 
-    CHECK(pthread_setspecific(f->app->key, &threadData));
+
 
     return 0;
 }
 
+#if 0
 static void *FinishThread(void *ptr) {
 
 
@@ -47,6 +45,35 @@ static void CreateThread(struct QsStream *s, struct QsFilter *f) {
 
 #endif
 
+static inline
+void AddJobToStreamQueue(struct QsStream *s, struct QsJob *j) {
+
+    DASSERT(s);
+
+    if(s->jobLast) {
+        DASSERT(s->jobLast->sNext == 0);
+        s->jobLast->sNext = j;
+        s->jobLast = j;
+        return;
+    }
+    // else there are no jobs in the queue.
+    DASSERT(s->jobFirst == 0);
+
+
+}
+
+
+static inline
+struct QsJob *PopJobToStreamQueue(struct QsStream *s) {
+
+    DASSERT(s);
+
+    ASSERT(0, "Write this code");
+
+    return 0;
+}
+  
+
 // The output, o, is one of the output from a filter feeding filter f.
 //
 // If output o is 0 then f is a source filter.
@@ -60,9 +87,8 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
     DASSERT(f);
     DASSERT(f->input);
     DASSERT(f->queue);
-    DASSERT(f->mutex);
 
-    struct QsSream *s;
+    struct QsStream *s;
     s = f->stream;
     DASSERT(s);
 
@@ -74,7 +100,7 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
     CHECK(pthread_mutex_lock(&s->mutex));
 
-    if(s->job) {
+    if(s->jobFirst) {
 
         // There should be no worker threads waiting for work.
 
@@ -83,9 +109,10 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
     }
 
-    s->job = f->queue;
+    // Add this f->queue job to the stream queue.
+    
 
-    if(numIdleThreads) {
+    if(s->numIdleThreads) {
         // Watch out for "spurious wakeup" which is where more than one
         // thread can wait up from one pthread_cond_signal() call.
         //
@@ -101,8 +128,7 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
         ASSERT(td, "calloc(1,%zu) failed", sizeof(*td));
         td->stream = s;
 
-        CHECK(pthread_create(&thread, 0, StartThread, td));
-
+        CHECK(pthread_create(&thread, 0, (void *(*)(void *)) StartThread, td));
 
 
     } else {
@@ -157,15 +183,17 @@ void AllocateFilterJobs(struct QsFilter *f) {
     DASSERT(f->mark);
     DASSERT(f->maxThreads, "maxThreads cannot be 0");
     DASSERT(f->jobs == 0);
-    DASSERT(f->mutex == 0);
 
     // Un-mark this filter.
     f->mark = false;
 
-    f->mutex = malloc(sizeof(*f->mutex));
-    ASSERT(f->mutex, "malloc(%zu) failed", sizeof(*f->mutex));
-    CHECK(pthread_mutex_init(f->mutex, 0));
-
+    for(uint32_t i=0; i<f->numOutputs; ++i) {
+        struct QsOutput *o = f->outputs + i;
+        DASSERT(o->mutex == 0);
+        o->mutex = malloc(sizeof(*o->mutex));
+        ASSERT(o->mutex, "malloc(%zu) failed", sizeof(*o->mutex));
+        CHECK(pthread_mutex_init(o->mutex, 0));
+    }
 
     uint32_t numJobs = f->maxThreads + 1;
     uint32_t numInputs = f->numInputs;
@@ -175,6 +203,8 @@ void AllocateFilterJobs(struct QsFilter *f) {
             numJobs, sizeof(*f->jobs));
 
     for(uint32_t i=0; i<numJobs; ++i) {
+
+        f->jobs[i].filter = f; 
 
         AllocateJobArgs(f->jobs + i, numInputs);
         // Initialize the unused job stack:

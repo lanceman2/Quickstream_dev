@@ -217,9 +217,9 @@ struct QsStream {
     //
     // jobQueue is the job that is being passed from the main thread to a
     // worker thread.
-    struct QsJob *jobQueue; // next job in the streams job queue
+    struct QsJob *jobFirst; // next job in the streams job queue
     struct QsJob *jobLast; // last job in the streams job queue
-
+    //
     //
     ///////////////////////////////////////////////////////////////////////
 
@@ -297,12 +297,38 @@ struct QsFilter {
     ///////////////////////////////////////////////////////////////////////
     struct QsJob {
 
+        ///////////////// STREAM MUTEX GROUP ////////////////////////////
+        //
         // A thread when the job is being acted on in a thread.
         struct QsThread *thread;
-
+        //
         struct QsJob *next; // in the filters unused job list or 0
-
-        struct QsJob *streamNext; // used by the streams job queue
+        //
+        // The stream owns this particular pointer.
+        struct QsJob *sNext; // used by the streams job queue
+        //
+        // The number of inputs can change before start and after stop,
+        // so can maxThread in the stream and so jobs and these input()
+        // arguments are all reallocated at qsStreamLaunch().
+        //
+        // The arguments to pass to the input() call:
+        void **buffers;  // allocated after start and freed at stop
+        size_t *lens;    // allocated after start and freed at stop
+        bool *isFlushing;// allocated after start and freed at stop
+        //
+        // The thread working on a given filter have an ID that is from a
+        // sequence counter.  This threadNum (ID) is gotten from
+        // filter->nextThreadNum++.  So the lowest numbered thread job for
+        // this filter is the oldest, except when the counter wraps
+        // through 0.  So really the oldest job is just the first in the
+        // threadNum count sequence, and we must use filter->nextThreadNum
+        // - filter->numThreads to get the oldest job threadNum.
+        //
+        // Hence, threadNum is respect to the filter, so that we can order
+        // the threads with the buffers.
+        uint32_t threadNum;
+        //
+        /////////////////////////////////////////////////////////////////
 
 
         // This will be the pthread_getspecific() data for each flow
@@ -315,38 +341,18 @@ struct QsFilter {
         // This filter is the filter structure that this job is in.
         struct QsFilter *filter;
 
-        // The number of inputs can change before start and after stop,
-        // so can maxThread in the stream and so jobs and these input()
-        // arguments are all reallocated at qsStreamLaunch().
-        //
-        // The arguments to pass to the input() call:
-        void **buffers;  // allocated after start and freed at stop
-        size_t *lens;    // allocated after start and freed at stop
-        bool *isFlushing;// allocated after start and freed at stop
-
-        pthread_cond_t cond; // paired with the filter mutex.
-
-        // The thread working on a given filter have an ID that is from a
-        // sequence counter.  This threadNum (ID) is gotten from
-        // filter->nextThreadNum++.  So the lowest numbered thread job for
-        // this filter is the oldest, except when the counter wraps
-        // through 0.  So really the oldest job is just the first in the
-        // threadNum count sequence, and we must use filter->nextThreadNum
-        // - filter->numThreads to get the oldest job threadNum.
-        //
-        // Hence, threadNum is respect to the filter, so that we can order
-        // the threads with the buffers.
-        uint32_t threadNum;
-
     } *jobs; // The memory allocated for jobs in jobQueue, or unused.
 
+
+    ///////////////// STREAM MUTEX GROUP ////////////////////////////////
+    //
     // All jobs in this filter are in one of these two job lists, or are
     // running with threads.
     //
+    // queue has 
     struct QsJob *queue;  // queue of zero or one jobs that is waiting.
     struct QsJob *unused; // stack of unused jobs.
-
-
+    //
     // There can be maxThreads calling input() using maxThreads jobs for
     // this filter and one job that is "queued" that is not calling
     // input(); therefore the length of jobs is maxThreads + 1.  If not
@@ -360,8 +366,8 @@ struct QsFilter {
     // We exclude the case maxThreads=0 and use maxThreads=1.
     //
     uint32_t maxThreads; // per this filter.
-
-
+    //
+    //
     // numThreads and nextThreadNum are accessed with stream mutex locked.
     //
     // numThreads is the number of threads currently calling
@@ -376,19 +382,13 @@ struct QsFilter {
     // nextThreadNum.
     uint32_t numThreads;
     uint32_t nextThreadNum;
-
+    //
+    /////////////////////////////////////////////////////////////////////
+ 
 
     // We define source as a filter with no input.  We will feed is zeros
     // when the stream is flowing.
     bool isSource; // startup flag marking filter as a source
-
-
-    // mutex used when more than one thread accesses this filters
-    // numThreads, nextThreadNum, outputs, job arguments, and job
-    // condition variable.
-    //
-    pthread_mutex_t *mutex;
-
 
 
     // This filter owns these output structs, in that it is the only
@@ -416,6 +416,8 @@ struct QsOutput {  // points to reader filters
 
     // Outputs (QsOutputs) are only accessed by the filters (QSFilters)
     // that own them.
+
+    pthread_mutex_t *mutex;
 
     // The "pass through" buffers are a double linked list with the "real"
     // buffer in the first one in the list.  The "real" output buffer has
