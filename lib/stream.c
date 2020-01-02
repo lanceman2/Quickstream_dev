@@ -21,8 +21,7 @@
 
 // See comments in qs.h
 //
-struct QsFilter *_qsConstructFilter = 0;
-struct QsFilter *_qsStartFilter = 0;
+struct QsFilter *_qsCurrentFilter = 0;
 
 
 
@@ -54,6 +53,14 @@ void qsStreamAllowLoops(struct QsStream *s, bool doAllow) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s);
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+
+    // s->sources != 0 at start and stop and this should be a good enough
+    // check, if this code is consistent.
+    ASSERT(s->sources == 0,
+            "The stream is in the wrong mode to call this now.");
+
 
     if(doAllow)
         s->flags |= _QS_STREAM_ALLOWLOOPS;
@@ -99,6 +106,7 @@ void qsStreamConnectFilters(struct QsStream *s,
         uint32_t fromPortNum, uint32_t toPortNum) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+
     DASSERT(s);
     DASSERT(s->app);
     ASSERT(from != to, "a filter cannot connect to itself");
@@ -107,10 +115,15 @@ void qsStreamConnectFilters(struct QsStream *s,
     DASSERT(to->app);
     DASSERT(from->app == s->app, "wrong app");
     DASSERT(to->app == s->app, "wrong app");
-    DASSERT(to->stream == s || !to->stream,
+    ASSERT(to->stream == s || !to->stream,
             "filter cannot be part of another stream");
-    DASSERT(from->stream == s || !from->stream,
+    ASSERT(from->stream == s || !from->stream,
             "filter cannot be part of another stream");
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    ASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+    ASSERT(s->sources == 0,
+            "stream is in the wrong mode to call this now.");
+
 
     // Grow the connections array:
     //
@@ -205,6 +218,10 @@ int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f);
     DASSERT(f->stream == s);
     DASSERT(s->numConnections || s->connections == 0);
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    ASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+    ASSERT(s->sources == 0,
+            "stream is in the wrong mode to call this now.");
 
     bool gotOne = false;
 
@@ -373,6 +390,8 @@ void qsStreamDestroy(struct QsStream *s) {
     DASSERT(s);
     DASSERT(s->app);
     DASSERT(s->numConnections || s->connections == 0);
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
 
     FreeRunResources(s);
 
@@ -695,14 +714,21 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s->sources);
+    DASSERT(s);
+    DASSERT(s->app);
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+
+    ASSERT(s->sources != 0,
+            "stream is in the wrong mode to call this now.");
+
 
     s->flags &= (~_QS_STREAM_LAUNCHED);
 
     if(!s->sources) {
         // The setup of the stream failed and the user ignored it.
         WARN("The stream is not setup");
-        return -1;
+        return -1; // failure
     }
 
 
@@ -712,9 +738,11 @@ int qsStreamStop(struct QsStream *s) {
 
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->stop) {
-            _qsStartFilter = f;
+            _qsCurrentFilter = f;
+            s->flags |= _QS_STREAM_STOP;
             f->stop(f->numInputs, f->numOutputs);
-            _qsStartFilter = 0;
+            s->flags &= ~_QS_STREAM_STOP;
+            _qsCurrentFilter = 0;
         }
 
 
@@ -728,7 +756,7 @@ int qsStreamStop(struct QsStream *s) {
     s->flow = 0;
 
 
-    return 0; // success ??
+    return 0; // success
 }
 
 
@@ -738,6 +766,11 @@ int qsStreamReady(struct QsStream *s) {
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s);
     DASSERT(s->app);
+    DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+    ASSERT(s->sources == 0,
+            "The stream is in the wrong mode to call this now.");
+
 
     ///////////////////////////////////////////////////////////////////////
     //                                                                   //
@@ -869,13 +902,16 @@ int qsStreamReady(struct QsStream *s) {
     for(struct QsFilter *f = s->app->filters; f; f = f->next) {
         if(f->stream == s) {
             if(f->start) {
-                // We mark which filter we are calling the start() for so that
-                // if the filter start() calls any filter API function to get
-                // resources we know what filter these resources belong to.
-                _qsStartFilter = f;
+                // We mark which filter we are calling the start() for so
+                // that if the filter start() calls any filter API
+                // function to get resources we know what filter these
+                // resources belong to.
+                _qsCurrentFilter = f;
+                s->flags |= _QS_STREAM_START;
                 // Call a filter start() function:
                 int ret = f->start(f->numInputs, f->numOutputs);
-                _qsStartFilter = 0;
+                s->flags &= ~_QS_STREAM_START;
+                _qsCurrentFilter = 0;
                 if(ret) {
                     // TODO: Should we call filter stop() functions?
                     //
@@ -894,7 +930,7 @@ int qsStreamReady(struct QsStream *s) {
     // Any filters' special buffer requirements should have been gotten
     // from the filters' start() function.  Now we allocate any output
     // buffers that have not been explicitly allocated from the filter
-    // start() calling qsBufferCreate().
+    // start() calling qsCreateOutputBuffer().
     //
     StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)

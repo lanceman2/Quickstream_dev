@@ -255,24 +255,29 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     if(construct) {
 
+        // We use this otherwise 0 pointer as a marker that we are in the
+        // construct() phase.
+        f->stream = _QS_IN_CONSTRUCT;
+
         // This code is only run in one thread, so this is not necessarily
         // required to be thread safe, but it is and must be re-entrant.
-        // Currently this is not thread-safe; _qsConstructFilter is
+        // Currently this is not thread-safe; _qsCurrentFilter is
         // global.
-        struct QsFilter *old_qsConstructFilter = _qsConstructFilter;
+        struct QsFilter *old_qsCurrentFilter = _qsCurrentFilter;
 
         // In this construct() call this function, qsAppFilterLoad(), may
         // be called, so this function must be re-entrant.
 
-        _qsConstructFilter = f;
+        _qsCurrentFilter = f;
         // When this construct() is called this filter struct is "all
         // setup" and in the app object.  Therefore if this filter module
         // is a super-module that loads other filters and adds
         // connections, it will work.
         int ret = construct(argc, argv);
 
-        _qsConstructFilter = old_qsConstructFilter;
-        
+        _qsCurrentFilter = old_qsCurrentFilter;
+        f->stream = 0; // not in construct() phase.
+
         if(ret) {
             // Failure.
             //

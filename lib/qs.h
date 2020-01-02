@@ -59,6 +59,27 @@
 // this is a stream state bit flag
 #define _QS_STREAM_LAUNCHED          (02)
 
+
+#define _QS_STREAM_START         (010)
+#define _QS_STREAM_STOP          (020)
+
+#define _QS_STREAM_MODE_MASK   (_QS_STREAM_START | _QS_STREAM_STOP)
+
+
+// We cannot use the filter's stream when in the construct() and destroy()
+// calls, so reuse the filter stream pointer as a flag when we are in the
+// construct() and destroy() calls.  So long as the values we use are
+// invalid pointers, that should be okay.
+//
+// For in construct() filter->stream == _QS_IN_CONSTRUCT
+// For in destroy()   filter->stream == _QS_IN_DESTROY
+//
+#define _QS_IN_CONSTRUCT        ((struct QsStream *) 0)
+#define _QS_IN_DESTROY          ((struct QsStream *) 1)
+
+
+
+
 // By limiting the number of channels possible, ports in or out we can use
 // stack allocation via alloca().  We do not do something stupid like make
 // arrays of this size.  We figured that a streaming API that allowed a
@@ -70,15 +91,6 @@
 // just has to be some limit.
 //
 #define _QS_MAX_BUFFERLEN             ((size_t) (16*4*1024))
-
-// This is a parameter used in calculating ring buffer sizes.
-//
-#define _QS_DEFAULT_MAXWRITELEN       ((size_t) 2*1024)
-
-// In general the idea of threshold is related to input triggering.
-// In the simplest case we can set a input channel threshold.
-//
-#define _QS_DEFAULT_THRESHOLD         ((size_t) 1)
 
 
 
@@ -313,9 +325,13 @@ struct QsFilter {
         // arguments are all reallocated at qsStreamLaunch().
         //
         // The arguments to pass to the input() call:
-        void **buffers;  // allocated after start and freed at stop
-        size_t *lens;    // allocated after start and freed at stop
+        void **inputBuffers;  // allocated after start and freed at stop
+        size_t *inputLens;    // allocated after start and freed at stop
         bool *isFlushing;// allocated after start and freed at stop
+        //
+        // advanceLens is the length in bytes that the filter advanced the
+        // input buffers, indexed by input channel.
+        size_t *advanceLens;
         //
         // The thread working on a given filter have an ID that is from a
         // sequence counter.  This threadNum (ID) is gotten from
@@ -418,7 +434,12 @@ struct QsOutput {  // points to reader filters
     // Outputs (QsOutputs) are only accessed by the filters (QSFilters)
     // that own them.
 
-    // mutex used when many thread access this output.
+    // mutex used when many thread access this output by a filter that
+    // owns the output buffer and will run multiple threads calling
+    // input().  Otherwise, the ring buffer will be lock-less and this
+    // will be 0.  This will not be used by filters that access the
+    // buffer as a "pass through" output buffer.
+    //
     pthread_mutex_t *mutex;
 
     // The "pass through" buffers are a double linked list with the "real"
@@ -443,31 +464,18 @@ struct QsOutput {  // points to reader filters
     // buffer.
     //
     struct QsBuffer *buffer;
-    //
-    // newBuffer is the latest created buffer and memory mapping for
-    // this output.  This exists separately from buffer above for the
-    // case when it is found that the size of the memory mapping was
-    // not large enough in a call to qsGetOutputBuffer().
-    //
-    // The size of mapped memory in newBuffer should be larger than that
-    // in buffer above.
-    //
-    // After all readPtr and writePtr values are pointing to this
-    // buffer and none point to the buffer above, this newBuffer is
-    // switched with buffer.
-    //
-    // If this newBuffer is found to be a not large enough mapping, than
-    // the calls to qsGetOutputBuffer() will block until all readPtr and
-    // writePtr pointers point to this newBuffer.
-    //
-    struct QsBuffer *newBuffer;
 
-
-    // writePtr points to where to write next in mapped memory.
+    // writePtr points to where to write next in mapped memory.  This
+    // variable is not used if this is a "pass through" buffer.
+    //
     uint8_t *writePtr;
-    // oldWritePtr is used to check for writes after filter input()
-    // calls.
-    uint8_t *oldWritePtr;
+
+    // The filter that owns this buffer promises to not write more than
+    // maxWrite bytes to this buffer.
+    //
+    // Variable maxWrite is not used in a "pass through" output.
+    //
+    size_t maxWrite;
 
 
     // ** Only the filter (and it's thread) that has a pointer to this
@@ -488,7 +496,22 @@ struct QsOutput {  // points to reader filters
         // or output, effectively ignoring the input() call like the
         // threshold trigger conditions where not reached.  In this way
         // we may have arbitrarily complex threshold trigger conditions.
-        size_t thresholdLength;
+        size_t threshold; // Length in bytes to cause input() to be called.
+
+        // The reading filter promises to read some input data so long as
+        // the buffer input length >= maxThreshold.  It only has to read 1
+        // byte to fore fill this promise, but so long as the readable
+        // amount of data on this port is >= maxThreshold is will keep
+        // having it's input() called until the readable amount of data on
+        // this port is < maxThreshold.
+        //
+        // This parameter guarantees that we can calculate a fixed ring
+        // buffer size that will not be overrun.
+        //
+        // This parameter is used for "pass through" buffers in place of
+        // maxWrite, since only one parameter is needed
+        //
+        size_t maxThreshold; // Length in bytes to keep input being called.
 
         // The input port number that the filter being written to sees in
         // it's input(,,portNum,) call.
@@ -518,20 +541,12 @@ struct QsBuffer {
 };
 
 
-// The filter that is having construct() or destroy() called.  There is
-// only one thread when they are called.
+// The filter that is having construct(), start(), stop(), or destroy()
+// called.  There is only one thread when they are called.
 //
 // TODO: This makes the API not thread-safe.
 extern
-struct QsFilter *_qsConstructFilter;
-
-// The filter that is having start() or stop() called.  There is only one
-// thread when they are called.
-//
-// TODO: This makes the API not thread-safe.
-extern
-struct QsFilter *_qsStartFilter;
-
+struct QsFilter *_qsCurrentFilter;
 
 
 // These below functions are not API user interfaces:'

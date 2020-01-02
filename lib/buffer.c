@@ -191,7 +191,6 @@ void qsOutput(uint32_t portNum, const size_t len) {
 void *qsGetOutputBuffer(uint32_t outputPortNum,
         size_t maxLen, size_t minLen) {
 
-
     // Get the filter.
     struct QsJob *job = pthread_getspecific(_qsKey);
     ASSERT(job, "thread_getspecific(_qsKey) failed");
@@ -273,7 +272,17 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 }
 
 
-#if 0
+void qsSetInputThreshold(uint32_t inputPortNum, size_t len) {
+
+}
+
+
+
+void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
+
+}
+
+
 // Outputs can share the same buffer.  The list of output ports is
 // in the QS_ARRAYTERM terminated array outputPortNums[].
 //
@@ -282,9 +291,10 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
 //
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
-    DASSERT(_qsCurrentFilter);
-    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
-    DASSERT(_qsCurrentFilter->numOutputs);
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(_qsStartFilter);
+    ASSERT(_qsStartFilter->numOutputs <= _QS_MAX_CHANNELS);
+    DASSERT(_qsStartFilter->numOutputs);
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
 }
@@ -307,3 +317,4 @@ qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
     ASSERT(0, "Write this function");
     return 0; // success
 }
+

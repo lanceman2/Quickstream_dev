@@ -44,12 +44,22 @@ void FreeFilter(struct QsFilter *f) {
             // This FreeFilter() function must be re-entrant.  It may be
             // called from a qsFilterUnload() call in a filter->destroy()
             // call; for filters that are super-modules.  Super-modules
-            // are filters that load filters.
+            // are filters that can load and unload other filters.
+            // However, filters cannot unload themselves.
             //
-            struct QsFilter *old_qsConstructFilter = _qsConstructFilter;
-            _qsConstructFilter = f;
+            struct QsFilter *old_qsCurrentFilter = _qsCurrentFilter;
+            struct QsStream *stream;
+            stream = f->stream;
+            // Mark the filter so we know what run state it's in for any
+            // quickstream API calls it makes in destroy().  Since the
+            // filter should not know what it's stream is at this time, we
+            // reuse the stream variable at a state marker.
+            f->stream = _QS_IN_DESTROY;
+            _qsCurrentFilter = f;
             int ret = destroy();
-            _qsConstructFilter = old_qsConstructFilter;
+            _qsCurrentFilter = old_qsCurrentFilter;
+            // Put this stream variable back, for consistency.
+            f->stream = stream;
 
             if(ret) {
                 // TODO: what do we use this return value for??

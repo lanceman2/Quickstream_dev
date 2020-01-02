@@ -13,15 +13,6 @@
 
 
 
-#define QS_ARRAYTERM    ((uint32_t) -1)
-
-
-#define QS_ALLPORTS     ((uint32_t *) -2)
-
-
-#define QS_NONE         ((size_t) -1)
-
-
 
 // Given the parameters in these data structures (QsOutput and QsBuffer)
 // the stream running code should be able to determine the size needed for
@@ -35,18 +26,30 @@
 // ways.
 
 
-#define QS_DEFAULT_MAXINPUT         ((size_t) 0) // not set
+
+/** The default input read promise
+ */
+#define QS_DEFAULTMAXREADPROMISE    ((size_t) 1024)
 
 
-/** get the default maximum length in bytes that may be written
+/** The default maximum length in bytes that may be written
  *
  * A filter that has output may set the maximum length in bytes that may
  * be written for a given qsOutput() and qsGetBuffer() calls for a given
  * output port number.  If the value of the maximum length in bytes that
  * may be written was not set in the filter start() function it's value
- * will be QS_DEFAULT_maxWrite.
+ * will be QS_DEFAULTMAXWRITE.
  */
-#define QS_DEFAULT_MAXWRITE         ((size_t) 1024)
+#define QS_DEFAULTMAXWRITE         ((size_t) 1024)
+
+
+// In general the idea of threshold is related to input triggering.
+// In the simplest case we can set a input channel threshold.
+//
+#define QS_DEFAULTTHRESHOLD          ((size_t) 1)
+
+
+
 
 
 /** \file
@@ -229,7 +232,8 @@ int stop(uint32_t numInPorts, uint32_t numOutPorts);
  * may write at most \e maxLen bytes to this returned pointer.
  */
 extern
-void *qsGetOutputBuffer(uint32_t outputPortNum, size_t maxLen, size_t minLen);
+void *qsGetOutputBuffer(uint32_t outputPortNum,
+        size_t maxLen, size_t minLen);
 
 
 
@@ -277,29 +281,38 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
 
 
 
-#if 0
+// Sets maxRead
+/** Set the input read promise
+ *
+ */
+extern
+void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
+
+
+
+
+
 /** Create an output buffer that is associated with the listed ports
  *
- * If there is more than one output port number given than the ring
- * buffer will be shared between the output ports, and the data read by
- * all the receiving filters will be the same.
- *
- * qsOutputBufferCreate() can only be called in the filter's start() function.
+ * qsOutputBufferCreate() can only be called in the filter's start()
+ * function.  If qsOutputBufferCreate() is not called for a given port
+ * number an output buffer will be created with the maxWrite parameter set
+ * to the default value of QS_DEFAULTMAXWRITE.
  * 
  * The total amount of memory allocated for this ring buffer depends on
  * maxWrite, and other parameters set by other filters that may be
  * accessing this buffer down stream.
  *
- * \param maxWriteLen this filter promises to write at most maxWriteLen
- * bytes to this output port.  If the filter writes more than that
- * memory may be corrupted.
+ * \param outputPortNum the output port number that the filter will use to
+ * write to this buffer via qsGetBuffer() and qsOutput().
  *
- * \param outputPortNums is a pointer to an array of output port numbers
- * which is terminated with a value QS_ARRAYTERM.
+ * \param maxWriteLen this filter promises to write at most maxWriteLen
+ * bytes to this output port.  If the filter writes more than that memory
+ * may be corrupted.
  */
 extern
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
-#endif
+
 
 
 extern
@@ -307,7 +320,7 @@ int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen);
 
 
-// Because "C" does not know what a pointer is in
+// Because "C" does not know what a pointer to a struct is in
 // qsCreatePassThroughBufferDownstream() below.
 struct QsFilter;
 
