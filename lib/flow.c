@@ -200,7 +200,7 @@ void AllocateFilterJobs(struct QsFilter *f) {
         }
 #ifdef DEBUG
         else {
-            // This is a "pass through" buffer that is feed by a output
+            // This is a "pass through" buffer that is fed by a output
             // that we must have already allocated a mutex for.
             struct QsOutput *passThroughOutput = o;
             while(o->prev)
