@@ -197,16 +197,18 @@ void AllocateFilterJobs(struct QsFilter *f) {
             o->mutex = malloc(sizeof(*o->mutex));
             ASSERT(o->mutex, "malloc(%zu) failed", sizeof(*o->mutex));
             CHECK(pthread_mutex_init(o->mutex, 0));
-        } else {
+        }
+#ifdef DEBUG
+        else {
             // This is a "pass through" buffer that is feed by a output
             // that we must have already allocated a mutex for.
             struct QsOutput *passThroughOutput = o;
             while(o->prev)
                 o = o->prev;
             // o is now the "feed" output for the pass through buffer.
-
-
+            DASSERT(o->mutex);
         }
+#endif
     }
 
     uint32_t numJobs = f->maxThreads + 1;

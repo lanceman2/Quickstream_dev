@@ -511,7 +511,7 @@ struct QsOutput {  // points to reader filters
         // This parameter is used for "pass through" buffers in place of
         // maxWrite, since only one parameter is needed
         //
-        size_t maxThreshold; // Length in bytes to keep input being called.
+        size_t maxRead; // Length in bytes to keep input() being called.
 
         // The input port number that the filter being written to sees in
         // it's input(,,portNum,) call.
