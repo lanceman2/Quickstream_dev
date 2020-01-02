@@ -82,6 +82,7 @@
 
 
 
+
 ///////////////////////////////////////////////////////////////////////////
 //                 THREAD SAFETY WARNING
 //
@@ -417,6 +418,7 @@ struct QsOutput {  // points to reader filters
     // Outputs (QsOutputs) are only accessed by the filters (QSFilters)
     // that own them.
 
+    // mutex used when many thread access this output.
     pthread_mutex_t *mutex;
 
     // The "pass through" buffers are a double linked list with the "real"

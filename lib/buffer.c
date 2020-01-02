@@ -40,8 +40,13 @@ void AllocateBuffer(struct QsFilter *f) {
         if(output->prev)
             // Set from a qsCreatePassThroughBuffer() call in the filter
             // (f) f->start() function call, just before this call.  This
-            // is a "pass through" buffer so we do not allocate it yet.
+            // is a "pass through" buffer so we will not be using buffer
+            // pointers: output::buffer, and output::newBuffer.
+            //
+            DASSERT(output->buffer == 0);
+            DASSERT(output->newBuffer == 0);
             continue;
+        }
 
         output->buffer = calloc(1,sizeof(*output->buffer));
         ASSERT(output->buffer, "calloc(1,%zu) failed",
@@ -76,9 +81,10 @@ void FreeBuffers(struct QsFilter *f) {
         DASSERT(output->buffer);
 
         if(output->prev) {
-            // This is a "pass through" buffer so we do not free it yet.
-            // This is freed by the output that owns this buffer.
-            output->buffer = 0;
+            // This is a "pass through" buffer so there is nothing to
+            // free.
+            DASSERT(output->buffer == 0);
+            DASSERT(output->newBuffer == 0);
             continue;
         }
 
@@ -131,9 +137,10 @@ void MapRingBuffers(struct QsFilter *f) {
         struct QsOutput *output = f->outputs + i;
 
         if(output->prev) {
-
-            // This is a pass through buffer and it will not be set yet.
+            // This is a pass through buffer and it will not be set.
             DASSERT(output->buffer == 0);
+            continue;
+        }
 
             struct QsOutput *o = output->prev;
             // This is a "pass through" buffer so it does not have it's
