@@ -268,19 +268,19 @@ void FreeFilterRunResources(struct QsFilter *f) {
                 // Free the input() arguments:
                 struct QsJob *job = f->jobs + i;
 
-                DASSERT(job->buffers);
-                DASSERT(job->lens);
+                DASSERT(job->inputBuffers);
+                DASSERT(job->inputLens);
                 DASSERT(job->isFlushing);
 #ifdef DEBUG
-                memset(job->buffers, 0,
-                        f->numInputs*sizeof(*job->buffers));
-                memset(job->lens, 0,
-                        f->numInputs*sizeof(*job->lens));
+                memset(job->inputBuffers, 0,
+                        f->numInputs*sizeof(*job->inputBuffers));
+                memset(job->inputLens, 0,
+                        f->numInputs*sizeof(*job->inputLens));
                 memset(job->isFlushing, 0,
                         f->numInputs*sizeof(*job->isFlushing));
 #endif
-                free(job->buffers);
-                free(job->lens);
+                free(job->inputBuffers);
+                free(job->inputLens);
                 free(job->isFlushing);
             }
 
@@ -311,6 +311,9 @@ void FreeFilterRunResources(struct QsFilter *f) {
             DASSERT(output->numReaders);
             DASSERT(output->readers);
             if(output->mutex) {
+                // This is a top feeding output, and not a "pass through"
+                // output.
+                DASSERT(output->prev == 0);
                 CHECK(pthread_mutex_destroy(output->mutex));
 #ifdef DEBUG
                 memset(output->mutex, 0, sizeof(*output->mutex));
@@ -543,11 +546,12 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
     ASSERT(f->outputs, "calloc(%" PRIu32 ",%zu) failed",
             f->numOutputs, sizeof(*f->outputs));
 
-
     // Now setup the readers array in each output
     //
     for(uint32_t outputPortNum = 0; outputPortNum<f->numOutputs;
             ++outputPortNum) {
+
+        f->outputs[outputPortNum].maxWrite = QS_DEFAULTMAXWRITE;
 
         // Count the number of readers for this output port
         // (outputPortNum):
@@ -577,7 +581,8 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                     ) {
                 struct QsReader *reader = readers + readerIndex;
                 reader->filter = s->connections[i].to;
-                reader->thresholdLength = _QS_DEFAULT_THRESHOLD;
+                reader->threshold = QS_DEFAULTTHRESHOLD;
+                reader->maxRead = QS_DEFAULTMAXREADPROMISE;
 
                 // We'll set the reader->inputPortNum later in
                 // SetupInputPorts(), if inputPortNum is QS_NEXTPORT.
@@ -924,7 +929,7 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: allocate default output buffers
+     *     Stage: allocate output buffer structures
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten

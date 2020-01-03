@@ -48,18 +48,13 @@ void FreeFilter(struct QsFilter *f) {
             // However, filters cannot unload themselves.
             //
             struct QsFilter *old_qsCurrentFilter = _qsCurrentFilter;
-            struct QsStream *stream;
-            stream = f->stream;
-            // Mark the filter so we know what run state it's in for any
-            // quickstream API calls it makes in destroy().  Since the
-            // filter should not know what it's stream is at this time, we
-            // reuse the stream variable at a state marker.
-            f->stream = _QS_IN_DESTROY;
+            // Use the mark variable at a state marker.
+            f->mark = _QS_IN_DESTROY;
             _qsCurrentFilter = f;
             int ret = destroy();
             _qsCurrentFilter = old_qsCurrentFilter;
-            // Put this stream variable back, for consistency.
-            f->stream = stream;
+            // Not in destroy() phase anymore.
+            f->mark = 0;
 
             if(ret) {
                 // TODO: what do we use this return value for??

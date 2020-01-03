@@ -257,17 +257,16 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
         // We use this otherwise 0 pointer as a marker that we are in the
         // construct() phase.
-        f->stream = _QS_IN_CONSTRUCT;
+        f->mark = _QS_IN_CONSTRUCT;
 
         // This code is only run in one thread, so this is not necessarily
-        // required to be thread safe, but it is and must be re-entrant.
-        // Currently this is not thread-safe; _qsCurrentFilter is
-        // global.
+        // required to be thread safe, but it is and MUST BE re-entrant.
+        // There's a big difference.  Currently this is not thread-safe;
+        // _qsCurrentFilter is global.
         struct QsFilter *old_qsCurrentFilter = _qsCurrentFilter;
 
         // In this construct() call this function, qsAppFilterLoad(), may
         // be called, so this function must be re-entrant.
-
         _qsCurrentFilter = f;
         // When this construct() is called this filter struct is "all
         // setup" and in the app object.  Therefore if this filter module
@@ -276,7 +275,9 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         int ret = construct(argc, argv);
 
         _qsCurrentFilter = old_qsCurrentFilter;
-        f->stream = 0; // not in construct() phase.
+
+        // Not in construct() phase anymore.
+        f->mark = 0;
 
         if(ret) {
             // Failure.
@@ -307,25 +308,30 @@ cleanup:
 // maxThread that may run in the current filter.
 void qsSetThreadSafe(uint32_t maxThreads) {
 
-    ASSERT(_qsConstructFilter,
+    DASSERT(_qsCurrentFilter);
+    ASSERT(_qsCurrentFilter->mark == _QS_IN_CONSTRUCT,
             "qsSetThreadSafe() not called in construct()");
 
-    // We'll use maxThreads=0 to mean not multi-threaded.
-    if(maxThreads == 0) _qsConstructFilter->maxThreads = 1;
-    _qsConstructFilter->maxThreads = maxThreads;
+    // We just mark collect the maxThreads and allocate other things
+    // later.
+    //
+    // We'll use maxThreads=1 to mean not multi-threaded and exclude the
+    // use of maxThreads=0, so that there is at least one thread.
+    if(maxThreads == 0) _qsCurrentFilter->maxThreads = 1;
+    else _qsCurrentFilter->maxThreads = maxThreads;
 }
 
 
 int qsFilterUnload(struct QsFilter *f) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    ASSERT(_qsStartFilter == 0,
+    DASSERT(_qsCurrentFilter);
+    DASSERT(_qsCurrentFilter->app);
+    DASSERT(_qsCurrentFilter->stream);
+    ASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_MODE_MASK),
             "This cannot be called in start() or stop()");
 
-    DASSERT(f, "");
-    DASSERT(f->app, "");
-
-    DestroyFilter(f->app, f);
+    DestroyFilter(_qsCurrentFilter->app, f);
 
     return 0; // success
 }

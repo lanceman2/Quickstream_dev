@@ -13,7 +13,8 @@
 
 
 
-static void *StartThread(struct QsThread *td) {
+//static
+void *StartThread(struct QsThread *td) {
 
     DASSERT(td);
     DASSERT(td->stream);
@@ -100,44 +101,8 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
     CHECK(pthread_mutex_lock(&s->mutex));
 
-    if(s->jobFirst) {
 
-        // There should be no worker threads waiting for work.
-
-        // Wait for the last job to get picked up by a worker thread.
-        CHECK(pthread_cond_wait(&s->cond, &s->mutex));
-
-    }
-
-    // Add this f->queue job to the stream queue.
-    
-
-    if(s->numIdleThreads) {
-        // Watch out for "spurious wakeup" which is where more than one
-        // thread can wait up from one pthread_cond_signal() call.
-        //
-        // send job to the idle thread.  Any idle thread will do.
-        CHECK(pthread_cond_signal(&s->cond));
-
-    } else if(s->numThreads < s->maxThreads) {
-
-        // make a new thread and give is this one stream job.
-        pthread_t thread;
-        struct QsThread *td;
-        td = calloc(1,sizeof(*td));
-        ASSERT(td, "calloc(1,%zu) failed", sizeof(*td));
-        td->stream = s;
-
-        CHECK(pthread_create(&thread, 0, (void *(*)(void *)) StartThread, td));
-
-
-    } else {
-
-        // We must wait for a working thread to take this job after they
-        // finish their current job.
-    }
-
-    CHECK(pthread_mutex_unlock(&f->stream->mutex));
+    CHECK(pthread_mutex_unlock(&s->mutex));
 }
 
 
@@ -147,7 +112,6 @@ uint32_t nThreadFlow(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i) {
 
         AppendOutputToFilterJobs(0, s->sources[i]);
-
 
     }
 
@@ -161,12 +125,12 @@ void AllocateJobArgs(struct QsJob *job, uint32_t numInputs) {
 
     if(numInputs == 0) return;
 
-    job->buffers = calloc(numInputs, sizeof(*job->buffers));
-    ASSERT(job->buffers, "calloc(%" PRIu32 ",%zu) failed",
-            numInputs, sizeof(*job->buffers));
-    job->lens = calloc(numInputs, sizeof(*job->lens));
-    ASSERT(job->lens, "calloc(%" PRIu32 ",%zu) failed",
-            numInputs, sizeof(*job->lens));
+    job->inputBuffers = calloc(numInputs, sizeof(*job->inputBuffers));
+    ASSERT(job->inputBuffers, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*job->inputBuffers));
+    job->inputLens = calloc(numInputs, sizeof(*job->inputLens));
+    ASSERT(job->inputLens, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*job->inputLens));
     job->isFlushing = calloc(numInputs, sizeof(*job->isFlushing));
     ASSERT(job->isFlushing, "calloc(%" PRIu32 ",%zu) failed",
             numInputs, sizeof(*job->isFlushing));
@@ -200,9 +164,8 @@ void AllocateFilterJobs(struct QsFilter *f) {
         }
 #ifdef DEBUG
         else {
-            // This is a "pass through" buffer that is fed by a output
-            // that we must have already allocated a mutex for.
-            struct QsOutput *passThroughOutput = o;
+            // This is a "pass through" buffer that is fed by another
+            // output like above.  It does not need a mutex.
             while(o->prev)
                 o = o->prev;
             // o is now the "feed" output for the pass through buffer.

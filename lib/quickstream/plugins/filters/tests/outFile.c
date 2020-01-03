@@ -24,7 +24,7 @@ void help(FILE *f) {
         "      --file FILENAME    default value is stdout.\n"
         "\n"
         "\n",
-        QS_DEFAULT_MAXWRITE);
+        QS_DEFAULTMAXWRITE);
 }
 
 
@@ -38,7 +38,7 @@ int construct(int argc, const char **argv) {
     DSPEW();
 
     maxWrite = qsOptsGetSizeT(argc, argv,
-            "maxWrite", QS_DEFAULT_MAXWRITE);
+            "maxWrite", QS_DEFAULTMAXWRITE);
   
     filename = qsOptsGetString(argc, argv, "file", 0);
 

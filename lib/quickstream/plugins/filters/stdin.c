@@ -16,7 +16,7 @@ void help(FILE *f) {
 }
 
 
-static const size_t OutLen = 1024;
+static const size_t OutLen = QS_DEFAULTMAXWRITE;
 
 
 int input(const void *buffers[], const size_t lens[],
@@ -24,8 +24,8 @@ int input(const void *buffers[], const size_t lens[],
         uint32_t numInputs, uint32_t numOutputs) {
 
     // We'll assume there is no input data.
-    ASSERT(numInputs == 0, "");
-    ASSERT(numOutputs == 1, "");
+    ASSERT(numInputs == 0);
+    ASSERT(numOutputs == 1);
 
     // For output buffering.
     void *buffer = qsGetOutputBuffer(0, OutLen, 0);

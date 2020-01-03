@@ -14,12 +14,15 @@
 #include "./debug.h"
 
 
-// Allocate all buffers for all filters in the stream that have not been
-// allocated already by the filter start() calling qsBufferCreate().  This
-// sets up the default buffering arrangement.
+// Allocate all buffer structures for all filters in the stream.
+//
+// This does not create the ring buffers.  That is done by mmap()ing
+// memory later.  This allocates (struct QsBuffer) a buffer for top feed
+// filters, and sets up pointers to them in "pass through" buffers in
+// filters with "pass through" buffers.
 //
 // This function will recurse to filters that read output.  It is called
-// with all source filters.
+// with all source filters in the bottom of the function call stack.
 //
 void AllocateBuffer(struct QsFilter *f) {
 
@@ -34,26 +37,32 @@ void AllocateBuffer(struct QsFilter *f) {
         struct QsOutput *output = f->outputs + i;
         DASSERT(output->numReaders);
         DASSERT(output->readers);
-        DASSERT(output->newBuffer == 0);
         DASSERT(output->buffer == 0);
 
-        if(output->prev)
+        if(output->prev) {
             // Set from a qsCreatePassThroughBuffer() call in the filter
             // (f) f->start() function call, just before this call.  This
             // is a "pass through" buffer so we will not be using buffer
             // pointers: output::buffer, and output::newBuffer.
             //
             DASSERT(output->buffer == 0);
-            DASSERT(output->newBuffer == 0);
+
+            struct QsOutput *o = output;
+            // Find the top feeding output.
+            while(o->next) o = o->next;
+            // now o is points to the owner or top feed output.
+            // This "pass through" buffer will use the feed buffer.
+            DASSERT(o->buffer);
+            output->buffer = o->buffer;
             continue;
-        }
+        } // else
 
         output->buffer = calloc(1,sizeof(*output->buffer));
         ASSERT(output->buffer, "calloc(1,%zu) failed",
                 sizeof(*output->buffer));
     }
 
-    // Now recurse.
+    // Now recurse down to a reader filter.
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
         for(uint32_t j=0; j<output->numReaders; ++j)
@@ -65,7 +74,8 @@ void AllocateBuffer(struct QsFilter *f) {
 
 // This is called when outputs exist.  This un-maps memory and frees the
 // buffer structure.  The buffer and mappings do not necessarily exist
-// when this is called.
+// when this is called.  This does not free the outputs or readers
+// structs.
 //
 // Just this filters' buffers.  No recursion.
 //
@@ -77,40 +87,37 @@ void FreeBuffers(struct QsFilter *f) {
         struct QsOutput *output = f->outputs + i;
         DASSERT(output->numReaders);
         DASSERT(output->readers);
-        DASSERT(output->newBuffer == 0);
         DASSERT(output->buffer);
 
         if(output->prev) {
             // This is a "pass through" buffer so there is nothing to
-            // free.
-            DASSERT(output->buffer == 0);
-            DASSERT(output->newBuffer == 0);
+            // free.  This pointed to an up stream filter output buffer.
+            output->buffer = 0;
             continue;
         }
 
         struct QsBuffer *b = output->buffer;
-        if(b) {
-            // There is no failure mode between allocating the buffer and
-            // mapping the memory, therefore:
-            DASSERT(b->mem);
-            DASSERT(b->mapLength);
-            DASSERT(b->overhangLength);
+        // There is no failure mode (accept for ASSERT) between allocating
+        // the buffer and mapping the memory, therefore:
+        DASSERT(b->mem);
+        DASSERT(b->mapLength);
+        DASSERT(b->overhangLength);
 #ifdef DEBUG
-            // TODO: Is this really useful?
-            memset(b->mem, 0, b->mapLength);
+        // TODO: Is this really useful?
+        memset(b->mem, 0, b->mapLength);
 #endif
-            // freeRingBuffer() calls munmap() ...
-            freeRingBuffer(b->mem, b->mapLength, b->overhangLength);
+        // freeRingBuffer() calls munmap() ...
+        freeRingBuffer(b->mem, b->mapLength, b->overhangLength);
 #ifdef DEBUG
-            memset(b, 0, sizeof(*b));
+        memset(b, 0, sizeof(*b));
 #endif
-            free(b);
-            output->buffer = 0;
-        }
+        free(b);
+        output->buffer = 0;
     }
 }
 
 
+//TODO: rewrite this.
 static inline
 void CheckMakeRingBuffer(struct QsBuffer *b,
         size_t len, size_t overhang) {
@@ -127,7 +134,7 @@ void CheckMakeRingBuffer(struct QsBuffer *b,
 }
 
 
-// This function will recurse.
+// This function will recurse.  TODO: rewrite this.
 //
 void MapRingBuffers(struct QsFilter *f) {
 
@@ -136,12 +143,15 @@ void MapRingBuffers(struct QsFilter *f) {
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
 
-        if(output->prev) {
-            // This is a pass through buffer and it will not be set.
-            DASSERT(output->buffer == 0);
+        if(output->prev == 0) {
+            // This is NOT a pass through buffer. 
+            DASSERT(output->buffer != 0);
+            CheckMakeRingBuffer(output->buffer, 1, 1);
+            // Initialize the writer
+            output->writePtr = output->buffer->mem;
             continue;
-        }
-
+        } else {
+            // This is a pass through buffer.
             struct QsOutput *o = output->prev;
             // This is a "pass through" buffer so it does not have it's
             // own mapping.  We find the buffer that will map memory
@@ -152,17 +162,14 @@ void MapRingBuffers(struct QsFilter *f) {
             // the buffer first in the series of pass through buffers that
             // share this buffers memory mapping.
             DASSERT(o->buffer);
-            CheckMakeRingBuffer(o->buffer, 1, 1);
             output->buffer = o->buffer;
         }
 
         DASSERT(output->buffer);
-        CheckMakeRingBuffer(output->buffer, 1, 1);
 
-        // Initialize the writer
-        output->oldWritePtr = output->writePtr = output->buffer->mem;
+        DASSERT(output->numReaders);
+        DASSERT(output->readers);
 
-        DASSERT(output->numReaders && output->readers);
         for(uint32_t j=0; j<output->numReaders; ++j)
             // Initialize the readers
             output->readers[j].readPtr = output->buffer->mem;
@@ -188,6 +195,7 @@ void qsOutput(uint32_t portNum, const size_t len) {
 }
 
 
+// TODO: rewrite (write) this.
 void *qsGetOutputBuffer(uint32_t outputPortNum,
         size_t maxLen, size_t minLen) {
 
@@ -209,30 +217,14 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     DASSERT(o->numReaders);
     pthread_mutex_t *mutex = o->mutex;
 
-    // First question: can there be more than one thread calling this
-    // function for this filter?
-    //
-    //   Yes, mutex is non-zero.
-    //
-    //   No, mutex is zero.
-    //
-
+ 
     if(mutex) {
-        // There may be other threads accessing this output (o) structure.
+        // There may be other threads accessing this output, o, structure
+        // in this filter, f.
         CHECK(pthread_mutex_lock(mutex));
     }
     // Else: This is a lock-less ring buffer.  How nice.  There must not
     //       be more than one thread calling this input().
-
-
-
-    // Second question: What kind of buffer is this?
-    //
-    //   1. "Head buffer" = not a pass through
-    //
-    //   2. "Pass-through buffer"
-    //
-
 
 
     uint8_t *ret = 0;
@@ -292,29 +284,59 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(_qsStartFilter);
-    ASSERT(_qsStartFilter->numOutputs <= _QS_MAX_CHANNELS);
-    DASSERT(_qsStartFilter->numOutputs);
+    DASSERT(_qsCurrentFilter);
+    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
+    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
+            "We are not starting");
+    DASSERT(_qsCurrentFilter->numOutputs);
+    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
+            "We are stopping");
+
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
 }
-#endif
 
 
 int
 qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(_qsCurrentFilter);
+    DASSERT(_qsCurrentFilter->mark == 0);
+    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
+    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
+            "We are not starting");
+    DASSERT(_qsCurrentFilter->numOutputs);
+    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
+            "We are stopping");
+
+
     ASSERT(0, "Write this function");
     return 0; // success
 }
 
 
+#if 0
+// TODO: Do we want this stupid function.
 int
 qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
         struct QsFilter *toFilter, uint32_t toInputPort) {
 
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsFilter *f = _qsCurrentFilter;
+    DASSERT(f);
+    DASSERT(f->numOutputs <= _QS_MAX_CHANNELS);
+    DASSERT(toFilter->numInputs <= _QS_MAX_CHANNELS);
+    DASSERT(f->numOutputs);
+    DASSERT(!(f->stream->flags & _QS_STREAM_STOP), "We are stopping");
+    // This function can be called in filter construct() or start().
+    ASSERT(s->flags & _QS_STREAM_STOP || f-mark == _QS_IN_CONSTRUCT,
+            "We are not in construct() or start()");
+
+
     ASSERT(0, "Write this function");
+
     return 0; // success
 }
-
+#endif

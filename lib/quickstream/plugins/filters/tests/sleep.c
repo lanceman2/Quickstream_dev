@@ -26,7 +26,7 @@ void help(FILE *f) {
         "\n    --period SEC         default value %lf seconds\n"
         "\n"
         "\n",
-        QS_DEFAULT_MAXWRITE,
+        QS_DEFAULTMAXWRITE,
         seconds
         );
 }
@@ -40,9 +40,9 @@ int construct(int argc, const char **argv) {
     DSPEW();
 
     maxWrite = qsOptsGetSizeT(argc, argv,
-            "maxWrite", QS_DEFAULT_MAXWRITE);
+            "maxWrite", QS_DEFAULTMAXWRITE);
     seconds = qsOptsGetSizeT(argc, argv,
-            "period", QS_DEFAULT_MAXWRITE);
+            "period", QS_DEFAULTMAXWRITE);
 
     usecs = seconds * 1000000;
 

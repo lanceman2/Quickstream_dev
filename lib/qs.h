@@ -67,15 +67,15 @@
 
 
 // We cannot use the filter's stream when in the construct() and destroy()
-// calls, so reuse the filter stream pointer as a flag when we are in the
-// construct() and destroy() calls.  So long as the values we use are
-// invalid pointers, that should be okay.
+// calls, so reuse the filter mark as a flag when we are in the
+// construct() and destroy() calls.  So long as the values unique that
+// should be okay.
 //
-// For in construct() filter->stream == _QS_IN_CONSTRUCT
-// For in destroy()   filter->stream == _QS_IN_DESTROY
+// For in construct() filter->mark == _QS_IN_CONSTRUCT
+// For in destroy()   filter->mark == _QS_IN_DESTROY
 //
-#define _QS_IN_CONSTRUCT        ((struct QsStream *) 0)
-#define _QS_IN_DESTROY          ((struct QsStream *) 1)
+#define _QS_IN_CONSTRUCT        ((uint32_t) 21)
+#define _QS_IN_DESTROY          ((uint32_t) 31)
 
 
 
@@ -162,7 +162,7 @@ pthread_t _qsMainThread;
 struct QsThread {
 
     struct QsStream *stream;
-    //struct QsJob *job;  // job=0 for an idle thread
+    struct QsJob *job;  // job=0 for an idle thread
     //struct QsThread *next; // doubly linked list.
     //struct QsThread *prev; // doubly linked list.
 };
@@ -424,7 +424,7 @@ struct QsFilter {
     // as we look through the filters in the graph, because if the graph
     // has cycles in it, it's not easy to look at each filter just once
     // without a marker to mark a filter as looked at.
-    bool mark;
+    uint32_t mark;
 };
 
 
@@ -450,8 +450,8 @@ struct QsOutput {  // points to reader filters
     // filter output that this output uses to buffer its' data.
     //
     // So if prev is NOT 0 this is a "pass through" output buffer and prev
-    // points toward the origin of the output thingy; if prev is 0 this is
-    // not a "pass through" buffer.
+    // points toward the up-stream origin of the output thingy; if prev is
+    // 0 this is not a "pass through" buffer.
     //
     struct QsOutput *prev;
     //
@@ -473,7 +473,9 @@ struct QsOutput {  // points to reader filters
     // The filter that owns this buffer promises to not write more than
     // maxWrite bytes to this buffer.
     //
-    // Variable maxWrite is not used in a "pass through" output.
+    // Variable maxWrite is not used in a "pass through" output.  It will
+    // just need a read pointers, for read and write access to the same
+    // place in memory (virtual address space memory).
     //
     size_t maxWrite;
 

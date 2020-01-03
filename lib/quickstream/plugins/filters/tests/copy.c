@@ -21,7 +21,7 @@ void help(FILE *f) {
         "      --maxWrite BYTES      default value %zu\n"
         "\n"
         "\n",
-        QS_DEFAULT_MAXWRITE);
+        QS_DEFAULTMAXWRITE);
 }
 
 
@@ -33,7 +33,7 @@ int construct(int argc, const char **argv) {
     DSPEW();
 
     maxWrite = qsOptsGetSizeT(argc, argv,
-            "maxWrite", QS_DEFAULT_MAXWRITE);
+            "maxWrite", QS_DEFAULTMAXWRITE);
   
     return 0; // success
 }

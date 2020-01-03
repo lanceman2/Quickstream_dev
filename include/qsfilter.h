@@ -46,7 +46,7 @@
 // In general the idea of threshold is related to input triggering.
 // In the simplest case we can set a input channel threshold.
 //
-#define QS_DEFAULTTHRESHOLD          ((size_t) 1)
+#define QS_DEFAULTTHRESHOLD        ((size_t) 1)
 
 
 
@@ -104,34 +104,24 @@ enum QsFilterInputReturn {
  *
  * input() is how the filters receive input from upstream filters.
  *
- * \param buffer is a pointer to the current data being passed in from an
- * upstream filter, or 0 is this is a source filters.
+ * \param inBuffers is a pointer to an array of the current data being
+ * passed in from an upstream filter, or 0 is this is a source filters.
  *
- * \param len the length of the data pasted in bytes.  len is 0 if this is
- * a source feed.
+ * \param inLens is a pointer to an array of the size of the data in the
+ * inBuffers array in bytes.  inLens is 0 if this is a source feed that
+ * has no inputs.
  *
- * \param inputPortNum the port designation for this input. A transmitting
- * (or feeder) filter is a filter that is outputting to a receiver.  The
- * receiver filter is the filter that has it's input() function called.
- * For a given filter the input ports are numbered from 0 to N-1 where N
- * is the total number of input ports.  There may be more than one input
- * to a given receiver filter from a given transmitter filter.
- *
- * \param flowState should be considered an opaque data type that is
- * passed in to the filter input() to let the filter know stuff about the
- * state of the stream flow.  inline functions provide ways to interpret
- * this so called state.  See \ref qsFlowIsLastPackage().
+ * \param sFlushing is a 
  *
  * \return The values returned from input() give the filters some control
  * over how the stream and it's flow behaves.  The return value 0 is the
  * most common return value telling the stream to continue flowing
- * normally.  
- *
- * \see qsFlowIsLastPackage().
+ * normally.  Returning a any non-zero value stops that calling of input()
+ * and sets up the final flushing of the down stream filters.
  *
  * \todo figure out more return codes and what they mean
  */
-int input(const void *buffers[], const size_t lens[],
+int input(const void *inBuffers[], const size_t inLens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts);
 
