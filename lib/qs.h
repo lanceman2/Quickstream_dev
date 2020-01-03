@@ -157,16 +157,6 @@ pthread_t _qsMainThread;
 #endif
 
 
-// QsThread, so we may keep lists of threads with what they are doing.
-//
-struct QsThread {
-
-    struct QsStream *stream;
-    struct QsJob *job;  // job=0 for an idle thread
-    //struct QsThread *next; // doubly linked list.
-    //struct QsThread *prev; // doubly linked list.
-};
-
 
 // Stream (QsStream) is the thing the manages a group of filters and their
 // flow state.  Since streams can add and remove filters when it is not
@@ -312,9 +302,6 @@ struct QsFilter {
 
         ///////////////// STREAM MUTEX GROUP ////////////////////////////
         //
-        // A thread when the job is being acted on in a thread.
-        struct QsThread *thread;
-        //
         struct QsJob *next; // in the filters unused job list or 0
         //
         // The stream owns this particular pointer.
@@ -364,7 +351,16 @@ struct QsFilter {
     ///////////////// STREAM MUTEX GROUP ////////////////////////////////
     //
     // All jobs in this filter are in one of these two job lists, or are
-    // running with threads.
+    // running with threads in the stream.
+    //
+    // When a working thread finishes a job it is this now the "finished
+    // worker" thread that will put the job into the filters unused stack.
+    // This guarantees that the worker thread can access the job in the
+    // filter input() call without a mutex lock and without concern for
+    // memory corruption.  The pointer to this "job" is a thread specific
+    // attribute.
+    //
+    // if queue == 0 then unused must be 0
     //
     // queue has 
     struct QsJob *queue;  // queue of zero or one jobs that is waiting.

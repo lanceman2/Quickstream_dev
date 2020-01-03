@@ -12,42 +12,13 @@
 #include "./debug.h"
 
 
-
-//static
-void *StartThread(struct QsThread *td) {
-
-    DASSERT(td);
-    DASSERT(td->stream);
-
-    CHECK(pthread_setspecific(_qsKey, td));
-
-
-
-    return 0;
-}
-
-#if 0
-static void *FinishThread(void *ptr) {
-
-
-    return 0;
-}
-
-
-static void CreateThread(struct QsStream *s, struct QsFilter *f) {
-
-    pthread_t thread;
-
-    CHECK(pthread_create(&thread, 0,
-                (void *(*) (void *)) StartThread, f));
-
-
-}
-
-#endif
-
-static inline
-void AddJobToStreamQueue(struct QsStream *s, struct QsJob *j) {
+// Called by the main/manager thread.
+//
+// Transfer job from the filter->queue to the stream job queue.
+//
+// We must have a stream->mutex lock to call this.
+//static inline
+void FilterJobQToStreamQ(struct QsStream *s, struct QsJob *j) {
 
     DASSERT(s);
 
@@ -60,12 +31,17 @@ void AddJobToStreamQueue(struct QsStream *s, struct QsJob *j) {
     // else there are no jobs in the queue.
     DASSERT(s->jobFirst == 0);
 
-
 }
 
 
-static inline
-struct QsJob *PopJobToStreamQueue(struct QsStream *s) {
+// This is called by the N worker threads.
+//
+// Transfer job from the stream job queue to the worker thread function
+// call stack.
+//
+// We must have a stream->mutex lock to call this.
+//static inline
+struct QsJob *StreamQJobToWorker(struct QsStream *s) {
 
     DASSERT(s);
 
@@ -73,14 +49,96 @@ struct QsJob *PopJobToStreamQueue(struct QsStream *s) {
 
     return 0;
 }
-  
 
-// The output, o, is one of the output from a filter feeding filter f.
+
+// This is called by the worker threads.
+//
+// Transfer job from the worker thread function call stack to the filter
+// unused stack.
+//
+// We must have a stream->mutex lock to call this.
+//static inline
+void WorkerJobToFilterUnused(struct QsStream *s, struct QsJob *j) {
+
+    DASSERT(s);
+
+    ASSERT(0, "Write this code");
+
+    return 0;
+}
+
+
+// This is called by the main/manager thread.
+//
+// Transfer job from the filter unused stack to the filter queue.
+//
+// We must have a stream->mutex lock to call this.
+//static inline
+void FilterUnusedJobToStream(struct QsStream *s, struct QsJob *j) {
+
+    DASSERT(s);
+
+    ASSERT(0, "Write this code");
+
+    return 0;
+}
+
+
+
+// This is called by worker threads.
+//
+// Transfer job from the worker call stack to the filter unused stack
+//
+// We must have a stream->mutex lock to call this.
+static
+void *StartThread(struct QsStream *s) {
+
+    DASSERT(s);
+
+    CHECK(pthread_setspecific(_qsKey, s));
+
+
+
+    return 0;
+}
+
+
+//static
+void *FinishThread(void *ptr) {
+
+
+    return 0;
+}
+
+
+static
+void CreateThread(struct QsStream *s) {
+
+    pthread_t thread;
+
+    CHECK(pthread_create(&thread, 0,
+                (void *(*) (void *)) StartThread, s));
+
+
+}
+
+#endif
+
+
+// The output, o, is one of the outputs from an up stream filter feeding
+// filter f.
 //
 // If output o is 0 then f is a source filter.
 //
+// Recursion is possible with inline functions; the functions just get
+// unrolled a few times.
+//
 // This is for multi-thread flow.
 //
+// TODO: How can I have inline unroll this recursive function just a few
+// times.  It's command option: --max-inline-insns-recursive
+//
+static inline --max-inline-insns-recursive
 void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
     // TODO: remove some of these debug asserts after testing.
@@ -95,11 +153,21 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 
     if(o) {
         DSPEW("%p", f->queue);
-    } else {
-        // This f is a source
     }
+    // else: This f is a source
+
 
     CHECK(pthread_mutex_lock(&s->mutex));
+
+    if(f->unused) {
+
+    } else {
+
+        // Wait for 
+
+
+    }
+    
 
 
     CHECK(pthread_mutex_unlock(&s->mutex));
@@ -109,11 +177,8 @@ void AppendOutputToFilterJobs(struct QsOutput *o, struct QsFilter *f) {
 static
 uint32_t nThreadFlow(struct QsStream *s) {
 
-    for(uint32_t i=0; i<s->numSources; ++i) {
-
+    for(uint32_t i=0; i<s->numSources; ++i)
         AppendOutputToFilterJobs(0, s->sources[i]);
-
-    }
 
     return 0; // success
 }
