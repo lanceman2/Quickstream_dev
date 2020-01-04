@@ -286,7 +286,7 @@ struct QsFilter {
     // we call them.
     int (* start)(uint32_t numInputs, uint32_t numOutputs);
     int (* stop)(uint32_t numInputs, uint32_t numOutputs);
-    int (* input)(const void *buffer[], const size_t len[],
+    int (* input)(void *buffer[], const size_t len[],
             // If isFlushing[inPort]==true is this is the last bytes of
             // data in that input port.
             const bool isFlushing[],
@@ -308,14 +308,14 @@ struct QsFilter {
         // so can maxThread in the stream and so jobs and these input()
         // arguments are all reallocated at qsStreamLaunch().
         //
-        // The inputBuffers[i], inputLens[i] i=0,1,2,..N-1 pointer values
-        // can only be changed in qsOutput() by the feeding filter's
-        // thread.  If the feeding filter can have more than one thread
-        // than the thread that is changing them will lock the output
-        // mutex.
+        // The inputBuffers[i], inputLens[i] i=0,1,2,..N-1 numInputs
+        // pointer values can only be changed in qsOutput() by the feeding
+        // filter's thread.  If the feeding filter can have more than one
+        // thread than the thread that is changing them will lock the
+        // output mutex.
         //
-        // The arguments to pass to the input() call.
-        // All are indexed by input port number
+        // The arguments to pass to the input() call.  All are indexed by
+        // input port number
         void **inputBuffers; // allocated after start and freed at stop
         size_t *inputLens;   // allocated after start and freed at stop
         bool *isFlushing;    // allocated after start and freed at stop

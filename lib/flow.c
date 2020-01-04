@@ -12,44 +12,101 @@
 #include "./debug.h"
 
 
+
 // Called by the main/manager thread.
 //
-// Transfer job from the filter->queue to the stream job queue.
+// Transfer job from the filter->queue to the stream job queue, then
+// transfer a job from filter unused to filter queue, and then clean the
+// filter queue job args.
 //
 // We must have a stream->mutex lock to call this.
-//static inline
-void FilterQToStreamQ(struct QsStream *s, struct QsJob *j) {
+static inline
+void FilterQToStreamQAndSoOn(struct QsStream *s, struct QsJob *j) {
 
     DASSERT(s);
     DASSERT(j->next == 0);
+    struct QsFilter *f = j->filter;
+    DASSERT(f);
+
+    /////////////////////////////////////////////////////////////////////
+    // 1. Transfer job from the filter->queue to the stream job queue.
 
     if(s->jobLast) {
+        // There are jobs in the stream queue.
         DASSERT(s->jobLast->next == 0);
         DASSERT(s->jobFirst);
         s->jobLast->next = j;
         s->jobLast = j;
-        return;
+    } else {
+        // There are no jobs in the stream queue.
+        DASSERT(s->jobFirst == 0);
+        s->jobLast = s->jobFirst = j;
     }
-    // else there are no jobs in the queue.
-    DASSERT(s->jobFirst == 0);
+    // We are done with j.  We can reuse it.
 
-    s->jobLast = s->jobFirst = j;
+    /////////////////////////////////////////////////////////////////////
+    // 2. Now transfer a job from filter unused to filter queue.
+
+    DASSERT(f->unused);
+    j = f->unused;
+    f->unused = j->next;
+
+
+    /////////////////////////////////////////////////////////////////////
+    // 3. Now clean/reset the filter queue job args.
+
+    if(f->numInputs) {
+        // This is not a source filter.
+        DASSERT(j->inputBuffers);
+        DASSERT(j->inputLens);
+        DASSERT(j->isFlushing);
+        DASSERT(j->advanceLens);
+
+        memset(j->inputBuffers, 0, f->numInputs*sizeof(*j->inputBuffers));
+        memset(j->inputLens, 0, f->numInputs*sizeof(*j->inputLens));
+        // TODO: Deal with isFlushing ....
+        memset(j->isFlushing, 0, f->numInputs*sizeof(*j->isFlushing));
+        memset(j->advanceLens, 0, f->numInputs*sizeof(*j->advanceLens));
+    }
+#ifdef DEBUG
+    else {
+        // It must be a source filter.  There is nothing to clean/reset.
+        DASSERT(j->inputBuffers == 0);
+        DASSERT(j->inputLens == 0);
+        DASSERT(j->isFlushing == 0);
+        DASSERT(j->advanceLens == 0);
+    }
+#endif
 }
 
 
-// This is called by the N (N=1,2,3,..) worker threads.
+// This is called by the worker threads.
 //
 // Transfer job from the stream job queue to the worker thread function
 // call stack.
 //
 // We must have a stream->mutex lock to call this.
-//static inline
+static inline
 struct QsJob *StreamQToWorker(struct QsStream *s) {
 
     DASSERT(s);
 
-    ASSERT(0, "Write this code");
-
+    if(s->jobFirst) {
+        struct QsJob *j = s->jobFirst;
+        DASSERT(s->jobLast);
+        DASSERT(s->jobLast->next == 0);
+        s->jobFirst = j->next;
+        if(s->jobFirst == 0) {
+            DASSERT(s->jobLast == j);
+            s->jobLast = 0;
+            // There are now no jobs in the stream job queue.
+        } else {
+            // There are still some jobs in the stream job queue.
+            DASSERT(j->next);
+            j->next = 0;
+        }
+        return j;
+    }
     return 0;
 }
 
@@ -60,26 +117,20 @@ struct QsJob *StreamQToWorker(struct QsStream *s) {
 // unused stack.
 //
 // We must have a stream->mutex lock to call this.
-//static inline
+static inline
 void WorkerToFilterUnused(struct QsStream *s, struct QsJob *j) {
 
     DASSERT(s);
+    DASSERT(j->next == 0);
+    struct QsFilter *f = j->filter;
+    DASSERT(f);
 
-    ASSERT(0, "Write this code");
-}
+    if(f->unused)
+        j->next = f->unused;
+    else
+        f->unused = j;
 
-
-// This is called by the main/manager thread.
-//
-// Transfer job from the filter unused stack to the filter queue.
-//
-// We must have a stream->mutex lock to call this.
-//static inline
-void FilterUnusedToStream(struct QsStream *s, struct QsJob *j) {
-
-    DASSERT(s);
-
-    ASSERT(0, "Write this code");
+    // The job args will be cleaned later up in FilterUnusedToFilterQ().
 }
 
 
@@ -92,13 +143,74 @@ void FilterUnusedToStream(struct QsStream *s, struct QsJob *j) {
 //static
 void *StartThread(struct QsStream *s) {
 
+    // The life of a worker thread.
+
     DASSERT(s);
 
-    // Get the next job from the stream job queue and put it in this
-    // thread specific data.
-    CHECK(pthread_setspecific(_qsKey, StreamQToWorker(s)));
+    bool living = true;
+
+    // LOCK
+    CHECK(pthread_mutex_lock(&s->mutex));
 
 
+    while(living) {
+
+        // Get the next job from the stream job queue and put it in this
+        // thread specific data so we can find it in the filter when this
+        // thread runs things like qsOutput() and other filter API
+        // functions.
+        //
+        struct QsJob *j =  StreamQToWorker(s);
+
+        // This thread can now read and write to the args in this job
+        // without a mutex.  No other thread can access this job while it
+        // is not in a stream queue, filter queue, or filter unused
+        // list.
+
+        if(j) {
+
+            // We have a job.
+
+            CHECK(pthread_setspecific(_qsKey, j));
+            struct QsFilter *f = j->filter;
+            DASSERT(f->numThreads <= f->maxThreads);
+
+            // UNLOCK
+            CHECK(pthread_mutex_unlock(&s->mutex));
+
+            int ret = f->input(j->inputBuffers, j->inputLens,
+                    j->isFlushing,
+                    f->numInputs, f->numOutputs);
+
+            if(ret) {
+                if(ret < 0)
+                    WARN("filter \"%s\" input() returned error code %d",
+                            f->name, ret);
+
+
+            }
+
+
+DSPEW("ret=%d", ret);
+
+            // LOCK
+            CHECK(pthread_mutex_lock(&s->mutex));
+
+
+        } else {
+
+            // We are unemployed.
+
+            // UNLOCK
+            CHECK(pthread_cond_wait(&s->cond, &s->mutex));
+            // LOCK
+
+        }
+
+    }
+
+    // UNLOCK
+    CHECK(pthread_mutex_unlock(&s->mutex));
 
     return 0;
 }
@@ -116,7 +228,7 @@ void *StartThread(struct QsStream *s) {
 // times.  It's command option: --max-inline-insns-recursive
 //
 static inline
-void InputToFilter(struct QsStream *s, struct QsFilter *f) {
+void InputToThread(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(s);
     DASSERT(f);
@@ -126,30 +238,46 @@ void InputToFilter(struct QsStream *s, struct QsFilter *f) {
     /////////////////////////////////////////////////////////////////////
     CHECK(pthread_mutex_lock(&s->mutex));
 
-    struct QsJob *j = f->queue;
-    DASSERT(j);
+    DASSERT(f->queue);
     DASSERT(f->numThreads <= f->maxThreads);
 
-    // Check if filter has its' quota of worker threads.
+    // Some how get a worker thread to do our thread input() call.
+    //
+    FilterQToStreamQAndSoOn(s, f->queue);
 
-    if(f->numThreads != f->maxThreads) {
-
-        // We may send a worker thread to do our thread input() call.
+    if(s->numIdleThreads) {
         //
-        FilterQToStreamQ(s, f->queue);
-        if(s->numIdleThreads) {
+        // Note: this job launch mode adds thread contention.
+        //
+        // There is a thread calling pthread_cond_wait(s->cond, s->mutex),
+        // the s->mutex lock before that guarantees it.
+        //
+        CHECK(pthread_cond_signal(&s->cond));
 
+        // At least one (and maybe more) worker threads will wake up
+        // sometime after we release the s->mutex.  The threads that wake
+        // up will handle the numIdleThreads counting.  We are done.
+    
+    } else if(f->numThreads != f->maxThreads) {
+        //
+        // Filter does not have its' quota of worker threads.
+        //
+        pthread_t thread;
+        CHECK(pthread_create(&thread, 0/*attr*/,
+                    (void *(*) (void *)) StartThread, s));
 
-
-        }
-
-
-    } else {
-
-        // This filter has its' quota of worker threads.
-
-
+        // The new thread may be born and get its' job or another worker
+        // thread may finish its' current job and take this job before
+        // that new thread can.  So this thread may end up idle.  It's
+        // okay either way.
     }
+
+    // else: We have no idle threads (that's good) and; we are running as
+    // many worker threads as we can.  That may be good too, but running
+    // many threads can cause contention, and the more threads the more
+    // contention.  Performance measures can determine the optimum number
+    // of threads.  Also we need to see how this flow runner method
+    // (quickstream) compares to other streaming frame-works.
 
 
     CHECK(pthread_mutex_unlock(&s->mutex));
@@ -164,7 +292,7 @@ static
 uint32_t nThreadFlow(struct QsStream *s) {
 
     for(uint32_t i=0; i<s->numSources; ++i)
-        InputToFilter(s, s->sources[i]);
+        InputToThread(s, s->sources[i]);
 
     return 0; // success
 }

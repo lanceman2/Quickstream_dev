@@ -106,6 +106,9 @@ enum QsFilterInputReturn {
  *
  * \param inBuffers is a pointer to an array of the current data being
  * passed in from an upstream filter, or 0 is this is a source filters.
+ * inBuffers is not const in case the filter uses the buffer to pass
+ * through data to a down stream filter by making the ports buffer a "pass
+ * through" buffer.
  *
  * \param inLens is a pointer to an array of the size of the data in the
  * inBuffers array in bytes.  inLens is 0 if this is a source feed that
@@ -121,7 +124,7 @@ enum QsFilterInputReturn {
  *
  * \todo figure out more return codes and what they mean
  */
-int input(const void *inBuffers[], const size_t inLens[],
+int input(void *inBuffers[], const size_t inLens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts);
 

@@ -19,7 +19,7 @@ void help(FILE *f) {
 static const size_t OutLen = QS_DEFAULTMAXWRITE;
 
 
-int input(const void *buffers[], const size_t lens[],
+int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInputs, uint32_t numOutputs) {
 

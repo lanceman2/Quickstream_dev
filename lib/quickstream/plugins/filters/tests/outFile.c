@@ -67,7 +67,7 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
 }
 
 
-int input(const void *buffers[], const size_t lens[],
+int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {
 
