@@ -68,6 +68,11 @@
 
 
 
+/** used in qsStreamLaunch()
+ *
+ */
+#define QS_AUTOMAXTHREADS    ((uint32_t) -2)
+
 
 /** Read the last quickstream error string
  *
@@ -274,6 +279,11 @@ void qsStreamConnectFilters(struct QsStream *stream,
  * \param stream the stream object that has the filters that are
  * connected.
  *
+ * \param maxThreads is the maximum number of worker threads that can be
+ * used to run the filters in the stream.  Setting maxThreads to
+ * QS_AUTOMAXTHREADS with let quickstream try to automatically determine
+ * the optimal number of threads to run.
+ *
  * \return 0 if the stream runs and non-zero on error.
  */
 extern
@@ -317,30 +327,6 @@ int qsStreamReady(struct QsStream *stream);
  */
 extern
 int qsStreamStop(struct QsStream *stream);
-
-
-
-/** Create a thread object
- *
- * This does not start the thread.  It just sets up what threads
- * will be used when the stream runs.  See \ref qsStreamReady() and
- * \ref qsStreamStop().
- *
- * \param stream returned from qsAppStreamCreate().
- *
- * \return a pointer to a thread object, or 0 on failure.
- */
-extern
-struct QsThread *qsStreamThreadCreate(struct QsStream *stream);
-
-
-extern
-int qsThreadDestroy(struct QsThread *thread);
-
-
-extern
-int qsThreadAddFilter(struct QsThread *thread, struct QsFilter *filter);
-
 
 
 
