@@ -137,7 +137,6 @@ extern
 pthread_key_t _qsKey;
 
 
-
 // https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
 // example: _sync_fetch_and_add()
 // Or use:
@@ -302,23 +301,28 @@ struct QsFilter {
 
         ///////////////// STREAM MUTEX GROUP ////////////////////////////
         //
-        struct QsJob *next; // in the filters unused job list or 0
-        //
-        // The stream owns this particular pointer.
-        struct QsJob *sNext; // used by the streams job queue
+        // to put in filter unused stack or stream queue
+        struct QsJob *next;
         //
         // The number of inputs can change before start and after stop,
         // so can maxThread in the stream and so jobs and these input()
         // arguments are all reallocated at qsStreamLaunch().
         //
-        // The arguments to pass to the input() call:
-        void **inputBuffers;  // allocated after start and freed at stop
-        size_t *inputLens;    // allocated after start and freed at stop
-        bool *isFlushing;// allocated after start and freed at stop
+        // The inputBuffers[i], inputLens[i] i=0,1,2,..N-1 pointer values
+        // can only be changed in qsOutput() by the feeding filter's
+        // thread.  If the feeding filter can have more than one thread
+        // than the thread that is changing them will lock the output
+        // mutex.
+        //
+        // The arguments to pass to the input() call.
+        // All are indexed by input port number
+        void **inputBuffers; // allocated after start and freed at stop
+        size_t *inputLens;   // allocated after start and freed at stop
+        bool *isFlushing;    // allocated after start and freed at stop
         //
         // advanceLens is the length in bytes that the filter advanced the
-        // input buffers, indexed by input channel.
-        size_t *advanceLens;
+        // input buffers, indexed by input port number.
+        size_t *advanceLens; // allocated after start and freed at stop
         //
         // The thread working on a given filter have an ID that is from a
         // sequence counter.  This threadNum (ID) is gotten from
@@ -360,11 +364,15 @@ struct QsFilter {
     // memory corruption.  The pointer to this "job" is a thread specific
     // attribute.
     //
-    // if queue == 0 then unused must be 0
+    // Queue always points to one job.  The job may have no input buffer
+    // data or it may have input buffer data.  There can only be
+    // maxThreads threads with jobs; so we have maxThreads jobs and that
+    // leaves at least one in the queue, and if there are less than
+    // maxThreads with jobs, then there will be left over jobs in
+    // "unused".
     //
-    // queue has 
-    struct QsJob *queue;  // queue of zero or one jobs that is waiting.
-    struct QsJob *unused; // stack of unused jobs.
+    struct QsJob *queue;  // queue of one job that is waiting.
+    struct QsJob *unused; // stack of 0 or more unused jobs.
     //
     // There can be maxThreads calling input() using maxThreads jobs for
     // this filter and one job that is "queued" that is not calling
@@ -377,6 +385,8 @@ struct QsFilter {
     // this flow.
     //
     // We exclude the case maxThreads=0 and use maxThreads=1.
+    //
+    // At flow time, array "jobs" has length maxThreads+1.
     //
     uint32_t maxThreads; // per this filter.
     //

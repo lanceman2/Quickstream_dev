@@ -97,17 +97,17 @@ PrintStreamOutline(struct QsStream *s,
         uint32_t clusterNum,
         FILE *file) {
 
-    DASSERT(s->numConnections || s->connections == 0);
+    DASSERT(s->numConnections || s->connections == 0, "");
 
     fprintf(file, "\n"
             "  subgraph cluster_%" PRIu32 " {\n"
             "    label=\"stream %" PRIu32 "\";\n\n",
             clusterNum++, sNum);
     for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->connections[i].from);
-        DASSERT(s->connections[i].from->name);
-        DASSERT(s->connections[i].to);
-        DASSERT(s->connections[i].to->name);
+        DASSERT(s->connections[i].from, "");
+        DASSERT(s->connections[i].from->name, "");
+        DASSERT(s->connections[i].to, "");
+        DASSERT(s->connections[i].to->name, "");
         fprintf(file, "    \"%s\" -> \"%s\";\n",
                 s->connections[i].from->name, s->connections[i].to->name);
     }
@@ -140,8 +140,8 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
     // Recurse
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
         struct QsOutput *output = &filter->outputs[i];
-        DASSERT(output);
-        DASSERT(output->readers || output->numReaders == 0);
+        DASSERT(output, "");
+        DASSERT(output->readers || output->numReaders == 0, "");
 
         for(uint32_t j=0; j<output->numReaders; ++j)
             // Skip unmarked filters.
@@ -162,8 +162,8 @@ static inline uint32_t
 PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
         FILE *file) {
 
-    DASSERT(filter);
-    DASSERT(filter->numOutputs || filter->outputs == 0);
+    DASSERT(filter,"");
+    DASSERT(filter->numOutputs || filter->outputs == 0, "");
 
     for(uint32_t i=0; i<filter->numOutputs; ++i) {
 
@@ -185,12 +185,12 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
                 filter->name, i,
                 filter->name, numBuffers, i);
 
-        DASSERT(output->numReaders);
-        DASSERT(output->readers);
+        DASSERT(output->numReaders, "");
+        DASSERT(output->readers, "");
 
         for(uint32_t j=0; j<output->numReaders; ++j) {
             struct QsReader *reader = &output->readers[j];
-            DASSERT(reader);
+            DASSERT(reader, "");
             //
             // Draw buffer -> input;
             fprintf(file,"    "
@@ -231,7 +231,7 @@ PrintStreamDetail(struct QsStream *s,
         uint32_t clusterNum,
         FILE *file) {
 
-    DASSERT(s->sources);
+    DASSERT(s->sources, "");
 
     // TODO: add an image of the buffers so we may see how they are
     // shared.
@@ -265,8 +265,8 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         FILE *file) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(app);
-    DASSERT(file);
+    DASSERT(app, "");
+    DASSERT(file, "");
 
 
     fprintf(file, "digraph {\n"
@@ -313,7 +313,7 @@ int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
         bool waitForDisplay) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(app);
+    DASSERT(app, "");
 
     int fd[2];
     int ret = 0;

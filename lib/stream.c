@@ -271,6 +271,7 @@ void FreeFilterRunResources(struct QsFilter *f) {
                 DASSERT(job->inputBuffers);
                 DASSERT(job->inputLens);
                 DASSERT(job->isFlushing);
+                DASSERT(job->advanceLens);
 #ifdef DEBUG
                 memset(job->inputBuffers, 0,
                         f->numInputs*sizeof(*job->inputBuffers));
@@ -278,10 +279,13 @@ void FreeFilterRunResources(struct QsFilter *f) {
                         f->numInputs*sizeof(*job->inputLens));
                 memset(job->isFlushing, 0,
                         f->numInputs*sizeof(*job->isFlushing));
+                memset(job->advanceLens, 0,
+                        f->numInputs*sizeof(*job->advanceLens));
 #endif
                 free(job->inputBuffers);
                 free(job->inputLens);
                 free(job->isFlushing);
+                free(job->advanceLens);
             }
 
 #ifdef DEBUG
