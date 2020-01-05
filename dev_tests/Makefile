@@ -15,7 +15,6 @@ ifeq ($(strip $(MAKELEVEL)),0)
 SUBDIRS := ../include ../lib ../lib/quickstream/plugins/filters
 endif
 
-stripcmt_SOURCES := stripcmt.c
 
 getOpts_SOURCES := getOpts.c ../bin/getOpt.c
 getOpt.o_CPPFLAGS := -I../bin

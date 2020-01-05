@@ -130,21 +130,21 @@ void WorkerToFilterUnused(struct QsJob *j) {
 }
 
 
-static inline
+//static inline
 void CheckLockOutput(struct QsOutput *o) {
 
     DASSERT(o);
     if(o->mutex)
-        CHECK(pthread_mutex_lock(f->mutex));
+        CHECK(pthread_mutex_lock(o->mutex));
 }
 
 
-static inline
+//static inline
 void CheckUnlockOutput(struct QsOutput *o) {
 
     DASSERT(o);
     if(o->mutex)
-        CHECK(pthread_mutex_unlock(f->mutex));
+        CHECK(pthread_mutex_unlock(o->mutex));
 }
 
 
@@ -163,7 +163,8 @@ void *RunningWorkerThread(struct QsStream *s) {
     // STREAM LOCK
     CHECK(pthread_mutex_lock(&s->mutex));
 
-
+    // We work until we die.
+    //
     while(living) {
 
         // Get the next job from the stream job queue and put it in this
@@ -179,9 +180,10 @@ void *RunningWorkerThread(struct QsStream *s) {
         // list.
 
         if(j == 0) {
-            // We are unemployed.  We have no job.
+            // We are unemployed.  We have no job.  Just like I'll be
+            // after I finish writing this fucking code.
 
-            ++stream->numIdleThreads;
+            ++s->numIdleThreads;
 
             DSPEW("Thread waiting for work");
 
@@ -190,30 +192,32 @@ void *RunningWorkerThread(struct QsStream *s) {
             CHECK(pthread_cond_wait(&s->cond, &s->mutex));
             // STREAM LOCK
 
-            --stream->numIdleThreads;
+            --s->numIdleThreads;
 
             // Because there can be more than one thread woken by a
             // signal, we may still not have a job available for this
-            // worker.
+            // worker.  Such is life for the masses.
             continue;
         }
 
-
         // This worker has a new job.
         //
-        // This thread can now read and write to the args in this job
-        // without a mutex.  No other thread can access this job while it
-        // is not in a stream queue, filter queue, or filter unused
-        // list.
+        // This thread can now read and write to this job without a mutex.
+        // No other thread can access this job while it is not in a stream
+        // queue, filter queue, or filter unused stack list.
 
         CHECK(pthread_setspecific(_qsKey, j));
         struct QsFilter *f = j->filter;
         DASSERT(f->numThreads < f->maxThreads);
 
-        // Set the thread counters for this filter.
+        // Set the thread counters for this filter.  Have a stream mutex
+        // lock for this:
         ++f->numThreads;
-        // The next thread number is always increasing.
+
+        // The next thread number is always increasing. Have a stream
+        // mutex lock for reading and changing f->nextThreadNum.
         j->threadNum = f->nextThreadNum++;
+
         // j->threadNum is now letting us know the order of the thread
         // calling this filter input().  j->threadNum is not really needed
         // if this filter input does not support multiple threads.
@@ -225,16 +229,8 @@ void *RunningWorkerThread(struct QsStream *s) {
                 j->isFlushing, f->numInputs, f->numOutputs);
 
 
-        // Advance the output buffers, write/advance the down stream
-        // filter's job args, and push jobs to the stream queue.
+        // Push jobs to the stream queue.
 
-        for(uint32_t i=0; i<f->numOutputs; ++i) {
-            struct QsOutput *o = f->outputs + i;
-            CheckLockOutput(o);
-
-
-            CheckUnlockOutput(o);
-        }
 
 
         if(ret) {
@@ -249,7 +245,8 @@ void *RunningWorkerThread(struct QsStream *s) {
         // STREAM LOCK
         CHECK(pthread_mutex_lock(&s->mutex));
 
-        // Unset the thread counters for this filter.
+        // Unset the thread counters for this filter.  This worker no
+        // longer has the job we just finished.
         --f->numThreads;
 
 
@@ -395,17 +392,16 @@ void AllocateFilterJobs(struct QsFilter *f) {
             o->mutex = malloc(sizeof(*o->mutex));
             ASSERT(o->mutex, "malloc(%zu) failed", sizeof(*o->mutex));
             CHECK(pthread_mutex_init(o->mutex, 0));
-        }
-#ifdef DEBUG
-        else {
+        } else {
             // This is a "pass through" buffer that is fed by another
             // output like above.  It does not need a mutex.
-            while(o->prev)
-                o = o->prev;
-            // o is now the "feed" output for the pass through buffer.
-            DASSERT(o->mutex);
+            struct QsOutput *feedOutput = o->prev;
+            while(feedOutput->prev)
+                feedOutput = feedOutput->prev;
+            // feedOutput is now the "feed" output for the "pass through"
+            // buffer.  This output will use the feed output mutex. 
+            o->mutex = feedOutput->mutex;
         }
-#endif
     }
 
     uint32_t numJobs = f->maxThreads + 1;
@@ -450,7 +446,7 @@ void AllocateFilterJobs(struct QsFilter *f) {
 }
 
 
-int qsStreamWait(struct QsStream *stream) {
+int qsStreamWait(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     ASSERT(s->sources, "qsStreamReady() must be successfully"
@@ -459,7 +455,8 @@ int qsStreamWait(struct QsStream *stream) {
             "Stream has not been launched");
 
     if(s->maxThreads == 0)
-        // This is not configured to run with worker threads.
+        // qsStreamLaunch() was not configured to run with worker
+        // threads.
         return -1;
 
     if(s->numThreads == 0)

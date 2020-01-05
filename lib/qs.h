@@ -470,7 +470,8 @@ struct QsOutput {  // points to reader filters
     struct QsOutput *next;
 
 
-    // If prev is set this is not set and this output is a "pass through"
+    // If prev is set this is a "pass through" and buffer points to the
+    // "real" buffer that is the feed buffer, that feeds this pass through
     // buffer.
     //
     struct QsBuffer *buffer;
@@ -484,7 +485,7 @@ struct QsOutput {  // points to reader filters
     // maxWrite bytes to this buffer.
     //
     // Variable maxWrite is not used in a "pass through" output.  It will
-    // just need a read pointers, for read and write access to the same
+    // just need read pointers, for read and write access to the same
     // place in memory (virtual address space memory).
     //
     size_t maxWrite;
@@ -495,7 +496,11 @@ struct QsOutput {  // points to reader filters
     //
     struct QsReader {
 
-        // readPtr points to a location in the mapped memory
+        // readPtr points to a location in the mapped memory.
+        //
+        // After initialization, readPtr is only read and written by the
+        // reading filter???  If so do we need a filter mutex for
+        // multi-thread filters input()s.
         uint8_t *readPtr;
 
         // The filter that is reading.
