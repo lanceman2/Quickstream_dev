@@ -396,7 +396,7 @@ struct QsFilter {
     // numThreads is the number of threads currently calling
     // filter->input().  nextThreadNum is the thread number of the next
     // thread to call filter->input().  The leading thread number is then
-    // nextThreadNum - numThreads.  Note this work when these numbers
+    // nextThreadNum - numThreads.  Note this works when these numbers
     // wrap through zero.  When a new thread calls filter->input() it's
     // thread number will be nextThreadNum and then we add 1 to
     // nextThreadNum.

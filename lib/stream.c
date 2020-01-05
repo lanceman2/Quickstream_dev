@@ -317,6 +317,7 @@ void FreeFilterRunResources(struct QsFilter *f) {
             if(output->mutex) {
                 // This is a top feeding output, and not a "pass through"
                 // output.
+                DASSERT(f->maxThread > 1);
                 DASSERT(output->prev == 0);
                 CHECK(pthread_mutex_destroy(output->mutex));
 #ifdef DEBUG
@@ -324,8 +325,10 @@ void FreeFilterRunResources(struct QsFilter *f) {
 #endif
                 free(output->mutex);
             }
-
 #ifdef DEBUG
+            else
+                DASSERT(f->maxThread == 1);
+
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
 #endif
