@@ -15,6 +15,7 @@ ifeq ($(strip $(MAKELEVEL)),0)
 SUBDIRS := ../include ../lib ../lib/quickstream/plugins/filters
 endif
 
+stripcmt_SOURCES := stripcmt.c
 
 getOpts_SOURCES := getOpts.c ../bin/getOpt.c
 getOpt.o_CPPFLAGS := -I../bin
@@ -30,8 +31,13 @@ run2_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 test_qsError_SOURCES := test_qsError.c
 test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
+
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)
+
+
+CLEANERFILES := $(wildcard scc-snapshots-*)
+
 
 
 include ../quickbuild.make

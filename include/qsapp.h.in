@@ -290,6 +290,18 @@ extern
 int qsStreamLaunch(struct QsStream *stream, uint32_t maxThreads);
 
 
+/** Wait for worker threads to signal the main thread.
+ *
+ * This should be called after qsStreamLaunch().
+ *
+ * /return 0 if this waited, or 1 if the stream was not flowing and this
+ * did not wait and there is a multi-threaded launch, and -1 if there is
+ * not a multi-threaded launch.
+ */
+extern
+int qsStreamWait(struct QsStream *stream);
+
+
 /** Make ready the stream.
  *
  * Allocate resources for the stream to flow, but not the threads and

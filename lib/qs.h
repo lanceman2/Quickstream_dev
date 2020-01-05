@@ -199,6 +199,10 @@ struct QsStream {
     pthread_mutex_t mutex;
     // cond is paired with mutex.
     pthread_cond_t cond;  // idle threads just wait with this cond.
+    // The main (master) thread waits on this conditional while the worker
+    // threads run the stream flow.
+    pthread_cond_t masterCond;
+    bool masterWaiting;
     //
     // numThreads is the number of pthreads that exist from this stream,
     // be they idle or in the process of calling input().  We must have a

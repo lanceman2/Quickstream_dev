@@ -526,7 +526,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   path of files that they are most directly related to in the installed
   paths.  Consequently:
   - you don't need to wonder where source files are,
-  - programs can run in the source directory after running make without
+  - programs can run in the source directory after running "make" without
     installing them,
   - the running programs find files from a relative paths between them,
     the same way as in the installed files as with the files in the
@@ -551,11 +551,22 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   programmer knows that excessive use of CPP macros leads to code that is
   not easily understandable in the future after you haven't looked at it
   in a while.
+- We tend to make self documenting interfaces with straight forward variable
+  arguments that are provide quick understanding, like for example we prefer
+  functions like **read(void *buffer, size_t len)** to
+  **InputObject->val** and **InputObject->len**.  The read form is self
+  documenting where as an input object (or struct) requires that we force
+  the user to lookup methods to get to the wrapped buffer data.  We don't
+  make abstractions and wrappers unless the added benefit for the user
+  outweighs the cost of adding new uncommon abstractions.
+- The standard C library is a thing we use.  The GNU/Linux and BSD (OSX)
+  operating systems are built on it.  For the most part C++ has not
+  replaced it, but has just wrapped it.
 - If you wish to make a tarball release use the GNU autotool building
   method and run *./configure* and *make dist*.
 - There will be no downloading of files in the build step.  Downloading
   may happen in the bootstrap step.  In building from a tarball release
-  there will be no downloads.
+  there will be no downloads or bootstrapping.
 - Files in the source are located in the same relative path of files that
   they are most directly related to in the installed paths.
 - All filter modules do not share the global variable space that came from
@@ -569,6 +580,13 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   module.  Modules that wish to share variables with other modules may do
   so by using other non-filter DSOs (dynamic shared objects), basically
   any other library than the filter DSO.
+- quickstream is not OOP (object oriented programming).  We only make
+  objects when it is necessary.  OOP can lead to more complexity which we
+  want to avoid.
+- Don't put stuff in quickstream that does not belong in quickstream.  You
+  can always build higher level APIs on top of quickstream.
+- If you don't like quickstream don't use it.
+
 
 
 ## Driving concerns and todo list
@@ -588,7 +606,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   die of obscurity.
 
 - It looks like a kernel hack is not needed, or is it?  mmap(2) does what
-  we need.
+  we need.  NPTL (Native POSIX Threads Library) pthreads rock!
 
-- Add filter modules that are groups of filter modules.
+- Add "super filter modules" that load groups of filter modules.
 

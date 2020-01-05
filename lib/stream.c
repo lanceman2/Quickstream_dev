@@ -369,9 +369,11 @@ void FreeRunResources(struct QsStream *s) {
 
         CHECK(pthread_mutex_destroy(&s->mutex));
         CHECK(pthread_cond_destroy(&s->cond));
+        CHECK(pthread_cond_destroy(&s->masterCond));
 #ifdef DEBUG
         memset(&s->mutex, 0, sizeof(s->mutex));
         memset(&s->cond, 0, sizeof(s->cond));
+        memset(&s->masterCond, 0, sizeof(s->masterCond));
 #endif
         s->maxThreads = 0;
         s->numThreads = 0;
