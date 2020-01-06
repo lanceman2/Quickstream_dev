@@ -215,7 +215,7 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     struct QsOutput *o = f->outputs + outputPortNum;
     DASSERT(o->readers);
     DASSERT(o->numReaders);
-    pthread_mutex_t *mutex = o->mutex;
+    pthread_mutex_t *mutex = f->mutex;
 
  
     if(mutex) {

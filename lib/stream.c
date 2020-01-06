@@ -262,7 +262,7 @@ void FreeFilterRunResources(struct QsFilter *f) {
 
         uint32_t numJobs = f->maxThreads + 1;
 
-        if(f->numInputs)
+        if(f->numInputs) {
             for(uint32_t i=0; i<numJobs; ++i) {
 
                 // Free the input() arguments:
@@ -288,6 +288,13 @@ void FreeFilterRunResources(struct QsFilter *f) {
                 free(job->advanceLens);
             }
 
+            DASSERT(f->readers);
+#ifdef DEBUG
+            memset(f->readers, 0, f->numInputs*sizeof(*f->readers));
+#endif
+            free(f->readers);
+        }
+
 #ifdef DEBUG
         memset(f->jobs, 0, numJobs*sizeof(*f->jobs));
 #endif
@@ -299,6 +306,22 @@ void FreeFilterRunResources(struct QsFilter *f) {
         f->numThreads = 0;
         f->nextThreadNum = 0;
     }
+
+    if(f->mutex) {
+        DASSERT(f->maxThreads > 1);
+        DASSERT(f->stream->maxThreads > 1);
+        CHECK(pthread_mutex_destroy(f->mutex));
+#ifdef DEBUG
+        memset(f->mutex, 0, sizeof(*f->mutex));
+#endif
+        free(f->mutex);
+    }
+#ifdef DEBUG
+    else {
+        DASSERT(f->stream);
+        DASSERT(f->maxThreads == 1 || f->stream->maxThreads < 2);
+    }
+#endif
 
     if(f->numOutputs) {
         DASSERT(f->outputs);
@@ -314,26 +337,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
             struct QsOutput *output = &f->outputs[i];
             DASSERT(output->numReaders);
             DASSERT(output->readers);
-            if(output->mutex) {
-                if(output->prev == 0) {
-                    // This is a top feeding output, and not a "pass
-                    // through" output.
-
-                    DASSERT(f->maxThreads > 1);
-                    CHECK(pthread_mutex_destroy(output->mutex));
-#ifdef DEBUG
-                    memset(output->mutex, 0, sizeof(*output->mutex));
-#endif
-                    free(output->mutex);
-                } else {
-                    // This is a "pass through" output.
-                    // The mutex pointed to the feed output mutex
-                    // so we do not free it here.  We have freed it
-                    // already in the above condition.
-                    output->mutex = 0;
-                }
-            }
-
 #ifdef DEBUG
             memset(output->readers, 0,
                     sizeof(*output->readers)*output->numReaders);
@@ -579,6 +582,7 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                 ++numReaders;
 
         DASSERT(numReaders);
+        DASSERT(_QS_MAX_CHANNELS >= numReaders);
 
         struct QsReader *readers =
             calloc(numReaders, sizeof(*readers));
@@ -609,7 +613,6 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
             }
 
         DASSERT(readerIndex == numReaders);
-        DASSERT(_QS_MAX_CHANNELS >= numReaders);
     }
 
     // Now recurse if we need to.

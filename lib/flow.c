@@ -131,20 +131,20 @@ void WorkerToFilterUnused(struct QsJob *j) {
 
 
 //static inline
-void CheckLockOutput(struct QsOutput *o) {
+void CheckLockOutput(struct QsFilter *f) {
 
-    DASSERT(o);
-    if(o->mutex)
-        CHECK(pthread_mutex_lock(o->mutex));
+    DASSERT(f);
+    if(f->mutex)
+        CHECK(pthread_mutex_lock(f->mutex));
 }
 
 
 //static inline
-void CheckUnlockOutput(struct QsOutput *o) {
+void CheckUnlockOutput(struct QsFilter *f) {
 
-    DASSERT(o);
-    if(o->mutex)
-        CHECK(pthread_mutex_unlock(o->mutex));
+    DASSERT(f);
+    if(f->mutex)
+        CHECK(pthread_mutex_unlock(f->mutex));
 }
 
 
@@ -372,7 +372,7 @@ void AllocateJobArgs(struct QsJob *job, uint32_t numInputs) {
 //
 // This is not called unless s->maxThreads is non-zero.
 static
-void AllocateFilterJobs(struct QsFilter *f) {
+void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(f);
     DASSERT(f->mark);
@@ -382,27 +382,6 @@ void AllocateFilterJobs(struct QsFilter *f) {
     // Un-mark this filter.
     f->mark = false;
 
-    for(uint32_t i=0; i<f->numOutputs; ++i) {
-        struct QsOutput *o = f->outputs + i;
-        if(o->prev == 0) {
-            // This is a buffer that is owned by this filter and is
-            // not a "pass through" buffer, but one that feeds a "pass
-            // through" buffer.
-            DASSERT(o->mutex == 0);
-            o->mutex = malloc(sizeof(*o->mutex));
-            ASSERT(o->mutex, "malloc(%zu) failed", sizeof(*o->mutex));
-            CHECK(pthread_mutex_init(o->mutex, 0));
-        } else {
-            // This is a "pass through" buffer that is fed by another
-            // output like above.  It does not need a mutex.
-            struct QsOutput *feedOutput = o->prev;
-            while(feedOutput->prev)
-                feedOutput = feedOutput->prev;
-            // feedOutput is now the "feed" output for the "pass through"
-            // buffer.  This output will use the feed output mutex. 
-            o->mutex = feedOutput->mutex;
-        }
-    }
 
     uint32_t numJobs = f->maxThreads + 1;
     uint32_t numInputs = f->numInputs;
@@ -410,6 +389,19 @@ void AllocateFilterJobs(struct QsFilter *f) {
     f->jobs = calloc(numJobs, sizeof(*f->jobs));
     ASSERT(f->jobs, "calloc(%" PRIu32 ",%zu) failed",
             numJobs, sizeof(*f->jobs));
+
+    DASSERT(f->mutex == 0);
+    DASSERT(f->maxThreads != 0);
+
+    if(s->maxThreads > 1 && f->maxThreads > 1) {
+        f->mutex = malloc(sizeof(*f->mutex));
+        ASSERT(f->mutex, "malloc(%zu) failed", sizeof(*f->mutex));
+        CHECK(pthread_mutex_init(f->mutex, 0));
+        // Not lock-less buffers, but we have multi-threaded filter
+        // input().
+    }
+    // else: We have lock-less buffers.
+
 
     for(uint32_t i=0; i<numJobs; ++i) {
 
@@ -440,7 +432,7 @@ void AllocateFilterJobs(struct QsFilter *f) {
             struct QsFilter *nextFilter = (output->readers + j)->filter;
             DASSERT(nextFilter);
             if(nextFilter->mark)
-                AllocateFilterJobs(nextFilter);
+                AllocateFilterJobsAndMutex(s, nextFilter);
         }
     }
 }
@@ -512,7 +504,7 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
         StreamSetFilterMarks(s, true);
         for(uint32_t i=0; i<s->numSources; ++i)
-            AllocateFilterJobs(s->sources[i]);
+            AllocateFilterJobsAndMutex(s, s->sources[i]);
     }
 
 

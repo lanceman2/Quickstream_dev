@@ -308,6 +308,20 @@ struct QsFilter {
         // to put in filter unused stack or stream queue
         struct QsJob *next;
         //
+        // The thread working on a given filter have an ID that is from a
+        // sequence counter.  This threadNum (ID) is gotten from
+        // filter->nextThreadNum++.  So the lowest numbered thread job for
+        // this filter is the oldest, except when the counter wraps
+        // through 0.  So really the oldest job is just the first in the
+        // threadNum count sequence, and we must use filter->nextThreadNum
+        // - filter->numThreads to get the oldest job threadNum.
+        //
+        // Hence, threadNum is respect to the filter, so that we can order
+        // the threads with the buffers.
+        uint32_t threadNum;
+        //
+        /////////////////////////////////////////////////////////////////
+
         // The number of inputs can change before start and after stop,
         // so can maxThread in the stream and so jobs and these input()
         // arguments are all reallocated at qsStreamLaunch().
@@ -328,19 +342,6 @@ struct QsFilter {
         // input buffers, indexed by input port number.
         size_t *advanceLens; // allocated after start and freed at stop
         //
-        // The thread working on a given filter have an ID that is from a
-        // sequence counter.  This threadNum (ID) is gotten from
-        // filter->nextThreadNum++.  So the lowest numbered thread job for
-        // this filter is the oldest, except when the counter wraps
-        // through 0.  So really the oldest job is just the first in the
-        // threadNum count sequence, and we must use filter->nextThreadNum
-        // - filter->numThreads to get the oldest job threadNum.
-        //
-        // Hence, threadNum is respect to the filter, so that we can order
-        // the threads with the buffers.
-        uint32_t threadNum;
-        //
-        /////////////////////////////////////////////////////////////////
 
 
         // This will be the pthread_getspecific() data for each flow
@@ -354,6 +355,83 @@ struct QsFilter {
         struct QsFilter *filter;
 
     } *jobs; // The memory allocated for jobs in jobQueue, or unused.
+
+
+    ///////////////// FILTER MUTEX GROUP ////////////////////////////////
+    //
+    // mutex for when more than one thread can run the filter input().
+    //
+    pthread_mutex_t *mutex;
+    //
+    // This filter owns these output structs, in that it is the only
+    // filter that may change the ring buffer pointers.
+    //
+    uint32_t numOutputs; // number of connected filter we write to.
+    struct QsOutput *outputs; // array of struct QsOutput
+    //
+    //
+    uint32_t numInputs; // number of connected input filters feeding this.
+    //
+    // When filter->maxThreads > 1 we require a filter mutex lock to
+    // access, r/w, a readPtr in readers[i]->readPtr.  The reader data
+    // is in the output (QsOutput) of the feeding filter.  We just point
+    // to the readers for this filter with readers.
+    //
+    // readers is an array of size filter->numInputs.  readers=0 if
+    // numInput=0.
+    //
+    //
+    //
+    struct QsReader {
+        //
+        // readPtr points to a location in the mapped memory, "ring
+        // buffer".
+        //
+        // After initialization, readPtr and readLength is only read and
+        // written by the reading filter.  We use a reading filter mutex
+        // for multi-thread filters input()s, but otherwise the buffer is
+        // lock-less.
+        uint8_t *readPtr;
+        //
+        // The amount of data that is available to be read from readPtr.
+        size_t readLength;
+
+        // The filter that is reading.
+        struct QsFilter *filter;
+
+        // This threshold will trigger a filter->input() call, independent
+        // of the other inputs.
+        //
+        // The filter->input() may just return without advancing any input
+        // or output, effectively ignoring the input() call like the
+        // threshold trigger conditions where not reached.  In this way
+        // we may have arbitrarily complex threshold trigger conditions.
+        size_t threshold; // Length in bytes to cause input() to be called.
+
+        // The reading filter promises to read some input data so long as
+        // the buffer input length >= maxThreshold.  It only has to read 1
+        // byte to fore fill this promise, but so long as the readable
+        // amount of data on this port is >= maxThreshold is will keep
+        // having it's input() called until the readable amount of data on
+        // this port is < maxThreshold.
+        //
+        // This parameter guarantees that we can calculate a fixed ring
+        // buffer size that will not be overrun.
+        //
+        // This parameter is used for "pass through" buffers in place of
+        // maxWrite, since only one parameter is needed
+        //
+        size_t maxRead; // Length in bytes to keep input() being called.
+
+        // The input port number that this filter being written to sees in
+        // it's input(,,portNum,) call.
+        uint32_t inputPortNum;
+    }
+    // array of pointers to readers array that is in feed filter
+    // outputs.  Indexed by input port number 0, 1, 2, 3, ..., numInputs-1
+    **readers;
+    //
+    /////////////////////////////////////////////////////////////////////
 
 
     ///////////////// STREAM MUTEX GROUP ////////////////////////////////
@@ -417,16 +495,6 @@ struct QsFilter {
     // when the stream is flowing.
     bool isSource; // startup flag marking filter as a source
 
-
-    // This filter owns these output structs, in that it is the only
-    // filter that may change the ring buffer pointers.
-    //
-    uint32_t numOutputs; // number of connected filter we write to.
-    struct QsOutput *outputs; // array of struct QsOutput
-
-    uint32_t numInputs; // number of connected input filters feeding this.
-
-
     // TODO: It'd be nice not to have this extra data.  It's not needed
     // when the stream is flowing.
     //
@@ -444,13 +512,6 @@ struct QsOutput {  // points to reader filters
     // Outputs (QsOutputs) are only accessed by the filters (QSFilters)
     // that own them.
 
-    // mutex used when many thread access this output by a filter that
-    // owns the output buffer and will run multiple threads calling
-    // input().  Otherwise, the ring buffer will be lock-less and this
-    // will be 0.  This will not be used by filters that access the
-    // buffer as a "pass through" output buffer.
-    //
-    pthread_mutex_t *mutex;
 
     // The "pass through" buffers are a double linked list with the "real"
     // buffer in the first one in the list.  The "real" output buffer has
@@ -465,7 +526,7 @@ struct QsOutput {  // points to reader filters
     //
     struct QsOutput *prev;
     //
-    // points to the next "pass through" output, if one it present; else
+    // points to the next "pass through" output, if one is present; else
     // next is 0.
     struct QsOutput *next;
 
@@ -479,6 +540,12 @@ struct QsOutput {  // points to reader filters
     // writePtr points to where to write next in mapped memory.  This
     // variable is not used if this is a "pass through" buffer.
     //
+    // writePtr can only be read from and written to by the filter that
+    // feeds this output.  If the filter that owns this output can run
+    // input() in multiple threads a filter mutex lock is required to read
+    // or write to this writePtr, but otherwise this is a lock-less
+    // buffer.
+    //
     uint8_t *writePtr;
 
     // The filter that owns this buffer promises to not write more than
@@ -491,50 +558,22 @@ struct QsOutput {  // points to reader filters
     size_t maxWrite;
 
 
-    // ** Only the filter (and it's thread) that has a pointer to this
-    // output can read and write this pointer, at flow time. **
+    // readers is where the output data flows to.
     //
-    struct QsReader {
-
-        // readPtr points to a location in the mapped memory.
-        //
-        // After initialization, readPtr is only read and written by the
-        // reading filter???  If so do we need a filter mutex for
-        // multi-thread filters input()s.
-        uint8_t *readPtr;
-
-        // The filter that is reading.
-        struct QsFilter *filter;
-
-        // This threshold will trigger a filter->input() call, independent
-        // of the other inputs.
-        //
-        // The filter->input() may just return without advancing any input
-        // or output, effectively ignoring the input() call like the
-        // threshold trigger conditions where not reached.  In this way
-        // we may have arbitrarily complex threshold trigger conditions.
-        size_t threshold; // Length in bytes to cause input() to be called.
-
-        // The reading filter promises to read some input data so long as
-        // the buffer input length >= maxThreshold.  It only has to read 1
-        // byte to fore fill this promise, but so long as the readable
-        // amount of data on this port is >= maxThreshold is will keep
-        // having it's input() called until the readable amount of data on
-        // this port is < maxThreshold.
-        //
-        // This parameter guarantees that we can calculate a fixed ring
-        // buffer size that will not be overrun.
-        //
-        // This parameter is used for "pass through" buffers in place of
-        // maxWrite, since only one parameter is needed
-        //
-        size_t maxRead; // Length in bytes to keep input() being called.
-
-        // The input port number that the filter being written to sees in
-        // it's input(,,portNum,) call.
-        uint32_t inputPortNum;
-
-    } *readers; // array of filter readers
+    // Elements in this array are accessible from the QsFilter (filter)
+    // but filter->readers (not output->readers) are indexed by the
+    // filters input port number.  This is readers of the current output
+    // and the index number to this array is likely not related to the
+    // reading filters input port number.
+    //
+    // Each element in this array may point to a different filter.
+    //
+    // This readers is a mapping from output to filter.  The QsFilter
+    // structure has a readers array of pointers that is a mapping from
+    // filter input port to reader (or output buffer).  Yes, it's
+    // complicated but essential, so draw a pointer graph picture.
+    //
+    struct QsReader *readers; // array of filter readers.
 
     uint32_t numReaders; // length of readers array
 
