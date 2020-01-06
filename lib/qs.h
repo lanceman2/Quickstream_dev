@@ -24,12 +24,15 @@
 // not so bad given this does not obscure what is being run.  Like for
 // example:
 //
-//   CHECK(pthread_mutex_destroy(&s->mutex));
+//   CHECK(pthread_mutex_lock(&s->mutex));
 //
 // You can totally tell what that is doing.  One line of code instead of
 // three.  Note (x) can only appear once in the macro expression,
-// otherwise (x) could get executed more than once, if it was listed more
+// otherwise (x) could get executed more than once if it was listed more
 // than once.
+//
+// CHECK() is not a debugging thing; it's inserting the (x) code every
+// time.  And the same goes for ASSERT().
 //
 #define CHECK(x) \
     do { \
@@ -96,12 +99,22 @@
 
 
 ///////////////////////////////////////////////////////////////////////////
-//                 THREAD SAFETY WARNING
 //
-// Most of the variables in the data structures are not changing when the
-// stream is flowing.  Any variables that do change at flow time we must
-// handle with "thread-safe" care.
+//                   THREAD SAFETY WARNING
+//
+//  Most of the variables in the data structures are not changing when the
+//  stream is flowing.  Any variables that do change at flow time we must
+//  handle with "thread-safe" care.
+//
 ///////////////////////////////////////////////////////////////////////////
+
+
+// In many cases, especially at stream flow-time, we use a data structure
+// call an array for the fastest possible access to data in these data
+// structures.  The cost of using an array is realloc()ing at
+// non-flow-time, which is infrequent (transient case).  Using a tree or
+// hash table is slower than accessing an array, so long as the array is
+// not changing size, like it is not at flow-time.
 
 
 
@@ -113,6 +126,10 @@
 //
 struct QsApp {
 
+    // There's no reason for fast access to these list at this time.
+    // Maybe we'll use a red/black tree for faster access if the need
+    // comes be.
+
     // List of filters.  Head of a singly linked list.
     struct QsFilter *filters;
 
@@ -122,7 +139,6 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
-
 };
 
 
