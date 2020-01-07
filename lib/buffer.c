@@ -163,6 +163,7 @@ void MapRingBuffers(struct QsFilter *f) {
             // share this buffers memory mapping.
             DASSERT(o->buffer);
             output->buffer = o->buffer;
+            output->writePtr = output->buffer->mem;
         }
 
         DASSERT(output->buffer);
