@@ -615,6 +615,37 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         DASSERT(readerIndex == numReaders);
     }
 
+    if(f->numInputs) {
+        // Allocate and set the
+        // filter->readers[inputPort] = output feeding reader
+        //
+        f->readers = calloc(f->numInputs, sizeof(*f->readers));
+        ASSERT(f->readers, "calloc(%" PRIu32 ",%zu) failed",
+                f->numInputs, sizeof(*f->readers));
+
+        for(i=0; i<s->numConnections; ++i)
+            if(s->connections[i].to == f) {
+                struct QsOutput *outputs = s->connections[i].from->outputs;
+                uint32_t numOutputs = s->connections[i].from->numOutputs;
+                for(uint32_t j=0; j<numOutputs; ++j) {
+                    struct QsReader *readers = outputs[j].readers;
+                    uint32_t numReaders = outputs[j].numReaders;
+                    for(uint32_t k=0; k<numReaders; ++k)
+                        if(readers[k].filter == f) {
+                            uint32_t inputPortNum = readers[k].inputPortNum;
+                            DASSERT(inputPortNum < f->numInputs);
+                            // It should only have one reader from one
+                            // output, so:
+                            DASSERT(f->readers[inputPortNum] == 0);
+                            // and we set it once here for all inputs
+                            // found:
+                            f->readers[inputPortNum] = readers + k;
+                        }
+                }
+            }
+    }
+
+
     // Now recurse if we need to.
     //
     for(i=0; i<f->numOutputs; ++i) {
@@ -632,6 +663,8 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
 
 
 // ret is a return value passed back from recusing.
+//
+// This happens after AllocateFilterOutputsFrom() above.
 //
 static bool
 SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
@@ -723,7 +756,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         struct QsOutput *output = &f->outputs[i];
         for(uint32_t j=0; j<output->numReaders; ++j) {
             // Every reader
-            struct QsReader *reader = &output->readers[j];
+            struct QsReader *reader = output->readers + j;
             if(reader->filter->mark)
                 // Recurse
                 ret = SetupInputPorts(s, reader->filter, ret);

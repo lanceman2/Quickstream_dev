@@ -405,8 +405,11 @@ struct QsFilter {
         //
         // After initialization, readPtr and readLength is only read and
         // written by the reading filter.  We use a reading filter mutex
-        // for multi-thread filters input()s, but otherwise the buffer is
-        // lock-less.
+        // for multi-thread filters input()s, but otherwise
+        // reading/writing the buffer is lock-less.
+        //
+        // In the case that this reader is for making is a "pass through"
+        // buffer this is a read and then write point.
         uint8_t *readPtr;
         //
         // The amount of data that is available to be read from readPtr.
