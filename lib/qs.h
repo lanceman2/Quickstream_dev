@@ -174,7 +174,7 @@ pthread_t _qsMainThread;
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
-// flow state.  Since streams can add and remove filters when it is not
+// flow state.  Since streams can add and rrsync -av --delete /home/ lance@anvil:cube_home_BACKUP/emove filters when it is not
 // flowing the stream needs app to be a list of loaded filters for it.
 //
 struct QsStream {
@@ -277,7 +277,7 @@ struct QsStream {
 
     struct QsStream *next; // next stream in app list of streams
 };
-
+rsync -av --delete /home/ lance@anvil:cube_home_BACKUP/
 
 
 // The filter (QsFilter) is loaded by app as a module DSO (dynamic shared
