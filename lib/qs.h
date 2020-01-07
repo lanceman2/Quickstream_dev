@@ -408,8 +408,6 @@ struct QsFilter {
         // for multi-thread filters input()s, but otherwise
         // reading/writing the buffer is lock-less.
         //
-        // In the case that this reader is for making is a "pass through"
-        // buffer this is a read and then write point.
         uint8_t *readPtr;
         //
         // The amount of data that is available to be read from readPtr.
@@ -436,9 +434,6 @@ struct QsFilter {
         //
         // This parameter guarantees that we can calculate a fixed ring
         // buffer size that will not be overrun.
-        //
-        // This parameter is used for "pass through" buffers in place of
-        // maxWrite, since only one parameter is needed
         //
         size_t maxRead; // Length in bytes to keep input() being called.
 
@@ -556,8 +551,7 @@ struct QsOutput {  // points to reader filters
     //
     struct QsBuffer *buffer;
 
-    // writePtr points to where to write next in mapped memory.  This
-    // variable is not used if this is a "pass through" buffer.
+    // writePtr points to where to write next in mapped memory. 
     //
     // writePtr can only be read from and written to by the filter that
     // feeds this output.  If the filter that owns this output can run
@@ -569,10 +563,6 @@ struct QsOutput {  // points to reader filters
 
     // The filter that owns this buffer promises to not write more than
     // maxWrite bytes to this buffer.
-    //
-    // Variable maxWrite is not used in a "pass through" output.  It will
-    // just need read pointers, for read and write access to the same
-    // place in memory (virtual address space memory).
     //
     size_t maxWrite;
 
