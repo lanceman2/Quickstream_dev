@@ -134,7 +134,7 @@ void CheckMakeRingBuffer(struct QsBuffer *b,
 }
 
 
-// This function will recurse.  TODO: rewrite this.
+// This function will recurse.
 //
 void MapRingBuffers(struct QsFilter *f) {
 
@@ -145,11 +145,10 @@ void MapRingBuffers(struct QsFilter *f) {
 
         if(output->prev == 0) {
             // This is NOT a pass through buffer. 
-            DASSERT(output->buffer != 0);
+            DASSERT(output->buffer);
             CheckMakeRingBuffer(output->buffer, 1, 1);
             // Initialize the writer
             output->writePtr = output->buffer->mem;
-            continue;
         } else {
             // This is a pass through buffer.
             struct QsOutput *o = output->prev;
@@ -165,8 +164,6 @@ void MapRingBuffers(struct QsFilter *f) {
             output->buffer = o->buffer;
             output->writePtr = output->buffer->mem;
         }
-
-        DASSERT(output->buffer);
 
         DASSERT(output->numReaders);
         DASSERT(output->readers);
