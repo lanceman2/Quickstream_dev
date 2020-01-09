@@ -623,6 +623,8 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         ASSERT(f->readers, "calloc(%" PRIu32 ",%zu) failed",
                 f->numInputs, sizeof(*f->readers));
 
+        // We got to look at all filter outputs in the stream to find the
+        // input readers for this filter, f.
         for(i=0; i<s->numConnections; ++i)
             if(s->connections[i].to == f) {
                 struct QsOutput *outputs = s->connections[i].from->outputs;
@@ -643,6 +645,11 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                         }
                 }
             }
+#ifdef DEBUG
+        for(i=0; i<f->numInputs; ++i)
+            // All the readers pointers should be set.
+            ASSERT(f->readers[inputPortNum]);
+#endif
     }
 
 
