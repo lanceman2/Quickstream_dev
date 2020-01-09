@@ -16,7 +16,7 @@ if [ -e configure ] && [ "$1" != "-f" ] ; then
   Generate GNU autotools build system files for this software project.
   This script does not run configure.  This script generate files that
   are needed to make a tarball release for a repository checkout.
-  tarballs contain more files that what is in a repository checkout.
+  Tarballs contain more files than what is in a repository checkout.
 
 
                         OPTIONS
