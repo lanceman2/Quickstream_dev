@@ -20,6 +20,8 @@ getOpts_SOURCES := getOpts.c ../bin/getOpt.c
 getOpt.o_CPPFLAGS := -I../bin
 getOpts_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
+assert_SOURCES := assert.c
+assert_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 run_SOURCES := run.c
 run_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib

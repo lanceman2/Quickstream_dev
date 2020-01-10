@@ -615,43 +615,6 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         DASSERT(readerIndex == numReaders);
     }
 
-    if(f->numInputs) {
-        // Allocate and set the
-        // filter->readers[inputPort] = output feeding reader
-        //
-        f->readers = calloc(f->numInputs, sizeof(*f->readers));
-        ASSERT(f->readers, "calloc(%" PRIu32 ",%zu) failed",
-                f->numInputs, sizeof(*f->readers));
-
-        // We got to look at all filter outputs in the stream to find the
-        // input readers for this filter, f.
-        for(i=0; i<s->numConnections; ++i)
-            if(s->connections[i].to == f) {
-                struct QsOutput *outputs = s->connections[i].from->outputs;
-                uint32_t numOutputs = s->connections[i].from->numOutputs;
-                for(uint32_t j=0; j<numOutputs; ++j) {
-                    struct QsReader *readers = outputs[j].readers;
-                    uint32_t numReaders = outputs[j].numReaders;
-                    for(uint32_t k=0; k<numReaders; ++k)
-                        if(readers[k].filter == f) {
-                            uint32_t inputPortNum = readers[k].inputPortNum;
-                            DASSERT(inputPortNum < f->numInputs);
-                            // It should only have one reader from one
-                            // output, so:
-                            DASSERT(f->readers[inputPortNum] == 0);
-                            // and we set it once here for all inputs
-                            // found:
-                            f->readers[inputPortNum] = readers + k;
-                        }
-                }
-            }
-#ifdef DEBUG
-        for(i=0; i<f->numInputs; ++i)
-            // All the readers pointers should be set.
-            ASSERT(f->readers[inputPortNum]);
-#endif
-    }
-
 
     // Now recurse if we need to.
     //
@@ -756,6 +719,43 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
             break; // nope
         }
 
+
+    if(f->numInputs) {
+        // Allocate and set the
+        // filter->readers[inputPort] = output feeding reader
+        //
+        f->readers = calloc(f->numInputs, sizeof(*f->readers));
+        ASSERT(f->readers, "calloc(%" PRIu32 ",%zu) failed",
+                f->numInputs, sizeof(*f->readers));
+
+        // We got to look at all filter outputs in the stream to find the
+        // input readers for this filter, f.
+        for(uint32_t i=0; i<s->numConnections; ++i)
+            if(s->connections[i].to == f) {
+                struct QsOutput *outputs = s->connections[i].from->outputs;
+                uint32_t numOutputs = s->connections[i].from->numOutputs;
+                for(uint32_t j=0; j<numOutputs; ++j) {
+                    struct QsReader *readers = outputs[j].readers;
+                    uint32_t numReaders = outputs[j].numReaders;
+                    for(uint32_t k=0; k<numReaders; ++k)
+                        if(readers[k].filter == f) {
+                            uint32_t inputPortNum = readers[k].inputPortNum;
+                            DASSERT(inputPortNum < f->numInputs);
+                            // It should only have one reader from one
+                            // output, so:
+                            DASSERT(f->readers[inputPortNum] == 0);
+                            // and we set it once here for all inputs
+                            // found:
+                            f->readers[inputPortNum] = readers + k;
+                        }
+                }
+            }
+    }
+
+#ifdef DEBUG
+    for(uint32_t i=0; i<f->numInputs; ++i)
+        DASSERT(f->readers[i]);
+#endif
 
     // Now recurse to filters that read from this filter if we have not
     // already.

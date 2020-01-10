@@ -163,6 +163,7 @@ void *RunningWorkerThread(struct QsStream *s) {
     // STREAM LOCK
     CHECK(pthread_mutex_lock(&s->mutex));
 
+
     // We work until we die.
     //
     while(living) {
@@ -271,6 +272,7 @@ void FeedJobToWorkerThread(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(s);
     DASSERT(f);
+
 
     /////////////////////////////////////////////////////////////////////
     /////////////////// HAVE STREAM MUTEX ///////////////////////////////
@@ -420,7 +422,7 @@ void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
     // Set the top of the unused job stack.
     f->unused = f->jobs + 1;
 
-    // I'm I a stupid-head?
+    // Am I a stupid-head?
     DASSERT(f->jobs->next == 0);
     DASSERT((f->jobs+numJobs-1)->next == 0);
 

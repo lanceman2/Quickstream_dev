@@ -277,7 +277,6 @@ struct QsStream {
 
     struct QsStream *next; // next stream in app list of streams
 };
-rsync -av --delete /home/ lance@anvil:cube_home_BACKUP/
 
 
 // The filter (QsFilter) is loaded by app as a module DSO (dynamic shared

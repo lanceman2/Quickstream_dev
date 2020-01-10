@@ -63,7 +63,7 @@ int main(void) {
     i++;
 
     qsStreamReady(s);
-    
+
     qsAppPrintDotToFile(app, QSPrintDebug, stdout);
     qsAppDisplayFlowImage(app, 0, false);
     qsAppDisplayFlowImage(app, QSPrintDebug, false);
