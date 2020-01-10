@@ -743,10 +743,20 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
                             DASSERT(inputPortNum < f->numInputs);
                             // It should only have one reader from one
                             // output, so:
-                            DASSERT(f->readers[inputPortNum] == 0);
-                            // and we set it once here for all inputs
-                            // found:
-                            f->readers[inputPortNum] = readers + k;
+                            DASSERT(f->readers[inputPortNum] == 0 ||
+                                    f->readers[inputPortNum] == readers + k);
+                            if(f->readers[inputPortNum] == 0)
+                                // and we set it once here for all inputs
+                                // found:
+                                f->readers[inputPortNum] = readers + k;
+                            else {
+                                // We have already checked this filter and
+                                // output.  We are using the stream
+                                // connection list which can have filters
+                                // listed more than once.
+                                j = numOutputs; // pop out of j loop too.
+                                break;
+                            }
                         }
                 }
             }
