@@ -731,6 +731,8 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         // We got to look at all filter outputs in the stream to find the
         // input readers for this filter, f.
         for(uint32_t i=0; i<s->numConnections; ++i)
+            // This i loop may repeat some filters, but that may be better
+            // than adding more data structures to the stream struct.
             if(s->connections[i].to == f) {
                 struct QsOutput *outputs = s->connections[i].from->outputs;
                 uint32_t numOutputs = s->connections[i].from->numOutputs;
@@ -743,19 +745,18 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
                             DASSERT(inputPortNum < f->numInputs);
                             // It should only have one reader from one
                             // output, so:
-                            DASSERT(f->readers[inputPortNum] == 0 ||
-                                    f->readers[inputPortNum] == readers + k);
                             if(f->readers[inputPortNum] == 0)
                                 // and we set it once here for all inputs
                                 // found:
                                 f->readers[inputPortNum] = readers + k;
                             else {
-                                // We have already checked this filter and
+                                DASSERT(f->readers[inputPortNum] == readers + k);
+                                // We have already looked at this filter and
                                 // output.  We are using the stream
                                 // connection list which can have filters
                                 // listed more than once.
-                                j = numOutputs; // pop out of j loop too.
-                                break;
+                                j = numOutputs; // pop out of j loop
+                                break; // pop out of this k loop
                             }
                         }
                 }
