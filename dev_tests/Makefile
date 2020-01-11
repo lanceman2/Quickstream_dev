@@ -12,7 +12,11 @@
 # linking and loading with generated files there-in.
 #
 ifeq ($(strip $(MAKELEVEL)),0)
-SUBDIRS := ../include/quickstream ../lib ../lib/quickstream/plugins/filters
+SUBDIRS :=\
+ ../include/quickstream\
+ ../lib\
+ ../lib/quickstream/plugins/filters\
+ ../bin
 endif
 
 

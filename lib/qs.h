@@ -77,8 +77,9 @@
 // For in construct() filter->mark == _QS_IN_CONSTRUCT
 // For in destroy()   filter->mark == _QS_IN_DESTROY
 //
-#define _QS_IN_CONSTRUCT        ((uint32_t) 21)
-#define _QS_IN_DESTROY          ((uint32_t) 31)
+// The values are just fixed and random
+#define _QS_IN_CONSTRUCT        ((uint32_t) 0xe583e10c)
+#define _QS_IN_DESTROY          ((uint32_t) 0x17fb51d9)
 
 
 

@@ -66,7 +66,7 @@ int main(int argc, const char * const *argv) {
             { 0, 0 }
         };
 
-        fprintf(stderr, "getOpt( argv[%d]=%s\n", i, argv[i]);
+        fprintf(stderr, "getOpt( argv[%d]=\"%s\" )\n", i, argv[i]);
         int c = getOpt(argc, argv, &i, options, &arg);
 
         switch(c) {
