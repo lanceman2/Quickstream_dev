@@ -13,13 +13,10 @@ The **quickstream** homepage is at https://github.com/lanceman2/quickstream
 \ref quickstream_program
 
 \section programming_filters programming filter modules
-\ref qsfilter.h
+\ref filter.h
 
 \section programming_streams programming stream running programs
-\ref qsapp.h
-
-
+\ref app.h
 
 
 */
-

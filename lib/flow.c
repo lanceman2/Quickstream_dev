@@ -8,7 +8,7 @@
 #include <pthread.h>
 
 #include "./qs.h"
-#include "../include/qsfilter.h"
+#include "../include/quickstream/filter.h"
 #include "./debug.h"
 
 
@@ -154,36 +154,29 @@ void CheckUnlockOutput(struct QsFilter *f) {
 static
 void *RunningWorkerThread(struct QsStream *s) {
 
-    // The life of a worker thread.
-
     DASSERT(s);
-
+    
+    // The life of a worker thread.
+    //
     bool living = true;
 
     // STREAM LOCK
     CHECK(pthread_mutex_lock(&s->mutex));
 
-
     // We work until we die.
     //
     while(living) {
 
-        // Get the next job from the stream job queue and put it in this
-        // thread specific data so we can find it in the filter when this
-        // thread runs things like qsOutput() and other filter API
-        // functions.
+        // Get the next job from the stream job queue.
         //
         struct QsJob *j = StreamQToWorker(s);
 
-        // This thread can now read and write to the args in this job
-        // without a mutex.  No other thread can access this job while it
-        // is not in a stream queue, filter queue, or filter unused
-        // list.
 
         if(j == 0) {
             // We are unemployed.  We have no job.  Just like I'll be
             // after I finish writing this fucking code.
 
+            // We count ourselves in the ranks of the unemployed.
             ++s->numIdleThreads;
 
             DSPEW("Thread waiting for work");
@@ -193,6 +186,7 @@ void *RunningWorkerThread(struct QsStream *s) {
             CHECK(pthread_cond_wait(&s->cond, &s->mutex));
             // STREAM LOCK
 
+            // Remove ourselves from the numIdleThreads.
             --s->numIdleThreads;
 
             // Because there can be more than one thread woken by a
@@ -206,6 +200,10 @@ void *RunningWorkerThread(struct QsStream *s) {
         // This thread can now read and write to this job without a mutex.
         // No other thread can access this job while it is not in a stream
         // queue, filter queue, or filter unused stack list.
+
+        // Put it in this thread specific data so we can find it in the
+        // filter when this thread runs things like qsAdvanceInput(),
+        // qsOutput(), and other filter.h API functions.
 
         CHECK(pthread_setspecific(_qsKey, j));
         struct QsFilter *f = j->filter;
@@ -253,13 +251,14 @@ void *RunningWorkerThread(struct QsStream *s) {
 
         // Move this job structure to the filter unused stack.
         WorkerToFilterUnused(j);
-
     }
+
 
     // STREAM UNLOCK
     CHECK(pthread_mutex_unlock(&s->mutex));
 
-    return 0;
+
+    return 0; // We're dead now.  It was a good life.
 }
 
 

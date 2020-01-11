@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-#include "../include/qsapp.h"
+#include "../include/quickstream/app.h"
 
 
 // Turn on spew macros for this file.

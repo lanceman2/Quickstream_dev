@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "../include/qsapp.h"
+#include "../include/quickstream/app.h"
 
 //
 // This program needs to be linked with a version of libquickstream.so

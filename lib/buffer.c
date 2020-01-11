@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 #include "./qs.h"
-#include "../include/qsfilter.h"
+#include "../include/quickstream/filter.h"
 #include "./debug.h"
 
 

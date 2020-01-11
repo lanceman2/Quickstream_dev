@@ -12,7 +12,7 @@
 #endif
 
 #include "./debug.h"
-#include "../include/qsapp.h"
+#include "../include/quickstream/app.h"
 
 
 // We make the access to qsErrorBuffer thread safe:

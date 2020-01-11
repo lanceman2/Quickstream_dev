@@ -1,6 +1,6 @@
 
 SUBDIRS :=\
- include\
+ include/quickstream\
  lib\
  bin\
  lib/quickstream/plugins/filters\

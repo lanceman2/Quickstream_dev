@@ -17,7 +17,7 @@ run the loaded filters in a flow stream
 #include <string.h>
 #include <stdbool.h>
 
-#include "../include/qsapp.h"
+#include "../include/quickstream/app.h"
 
 // Turn on spew macros for this file.
 #ifndef SPEW_LEVEL_DEBUG

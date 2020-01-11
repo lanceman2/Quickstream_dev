@@ -284,7 +284,7 @@ struct QsStream {
 // removed from the previous stream; so ya, a filter can be only in one
 // stream at a time.  When finished with a filter, the filter is unloaded
 // by its' app.  quickstream users can write filters using
-// include/qsfilter.h.  The quickstream software package also comes with a
+// include/quickstream/filter.h.  The quickstream software package also comes with a
 // large selection of filters.
 //
 struct QsFilter {

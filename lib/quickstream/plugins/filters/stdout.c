@@ -1,4 +1,4 @@
-#include "../../../../include/qsfilter.h"
+#include "../../../../include/quickstream/filter.h"
 #include "../../../../lib/debug.h"
 
 #if 0

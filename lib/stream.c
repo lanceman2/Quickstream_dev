@@ -3,8 +3,8 @@
 #include <pthread.h>
 
 // The public installed user interfaces:
-#include "../include/qsapp.h"
-#include "../include/qsfilter.h"
+#include "../include/quickstream/app.h"
+#include "../include/quickstream/filter.h"
 
 // Private interfaces.
 #include "./qs.h"
@@ -849,7 +849,7 @@ int qsStreamReady(struct QsStream *s) {
     ///////////////////////////////////////////////////////////////////////
     //                                                                   //
     //  This has a few stages in which we go through the lists, check    //
-    //  things out, set things up.                                       //
+    //  things out and set things up.                                    //
     //                                                                   // 
     ///////////////////////////////////////////////////////////////////////
 

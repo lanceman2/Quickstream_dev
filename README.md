@@ -428,12 +428,12 @@ quickstream has two APIs (application programming interfaces) and some
 utility programs.  Both APIs in use the libquickstream library.  The main
 parts are:
 
-- a filter API **qsfilter.h**: which is used to build a quickstream filter
+- a filter API **filter.h**: which is used to build a quickstream filter
   dynamic shared object filter modules using predeclared functions, one
   required and other optional functions.
-- a stream program API **qsapp.h**: which is used to build programs that run
+- a stream program API **app.h**: which is used to build programs that run
   a quickstream with said filters.
-- the program **quickstream**: which uses *qsapp.h* and libquickstream
+- the program **quickstream**: which uses *app.h* and libquickstream
   library to run a quickstream flow graph with said filters.
 
 

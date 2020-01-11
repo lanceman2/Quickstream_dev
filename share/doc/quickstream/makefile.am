@@ -10,8 +10,8 @@ html_DATA = $(DOX_TARGET)
 topdir = ../../..
 
 DOX_INFILES =\
- $(topdir)/include/qsapp.h\
- $(topdir)/include/qsfilter.h\
+ $(topdir)/include/quickstream/app.h\
+ $(topdir)/include/quickstream/filter.h\
  $(topdir)/bin/quickstream.c\
  mainpage.dox
 

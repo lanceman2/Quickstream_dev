@@ -1,4 +1,4 @@
-#include "../../../../include/qsfilter.h"
+#include "../../../../include/quickstream/filter.h"
 #include "../../../../lib/debug.h"
 
 void help(FILE *f) {
@@ -30,13 +30,13 @@ int input(void *buffers[], const size_t lens[],
     // For output buffering.
     void *buffer = qsGetOutputBuffer(0, OutLen, 0);
 
-    enum QsFilterInputReturn ret = QsFContinue;
+    int ret = 0;
 
     // Put data in the output buffer.
     size_t rd = fread(buffer, 1, OutLen, stdin);
 
     // handle the stream closing.
-    if(feof(stdin)) { ret = QsFFinished; }
+    if(feof(stdin)) { ret = 1; }
 
     if(rd)
         qsOutput(0, rd);

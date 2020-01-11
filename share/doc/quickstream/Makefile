@@ -34,8 +34,8 @@ IMAGES :=\
 DOX_TARGET := html/index.html
 
 DOX_INFILES =\
- $(topdir)/include/qsapp.h\
- $(topdir)/include/qsfilter.h\
+ $(topdir)/include/quickstream/app.h\
+ $(topdir)/include/quickstream/filter.h\
  $(topdir)/bin/quickstream.c\
  mainpage.dox
 
@@ -48,9 +48,9 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 build: $(IMAGES) $(DOX_TARGET)
 
 
-# qsapp.h is a generated file
-$(topdir)/include/qsapp.h: $(topdir)/include/qsapp.h.in
-	cd $(topdir)/include && $(MAKE) qsapp.h
+# app.h is a generated file
+$(topdir)/include/quickstream/app.h: $(topdir)/include/quickstream/app.h.in
+	cd $(topdir)/include/quickstream && $(MAKE) app.h
 
 
 install:

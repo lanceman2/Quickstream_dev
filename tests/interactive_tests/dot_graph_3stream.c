@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "../../include/qsapp.h"
+#include "../../include/quickstream/app.h"
 
 // Turn on spew macros for this file.
 #ifndef SPEW_LEVEL_DEBUG

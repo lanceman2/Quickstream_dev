@@ -118,8 +118,8 @@ AC_SUBST([AM_CPPFLAGS])
 
 AC_CONFIG_FILES(
  makefile
- include/makefile
- include/qsapp.h
+ include/quickstream/makefile
+ include/quickstream/app.h
  lib/makefile
  lib/pkgconfig/quickstream.pc
  bin/makefile

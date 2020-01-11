@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #define QS_FILTER_NAME_CODE
-#include "../../../../../include/qsfilter.h"
+#include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
 #ifdef SPEW_LEVEL_DEBUG

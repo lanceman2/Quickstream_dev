@@ -3,7 +3,7 @@ docdir = share/doc/quickstream
 plugindir = lib/quickstream/plugins/filters
 
 SUBDIRS =\
- include\
+ include/quickstream\
  lib\
  bin\
  $(plugindir)\
@@ -37,7 +37,7 @@ docfiles =\
 #
 quickbuild_makefiles =\
  $(docdir)/Makefile\
- include/Makefile\
+ include/quickstream/Makefile\
  dev_tests/Makefile\
  $(plugindir)/Makefile\
  $(plugindir)/tests/Makefile\

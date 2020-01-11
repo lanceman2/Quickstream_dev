@@ -1,5 +1,0 @@
-
-BUILT_SOURCES = qsapp.h
-
-include_HEADERS = qsapp.h qsfilter.h
-

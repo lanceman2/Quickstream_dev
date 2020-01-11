@@ -1,5 +1,5 @@
 #ifndef __qsapp_h__
-#  error "qsapp.h needs to be included before this file."
+#  error "app.h needs to be included before this file."
 #endif
 
 #ifndef __debug_h__

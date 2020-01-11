@@ -83,7 +83,7 @@ rm -rf autom4te.cache/ m4/
 for dir in .\
  bin\
  lib\
- include\
+ include/quickstream\
  lib/quickstream/plugins/filters\
  lib/quickstream/plugins/filters/tests\
  $docdir ; do
@@ -120,7 +120,7 @@ done
 rm -f\
  bin/quickstream\
  lib/pkgconfig/quickstream.pc\
- include/qsapp.h
+ include/quickstream/app.h
 
 
 

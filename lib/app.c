@@ -15,7 +15,7 @@
 #include <pthread.h>
 
 // The public installed user interfaces:
-#include "../include/qsapp.h"
+#include "../include/quickstream/app.h"
 
 
 // Private interfaces.
