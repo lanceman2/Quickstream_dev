@@ -13,7 +13,15 @@ SUBDIRS +=\
  tests/interactive_tests
 endif
 
-quickbuild.make: 
-	./quickbuild
+
+ifneq ($(wildcard package.make),package.make)
+$(error "First run './quickbuild'")
+endif
+
+ifneq ($(wildcard quickbuild.make),quickbuild.make)
+$(error "First run './quickbuild'")
+endif
+
+
 
 include quickbuild.make

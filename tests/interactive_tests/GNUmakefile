@@ -23,4 +23,4 @@ clean:
 # Nothing in this directory should be installed.
 
 
-include $(ROOT)/config.make
+-include $(ROOT)/config.make

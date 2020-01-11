@@ -1,5 +1,5 @@
 bin_PROGRAMS = quickstream
 
-quickstream_SOURCES = quickstream.c
+quickstream_SOURCES = quickstream.c getOpt.c getOpt.h
 quickstream_LDADD = $(top_builddir)/lib/libquickstream.la
 

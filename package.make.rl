@@ -1,4 +1,4 @@
-# The quickbuild.make makefile will include this every time make runs.
+# The quickbuild.make Makefile will include this every time make runs.
 #
 # This is quickstream specific configuration for the quickbuild build
 # system.  This should not contain any user installation configuration.

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This file is part of the quickbuild software package.
+# This file was part of the quickbuild software package.
 # 
 # quickbuild is free software that is distributed under the free software
 # foundation's GNU Affero General Public License (AGPL) version 3.
@@ -41,13 +41,11 @@ function usage()
 
   Usage: $0
 
-  This bootstrap script downloads and compresses a make file
+  This script downloads and compresses a make file
   from the web via url:
 
      $url
 
-  We call it bootstrap because you need this make file before
-  you can configure and make this package.
 
 EOF
     exit 1
@@ -62,19 +60,27 @@ set -ex
 # Go to the directory there this script is.
 cd $(dirname ${BASH_SOURCE[0]})
 
+
+./RELEASE.bash package.make.rl > package.make
+
+[ -e config.make ] || cp config.make.example config.make
+
+
+
 if [ -z "$*" ] && [ -e quickbuild.make ] ; then
     set +x
     cat <<EOF
 
   The file quickbuild.make exists.
-  If you wish to regenerate it remove it first.
-  Or run
-
-      $0 -f
 
 EOF
-    exit 1
+    exit
 fi
+
+
+############################################################
+# The rest of this script is for creating quickbuild.make
+############################################################
 
 
 set -e
@@ -110,6 +116,4 @@ sed quickbuild.make.org -e 's/^\s*\#.*$//g' -e '/^$/d' >> quickbuild.make.tmp
 rm quickbuild.make.org
 mv quickbuild.make.tmp quickbuild.make
 
-./RELEASE.bash package.make.rl > package.make
 
-[ -e config.make ] || cp config.make.example config.make

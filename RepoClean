@@ -26,13 +26,13 @@ if [ -n "$1" ] && [ "$1" != "-x" ] ; then
 
          OPTIONS
 
-       -x    remove the automatically downloaded file quickbuild.make
-             and package.make too.
+       -x    remove the automatically downloaded files too.
 
 
 EOF
     exit 1
 fi
+
 
 set -ex
 
@@ -43,9 +43,8 @@ cd $(dirname ${BASH_SOURCE[0]})
 # The extra clean option.  quickbuild.make is downloaded.
 #
 # We don't remove it by default, without the -x extra clean command-line
-# option.  package.make is generated from running the "quickbuild"
-# download script.
-[ -n "$1" ] && rm -f quickbuild.make package.make
+# option:
+[ -n "$1" ] && rm -f quickbuild.make dev_tests/scc-snapshots-6.80.tgz
 
 
 for f in NEWS README AUTHORS ChangeLog ; do
@@ -138,5 +137,35 @@ rm -f\
  dev_tests/run2\
  dev_tests/test_qsError\
  quickbuild.make.org\
- quickbuild.make.tmp
+ quickbuild.make.tmp\
+ config.make\
+ package.make
 
+
+# Remove some files from dev_test/
+
+cd dev_tests
+rm -rf\
+ qb_build/\
+ dev_tests/scc-snapshots-6.80_src/
+rm -f\
+ *.tmp\
+ assert\
+ getOpts\
+ run\
+ run2\
+ test_qsError
+cd -
+
+# Remove some files from tests/
+
+rm -rf tests/qb_build/
+rm -f tests/*.tmp
+
+
+# Remove some files from tests/interactive_tests/
+
+cd  tests/interactive_tests/
+rm -rf qb_build/
+rm -f *.tmp *.o dot_graph_3stream dot_graph_00
+cd -
