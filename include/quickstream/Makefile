@@ -10,4 +10,4 @@ IN_VARS := PACKAGE_VERSION
 
 
 
-include ../quickbuild.make
+include ../../quickbuild.make
