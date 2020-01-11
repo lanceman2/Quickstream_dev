@@ -3,6 +3,7 @@
 scc_ver=6.80
 scc_tag="release/${scc_ver}"
 scc_package=scc-snapshots-${scc_ver}
+scc_srcdir=${scc_package}_src
 sha512sum=
 
 case ${scc_tag} in
@@ -22,7 +23,7 @@ dir="$(dirname $0)"
 cd "$dir"
 dir="$PWD"
 
-stripcmt="$dir/$scc_package/scc"
+stripcmt="$dir/$scc_srcdir/scc"
 
 
 if [ ! -e "$stripcmt" ] ; then
@@ -40,9 +41,9 @@ if [ ! -e "$stripcmt" ] ; then
         sha512sum ${scc_package}.tgz
     fi
 
-    rm -rf $scc_package
-    mkdir $scc_package
-    cd $scc_package
+    rm -rf $scc_srcdir
+    mkdir $scc_srcdir
+    cd $scc_srcdir
     tar --strip-components=1 -xzf ../${scc_package}.tgz
     make
     cd ..
@@ -71,4 +72,3 @@ else
     echo -e "with comments and blank lines.\n"
     spewCode | wc -l
 fi
-

@@ -5,5 +5,5 @@ install:
 debug:
 help:
 
-clean:
+clean cleaner:
 	rm -f *.tmp

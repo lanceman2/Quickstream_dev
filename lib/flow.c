@@ -13,9 +13,12 @@
 
 
 
-// Transfer job from the filter->queue to the stream job queue, then
-// transfer a job from filter unused to filter queue, and then clean the
-// filter queue job args.
+// 1. Transfer job from the filter->queue to the stream job queue, then
+//
+// 2. transfer a job from filter unused to filter queue (to replace the
+// one you just moved), and then
+//
+// 3. clean the filter queue job args.
 //
 // We must have a stream->mutex lock to call this.
 static inline
@@ -203,7 +206,7 @@ void *RunningWorkerThread(struct QsStream *s) {
 
         // Put it in this thread specific data so we can find it in the
         // filter when this thread runs things like qsAdvanceInput(),
-        // qsOutput(), and other filter.h API functions.
+        // qsOutput(), and other quickstream/filter.h functions.
 
         CHECK(pthread_setspecific(_qsKey, j));
         struct QsFilter *f = j->filter;

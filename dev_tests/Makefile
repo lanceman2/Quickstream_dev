@@ -41,8 +41,8 @@ test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 CLEANFILES := $(wildcard *.tmp)
 
 
-CLEANERFILES := $(wildcard scc-snapshots-*)
-
+CLEANERFILES := $(wildcard scc-snapshots-*.tgz)
+CLEANERDIRS := $(wildcard scc-snapshots-*_src)
 
 
 include ../quickbuild.make

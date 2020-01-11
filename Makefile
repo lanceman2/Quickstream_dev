@@ -4,9 +4,14 @@ SUBDIRS :=\
  lib\
  bin\
  lib/quickstream/plugins/filters\
- share/doc/quickstream\
+ share/doc/quickstream
+
+ifeq ($(strip $(subst cleaner, clean, $(MAKECMDGOALS))),clean)
+SUBDIRS +=\
  dev_tests\
- tests
+ tests\
+ tests/interactive_tests
+endif
 
 quickbuild.make: 
 	./quickbuild
