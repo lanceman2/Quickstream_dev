@@ -1,32 +1,33 @@
 #!/bin/bash
 
 #
-# This script deletes generated files that are the difference between a
-# repository checkout and a tarball.
+# This script deletes generated files.
 #
-#
-# This script should not delete any user custom files.
+# This script should not delete any user custom files so long as the file
+# names are not matching files and wild card expressions in this script.
 #
 
 
 if [ -n "$1" ] && [ "$1" != "-x" ] ; then
     cat << EOF
 
-    Usage: $0 [-x]
+  Usage: $0 [-x]|[-h|--help]
 
-    Remove generated files; that's all files that are not checked into
-    a repository.  This will not remove users files that are not built
-    from the scripts here in.  So ya, this will not delete your notes,
-    assuming you don't put them in a autotools .lib/ directory or
-    something like that.
+    Remove generated files; that's all generated files that are not
+  checked into a repository.  This will not remove users files that are
+  not built from the scripts here in.  So ya, this will not delete your
+  notes, assuming you don't put them in a autotools .lib/ directory or
+  something like that.
 
     If you wish to remove files needed to bring this source to a fresh
-    tarball state run "make distclean".
+  tarball state run "make distclean".
 
 
-         OPTIONS
+            OPTIONS
 
-       -x    remove the automatically downloaded files too.
+       -h|--h   print this help and exit
+
+       -x       remove the automatically downloaded files too
 
 
 EOF
@@ -165,7 +166,7 @@ rm -f tests/*.tmp
 
 # Remove some files from tests/interactive_tests/
 
-cd  tests/interactive_tests/
+cd tests/interactive_tests/
 rm -rf qb_build/
 rm -f *.tmp *.o dot_graph_3stream dot_graph_00
 cd -

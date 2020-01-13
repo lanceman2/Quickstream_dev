@@ -170,7 +170,7 @@ void *RunningWorkerThread(struct QsStream *s) {
     //
     while(living) {
 
-        // Get the next job from the stream job queue.
+        // Get the next job (j) from the stream job queue.
         //
         struct QsJob *j = StreamQToWorker(s);
 
@@ -205,19 +205,21 @@ void *RunningWorkerThread(struct QsStream *s) {
         // queue, filter queue, or filter unused stack list.
 
         // Put it in this thread specific data so we can find it in the
-        // filter when this thread runs things like qsAdvanceInput(),
-        // qsOutput(), and other quickstream/filter.h functions.
+        // filter input() when this thread runs things like
+        // qsAdvanceInput(), qsOutput(), and other quickstream/filter.h
+        // functions.
 
         CHECK(pthread_setspecific(_qsKey, j));
         struct QsFilter *f = j->filter;
         DASSERT(f->numThreads < f->maxThreads);
 
-        // Set the thread counters for this filter.  Have a stream mutex
-        // lock for this:
+        // Set the thread counters for this filter.  If this counter wraps
+        // through 0 it's okay.  We have a stream mutex lock for this:
         ++f->numThreads;
 
         // The next thread number is always increasing. Have a stream
-        // mutex lock for reading and changing f->nextThreadNum.
+        // mutex lock for reading and changing f->nextThreadNum.  If this
+        // counter wraps through 0 it's okay.
         j->threadNum = f->nextThreadNum++;
 
         // j->threadNum is now letting us know the order of the thread
