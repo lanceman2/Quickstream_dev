@@ -5,8 +5,10 @@ PREFIX = /usr/local/encap/quickstream
 #
 # SPEW_LEVEL_* controls macros in lib/debug.h
 #
-# The following may be defined; defining them turn on the following CPP
-# macro functions that are in debug.h -> libquickstream.so
+# The following may be defined; defining them turns on the following CPP
+# macro functions that are in debug.h which is source for
+# libquickstream.so
+#
 #
 # DEBUG             -->  DASSERT()
 #
@@ -20,10 +22,10 @@ PREFIX = /usr/local/encap/quickstream
 
 
 # Example:
-#CPPFLAGS := -DDEBUG -DSPEW_LEVEL_NOTICE
+#CPPFLAGS := -DSPEW_LEVEL_NOTICE
 CPPFLAGS := -DDEBUG -DSPEW_LEVEL_DEBUG
 
 
-
+# C compiler option flags
 CFLAGS := -g -Wall -Werror
 
