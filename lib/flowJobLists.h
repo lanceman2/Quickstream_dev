@@ -33,11 +33,15 @@
 
 
 
+// Holding the stream mutex lock is required for all 3 job list transfer
+// functions.
+
+
 
 // 1. Transfer job from the filter->stage to the stream job queue, then
 //
 // 2. transfer a job from filter unused to filter stage (to replace the
-// one you just moved), and then
+//    one you just moved), and then
 //
 // 3. clean the filter stage job args.
 //
@@ -280,14 +284,14 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
 }
 
 
-//static inline
+static inline
 void CheckLockOutput(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_lock(f->mutex));
 }
 
 
-//static inline
+static inline
 void CheckUnlockOutput(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_unlock(f->mutex));
