@@ -444,6 +444,14 @@ struct QsFilter {
 
     ///////////////// STREAM MUTEX GROUP ////////////////////////////////
     //
+    //
+    //   See the "job flow graph" by running (bash command-line):
+    //
+    //
+    //      display ../share/doc/quickstream/jobFlow.dot
+    //
+    //
+    //
     // All jobs in this filter are in one of these three job lists, or are
     // running with threads in the stream.
     //
@@ -501,6 +509,11 @@ struct QsFilter {
     // may be removed from any point in the line, just because they had
     // faster worker threads and their was nothing causing the job to stay
     // in order, like not having input or output data accessed.
+    // The filter's working thread queue is needed so we know the order
+    // of the in which the working thread will access the buffers.  If
+    // this order was not needed to be known we would not need this queue
+    // to exist, and the thread's stack would hold the job until it puts
+    // it into the filter's unused stack.
     uint32_t numWorkingThreads; // number of threads working for the filter
     struct QsJob *workingFirst; // First in thread working queue
     struct QsJob *workingLast;  // Last in thread working queue
