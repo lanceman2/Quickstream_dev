@@ -124,11 +124,17 @@ void *RunningWorkerThread(struct QsStream *s) {
                         f->name, ret);
         }
         // MORE CODE HERE ....
-        
+
         // FILTER LOCK  -- does nothing if not a multi-threaded filter
         CheckLockOutput(f);
 
+        for(uint32_t i=0; i<f->numInputs; ++i) {
 
+            size_t advanceLen = j->advanceLens[i];
+            if(advanceLen)
+                DSPEW("%zu", advanceLen);
+
+        }
 
 
         // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
