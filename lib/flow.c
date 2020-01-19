@@ -42,8 +42,12 @@ void *RunningWorkerThread(struct QsStream *s) {
 
 #ifdef SPEW_LEVEL_DEBUG
     if(s->numThreads == s->maxThreads)
-        DSPEW("The maximum, %" PRIu32 " threads are running.",
+        DSPEW("The maximum, %" PRIu32 " worker threads are running.",
                 s->numThreads);
+    else
+        DSPEW("The %" PRIu32 " (out of %" PRIu32
+                " worker threads are running.",
+                s->numThreads, s->maxThreads);
 #endif
 
 
@@ -63,8 +67,9 @@ void *RunningWorkerThread(struct QsStream *s) {
             // We count ourselves in the ranks of the unemployed.
             ++s->numIdleThreads;
 
-            DSPEW("Now %" PRIu32 "thread(s) waiting for work",
-                    s->numIdleThreads);
+            DSPEW("Now %" PRIu32 " out of %" PRIu32
+                    "thread(s) waiting for work",
+                    s->numIdleThreads, s->numThreads);
 
             // STREAM UNLOCK
             // wait
@@ -74,14 +79,15 @@ void *RunningWorkerThread(struct QsStream *s) {
             // Remove ourselves from the numIdleThreads.
             --s->numIdleThreads;
 
+            DSPEW("Now %" PRIu32 " out of %" PRIu32
+                    "thread(s) waiting for work",
+                    s->numIdleThreads, s->numThreads);
+
             // Because there can be more than one thread woken by a
             // signal, we may still not have a job available for this
             // worker.  Such is life for the masses.
             continue;
         }
-
-        DSPEW("Now %" PRIu32 "thread(s) waiting for work",
-                s->numIdleThreads);
 
         struct QsFilter *f;
         f = j->filter;
@@ -90,8 +96,7 @@ void *RunningWorkerThread(struct QsStream *s) {
         // This worker has a new job.
         //
         // This thread can now read and write to this job without a mutex.
-        // No other thread can access this job while it is not in a stream
-        // queue, filter queue, or filter unused stack list.
+        // No other thread will access this job while it is here.
 
         // Put it in this thread specific data so we can find it in the
         // filter input() when this thread runs things like
@@ -104,29 +109,44 @@ void *RunningWorkerThread(struct QsStream *s) {
         // STREAM UNLOCK
         CHECK(pthread_mutex_unlock(&s->mutex));
 
+
+        //////////////////////// call input()
+        //
         int ret = f->input(j->inputBuffers, j->inputLens,
                 j->isFlushing, f->numInputs, f->numOutputs);
 
 
-        // Push jobs to the stream queue.
-
-
+        // Now handle the job arguments and returned value feedback.
 
         if(ret) {
             if(ret < 0)
                 WARN("filter \"%s\" input() returned error code %d",
                         f->name, ret);
-                
-
         }
+        // MORE CODE HERE ....
+        
+        // FILTER LOCK  -- does nothing if not a multi-threaded filter
+        CheckLockOutput(f);
+
+
+
+
+        // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
+        CheckUnlockOutput(f);
 
 
         // STREAM LOCK
         CHECK(pthread_mutex_lock(&s->mutex));
 
-        // Unset the thread counters for this filter.  This worker no
-        // longer has the job we just finished.
-        --f->numWorkingThreads;
+
+        // Now: Push jobs to the stream queue.  The stream queue
+        // distributes jobs to worker threads that are looking for work.
+        // We may need to vary how this function traverses the stream
+        // filter graph.  It may queue-up jobs for any adjacent filters,
+        // depending on how working threads are currently distributed
+        // across these adjacent filters.
+        //
+        PushJobsToStreamQueue(s, f);
 
 
         // Move this job structure to the filter unused stack.
@@ -180,7 +200,7 @@ void FeedJobToWorkerThread(struct QsStream *s, struct QsFilter *f) {
     // this case, this being the first action on a source filter, there
     // will be jobs available to move from filter unused to filter
     // stage.
-    FilterStageToStreamQAndSoOn(s, f->stage);
+    FilterStageToStreamQAndSoOn(s, f);
 
 
     if(s->numThreads != s->maxThreads) {

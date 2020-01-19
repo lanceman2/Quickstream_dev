@@ -491,12 +491,12 @@ struct QsFilter {
     // lens, and isFlushing will be allocated on the stack that is running
     // this flow.
     //
-    // We exclude the case maxThreads=0 and use maxThreads=1.
+    // We exclude the case (filter) maxThreads=0 and use maxThreads=1.
     //
     // At flow time, array "jobs" has length maxThreads+1 unless the
     // stream total maxThreads + 1 is less than that.  See
     // GetNumAllocJobsForFilter() in this file.  The + 1 is from needing
-    // one the filters jobs in the stage at all times.  It's filter->stage.
+    // one the filters jobs in the filter stage at all times.
     //
     uint32_t maxThreads; // per this filter.
     //
@@ -514,6 +514,10 @@ struct QsFilter {
     // this order was not needed to be known we would not need this queue
     // to exist, and the thread's stack would hold the job until it puts
     // it into the filter's unused stack.
+    //
+    // Note: filter maxThreads is the maximum number of working threads so
+    // long as it is less than the streams maxThreads.
+    //
     uint32_t numWorkingThreads; // number of threads working for the filter
     struct QsJob *workingFirst; // First in thread working queue
     struct QsJob *workingLast;  // Last in thread working queue
