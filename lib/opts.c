@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <stdlib.h> 
 
-#include "./qs.h"
 #include "./debug.h"
+#include "./qs.h"
 
 
 

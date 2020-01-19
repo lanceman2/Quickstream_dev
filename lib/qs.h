@@ -261,7 +261,9 @@ struct QsStream {
     // data structs are setup at startup.  The QsFilter data structures
     // are used when the stream is running.
     //
-    // tallied filter connections:
+    // qsStreamConnectFilters() is not called at flow time.
+    //
+    // tallied filter connections from qsStreamConnectFilters():
     struct QsConnection {
 
         struct QsFilter *from; // from filter
@@ -322,18 +324,11 @@ struct QsFilter {
         //
         // to put in filter unused stack or stream queue
         struct QsJob *next;
+        // prev is for when we need this in the filter workingQueue
+        // because the workingQueue can have jobs finish out of order some
+        // times.
+        struct QsJob *prev;
         //
-        // The thread working on a given filter have an ID that is from a
-        // sequence counter.  This threadNum (ID) is gotten from
-        // filter->nextThreadNum++.  So the lowest numbered thread job for
-        // this filter is the oldest, except when the counter wraps
-        // through 0.  So really the oldest job is just the first in the
-        // threadNum count sequence, and we must use filter->nextThreadNum
-        // - filter->numThreads to get the oldest job threadNum.
-        //
-        // Hence, threadNum is respect to the filter, so that we can order
-        // the threads with the buffers.
-        uint32_t threadNum;
         //
         /////////////////////////////////////////////////////////////////
 
@@ -449,24 +444,33 @@ struct QsFilter {
 
     ///////////////// STREAM MUTEX GROUP ////////////////////////////////
     //
-    // All jobs in this filter are in one of these two job lists, or are
+    // All jobs in this filter are in one of these three job lists, or are
     // running with threads in the stream.
+    //
+    // 1. stage - the one that is accumulating input() arguments.
+    //
+    // 2. working queue - 0 to maxThreads that can be working on the jobs
+    //
+    // 3. unused - a stack of job memory, for when the memory is not used
+    //             in stage or working queue.
+    //
+    //  maxThreads = number in working queue + number in unused queue.
     //
     // When a working thread finishes a job it is this now the "finished
     // worker" thread that will put the job into the filters unused stack.
     // This guarantees that the worker thread can access the job in the
     // filter input() call without a mutex lock and without concern for
-    // memory corruption.  The pointer to this "job" is a thread specific
-    // attribute.
+    // memory corruption.  The "job" is a thread specific attribute while
+    // the job is being accessed by a worker thread.
     //
-    // Queue always points to one job.  The job may have no input buffer
+    // stage always points to one job.  The job may have no input buffer
     // data or it may have input buffer data.  There can only be
     // maxThreads threads with jobs; so we have maxThreads jobs and that
-    // leaves at least one in the queue, and if there are less than
-    // maxThreads with jobs, then there will be left over jobs in
-    // "unused".
+    // leaves at least one in the stage pointer, and if there are less
+    // than maxThreads with jobs, then there will be left over jobs in
+    // "unused" if we are not at our working thread limit of maxThreads.
     //
-    struct QsJob *queue;  // queue of one job that is waiting.
+    struct QsJob *stage;  // queue of one job that is being built.
     struct QsJob *unused; // stack of 0 or more unused jobs.
     //
     // There can be maxThreads calling input() using maxThreads jobs for
@@ -481,25 +485,26 @@ struct QsFilter {
     //
     // We exclude the case maxThreads=0 and use maxThreads=1.
     //
-    // At flow time, array "jobs" has length maxThreads+1.
+    // At flow time, array "jobs" has length maxThreads+1 unless the
+    // stream total maxThreads + 1 is less than that.  See
+    // GetNumAllocJobsForFilter() in this file.  The + 1 is from needing
+    // one the filters jobs in the stage at all times.  It's filter->stage.
     //
     uint32_t maxThreads; // per this filter.
     //
     //
-    // numThreads and nextThreadNum are accessed with stream mutex locked.
+    // numWorkingThreads, workingLast, and workingFirst are accessed
+    // with stream mutex locked.  They make the data for the filters
+    // working queue.  numWorkingThreads is the number of threads working,
+    // calling filter input(), and is the number in the working thread
+    // (job) queue.  This working queue is doubly linked because jobs
+    // may be removed from any point in the line, just because they had
+    // faster worker threads and their was nothing causing the job to stay
+    // in order, like not having input or output data accessed.
+    uint32_t numWorkingThreads; // number of threads working for the filter
+    struct QsJob *workingFirst; // First in thread working queue
+    struct QsJob *workingLast;  // Last in thread working queue
     //
-    // numThreads is the number of threads currently calling
-    // filter->input().  nextThreadNum is the thread number of the next
-    // thread to call filter->input().  The leading thread number is then
-    // nextThreadNum - numThreads.  Note this works when these numbers
-    // wrap through zero.  When a new thread calls filter->input() it's
-    // thread number will be nextThreadNum and then we add 1 to
-    // nextThreadNum.
-    //
-    // We must have stream mutex locked to read or write numThreads or
-    // nextThreadNum.
-    uint32_t numThreads;
-    uint32_t nextThreadNum;
     //
     /////////////////////////////////////////////////////////////////////
  
@@ -682,4 +687,28 @@ void StreamSetFilterMarks(struct QsStream *s, bool val) {
         s->connections[i].to->mark = val;
         s->connections[i].from->mark = val;
     }
+}
+
+
+// This returns the number of jobs that will be allocated for a filter
+// after filter start() and before filter stop().
+//
+// Note: It depends on the maxThreads in the filter and the maxThreads in
+// the whole stream, depending on which is larger.
+//
+// We do this instead of; adding another int type in the data structures,
+// or repeating the code block in this function.
+static inline
+uint32_t
+GetNumAllocJobsForFilter(struct QsStream *s, struct QsFilter *f) {
+    DASSERT(s);
+    DASSERT(f);
+    DASSERT(s == f->stream);
+
+    uint32_t numJobs = f->maxThreads + 1;
+    if(s->maxThreads && numJobs > f->stream->maxThreads + 1)
+        // We do not need to have more jobs than this:
+        numJobs = f->stream->maxThreads + 1;
+
+    return numJobs;
 }

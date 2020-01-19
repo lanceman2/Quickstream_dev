@@ -7,8 +7,8 @@
 #include "../include/quickstream/filter.h"
 
 // Private interfaces.
-#include "./qs.h"
 #include "./debug.h"
+#include "./qs.h"
 
 
 
@@ -260,7 +260,7 @@ void FreeFilterRunResources(struct QsFilter *f) {
         DASSERT(f->stream);
         DASSERT(f->stream->maxThreads);
 
-        uint32_t numJobs = f->maxThreads + 1;
+        uint32_t numJobs = GetNumAllocJobsForFilter(f->stream, f);
 
         if(f->numInputs) {
             for(uint32_t i=0; i<numJobs; ++i) {
@@ -301,10 +301,11 @@ void FreeFilterRunResources(struct QsFilter *f) {
         free(f->jobs);
 
         f->jobs = 0;
-        f->queue = 0;
+        f->stage = 0;
         f->unused = 0;
-        f->numThreads = 0;
-        f->nextThreadNum = 0;
+        f->numWorkingThreads = 0;
+        f->workingFirst = 0;
+        f->workingLast = 0;
     }
 
     if(f->mutex) {

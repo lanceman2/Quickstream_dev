@@ -6,6 +6,28 @@ scc_package=scc-snapshots-${scc_ver}
 scc_srcdir=${scc_package}_src
 sha512sum=
 
+
+if [ -n "$1" ] && [ "$1" != "-w" ] ; then
+    cat << EOF
+
+  Usage: $(basename $0) [-w]|[-h|--help]
+
+    Print the number of lines of C code in this package.
+
+
+    --------------------------- OPTIONS ------------------------------------
+
+        -h|--help  print this help and exit 1.
+
+        -w          with comments and blank lines.  Otherwise it prints the
+                    number of lines of C code including comments and blank
+                    lines.
+
+EOF
+
+    exit 1
+fi
+
 case ${scc_tag} in
 
     release/6.80)

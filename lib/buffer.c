@@ -9,9 +9,9 @@
 #include <alloca.h>
 #include <pthread.h>
 
+#include "./debug.h"
 #include "./qs.h"
 #include "../include/quickstream/filter.h"
-#include "./debug.h"
 
 
 // Allocate all buffer structures for all filters in the stream.
