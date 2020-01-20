@@ -15,6 +15,9 @@ CHECK_FILES :=\
 
 # This ifeq mess brakes the make tab completion.
 ifeq (1,0) # So, if this out for now.
+# this ifeq stuff makes it so we know why make fails when
+# we run make in this directory without building libquickstream and
+# include/quickstream/app.h.
 ifeq ($(strip $(MAKELEVEL)),0)
 # The user is running make from this directory.
 ifneq ($(strip $(patsubst %clean, clean, $(patsubst clean%, clean, $(MAKECMDGOALS)))),clean)
