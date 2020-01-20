@@ -3,6 +3,36 @@
 
 topdir := ../../..
 
+QSLIBS := -L$(topdir)/lib -lquickstream -Wl,-rpath=\$$ORIGIN/$(topdir)/lib
+
+# If make was not run in the upper source directories this make file will
+# not work correctly.
+CHECK_FILES :=\
+ $(strip\
+ $(topdir)/lib/libquickstream.so\
+ $(topdir)/include/quickstream/app.h)
+
+
+# This ifeq mess brakes the make tab completion.
+ifeq (1,0) # So, if this out for now.
+ifeq ($(strip $(MAKELEVEL)),0)
+# The user is running make from this directory.
+ifneq ($(strip $(patsubst %clean, clean, $(patsubst clean%, clean, $(MAKECMDGOALS)))),clean)
+# The user is not running 'make clean', 'make cleaner',
+# or 'make distclean'.
+ifneq ($(strip $(wildcard $(CHECK_FILES))),$(CHECK_FILES))
+# The CHECK_FILES are not build in the upper directories.
+$(error $(CHECK_FILES) have not been made yet, run 'make -C ../../..')
+endif
+endif
+endif
+endif
+
+
+
+BUILD_NO_INSTALL := quickstream_complex_dot quickstream_simple_dot
+quickstream_complex_dot_LDADD := $(QSLIBS)
+quickstream_simple_dot_LDADD := $(QSLIBS)
 
 
 # WEB_DOCS_TARGET_DIR directory may be a git clone of
@@ -17,7 +47,11 @@ topdir := ../../..
 WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream.doc
 
 
-DOT := $(wildcard *.dot)
+DOT := $(sort\
+ $(wildcard *.dot)\
+ quickstream_complex.dot\
+ quickstream_simple.dot)
+
 
 WEB_DOCS :=\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
@@ -25,10 +59,12 @@ WEB_DOCS :=\
 
 
 
-
 IMAGES :=\
+ $(sort\
+ quickstream_complex.dot\
+ quickstream_simple.dot\
  $(patsubst %.dot, images/%.png, $(DOT))\
- $(patsubst %.dot, images/%.svg, $(DOT))
+ $(patsubst %.dot, images/%.svg, $(DOT)))
 
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET := html/index.html
@@ -42,10 +78,24 @@ DOX_INFILES =\
 INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 
 
+
+
 -include ../../config.make
 
 
 build: $(IMAGES) $(DOX_TARGET)
+
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_NO_INSTALL): %:%.o
+	$(CC) $(CFLAGS) -o $@ $< $($@_LDADD)
+
+quickstream_complex.dot: quickstream_complex_dot
+	./$< > $@
+quickstream_simple.dot: quickstream_simple_dot
+	./$< > $@
 
 
 # app.h is a generated file
@@ -104,7 +154,7 @@ show display: $(DOT)
 
 
 clean:
-	rm -f $(IMAGES) Doxyfile Doxyfile.tmp
+	rm -f $(IMAGES) Doxyfile Doxyfile.tmp $(BUILD_NO_INSTALL) *.o
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search

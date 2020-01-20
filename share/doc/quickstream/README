@@ -1,2 +1,4 @@
 This directory is for generating quickstream documention
 
+To see a bunch of dot graph images run 'make display'.
+

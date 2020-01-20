@@ -11,7 +11,7 @@ quickstream is the next generation of a stream flow graph API that we
 wrote a year or more ago.  The old stream flow graph API was the subset of
 larger project, with a larger scope.  I consider quickstream a smaller
 more refined spin-off project.  I hope to give quickstream more polish
-then it's previous generation.
+than it's previous generation.
 
 
 ## Development Status
@@ -262,8 +262,7 @@ quickstream provides the buffering between module filters in the flow.
 The filters may copy the input buffer and then send different data to it's
 outputs, or if the output buffers are or the same size as the input
 buffers, it may modify an input buffer and send it through to an output
-without copying any data were by eliminating an expensive copy
-operation.
+without copying any data whereby eliminating an expensive copy operation.
 
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
@@ -284,13 +283,12 @@ to use to do a particular task, the choose should be obvious.
 
 The intent is to construct a flow stream of filters.  The filters do not
 necessarily concern themselves with their neighboring filters; the filters
-just read input from input channels and write output to output channels,
-not necessarily knowing what is writing to them or what is reading from
-them; at least that is the mode of operation at this protocol (quickstream
-API) level.  The user may add more structure to that if they need to.
-It's like the other UNIX abstractions like sockets, file streams, and
-pipes, in that the type of data is of no concern in this quickstream
-APIs.
+just read input from input ports and write output to output ports, not
+necessarily knowing what is writing to them or what is reading from them;
+at least that is the mode of operation at this protocol (quickstream API)
+level.  The user may add more structure to that if they need to.  It's
+like the other UNIX abstractions like sockets, file streams, and pipes, in
+that the type of data is of no concern in this quickstream APIs.
 
 
 ## Terminology
