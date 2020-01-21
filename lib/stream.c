@@ -295,6 +295,23 @@ void FreeFilterRunResources(struct QsFilter *f) {
             free(f->readers);
         }
 
+
+        if(f->numOutputs) {
+            for(uint32_t i=0; i<numJobs; ++i) {
+
+                // Free the input() arguments:
+                struct QsJob *job = f->jobs + i;
+
+                DASSERT(job->outputLens);
+#ifdef DEBUG
+                memset(job->outputLens, 0,
+                        f->numOutputs*sizeof(*job->outputLens));
+#endif
+                free(job->outputLens);
+            }
+        }
+
+
 #ifdef DEBUG
         memset(f->jobs, 0, numJobs*sizeof(*f->jobs));
 #endif

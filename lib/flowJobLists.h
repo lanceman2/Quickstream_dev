@@ -48,6 +48,10 @@
 // minimal.
 
 
+// The function that a worker thread calls and runs for it's entire life.
+extern void *RunningWorkerThread(struct QsStream *s);
+
+
 
 // 1. Transfer job from the filter->stage to the stream job queue, then
 //
@@ -324,32 +328,14 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
 
 
 static inline
-void CheckLockOutput(struct QsFilter *f) {
+void CheckLockFilter(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_lock(f->mutex));
 }
 
 
 static inline
-void CheckUnlockOutput(struct QsFilter *f) {
+void CheckUnlockFilter(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_unlock(f->mutex));
-}
-
-
-// This is called just after filter input() by the working thread.
-//
-// We may need to vary how this function traverses the stream filter
-// graph.  It may queue-up jobs for any adjacent filters, depending on how
-// working threads are currently distributed across these adjacent
-// filters.  Outputs from and Inputs into this filter, f, trigger queuing
-// jobs into the adjacent (input and output) filters.
-//
-// We must have a stream->mutex lock to call this.
-static inline
-void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
-
-
-
-
 }

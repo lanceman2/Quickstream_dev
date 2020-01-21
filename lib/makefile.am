@@ -11,6 +11,7 @@ libquickstream_la_SOURCES =\
  buffer.c\
  flow.c\
  makeRingBuffer.c\
+ streamLaunch.c\
  debug.h\
  filterList.h\
  GetPath.h\

@@ -32,7 +32,8 @@
 // than once.
 //
 // CHECK() is not a debugging thing; it's inserting the (x) code every
-// time.  And the same goes for ASSERT().
+// time.  And the same goes for ASSERT(); ASSERT() is not a debugging
+// thing either.
 //
 #define CHECK(x) \
     do { \
@@ -287,8 +288,8 @@ struct QsStream {
 // removed from the previous stream; so ya, a filter can be only in one
 // stream at a time.  When finished with a filter, the filter is unloaded
 // by its' app.  quickstream users can write filters using
-// include/quickstream/filter.h.  The quickstream software package also comes with a
-// large selection of filters.
+// include/quickstream/filter.h.  The quickstream software package also
+// comes with a large selection of filters.
 //
 struct QsFilter {
 
@@ -352,7 +353,9 @@ struct QsFilter {
         // input buffers, indexed by input port number.
         size_t *advanceLens; // allocated after start and freed at stop
         //
-
+        // outputLens from qsOuput() and qsGetBuffer() calls from in
+        // filter input().   Length of this array is filter numOutputs.
+        size_t *outputLens; // amount output was advanced in input() call.
 
         // This will be the pthread_getspecific() data for each flow
         // thread.  Each thread just calls the filter (QsFilter) input()
