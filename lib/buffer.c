@@ -168,9 +168,11 @@ void MapRingBuffers(struct QsFilter *f) {
         DASSERT(output->numReaders);
         DASSERT(output->readers);
 
-        for(uint32_t j=0; j<output->numReaders; ++j)
+        for(uint32_t j=0; j<output->numReaders; ++j) {
             // Initialize the readers
             output->readers[j].readPtr = output->buffer->mem;
+            output->readers[j].buffer = output->buffer;
+        }
     }
 
 
@@ -270,6 +272,23 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len) {
 
 void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
 
+    // We only call this in the main thread in start().
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    ASSERT(_qsCurrentFilter, "We are not starting");
+    DASSERT(_qsCurrentFilter->stream);
+    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
+            "We are not starting");
+    DASSERT(_qsCurrentFilter->numInputs, "Filter \"%s\" has no inputs",
+            _qsCurrentFilter->name);
+    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
+            "We are stopping");
+    // This would be a user error.
+    ASSERT(inputPortNum > _qsCurrentFilter->numInputs);
+
+    DASSERT(_qsCurrentFilter->readers);
+
+
+    _qsCurrentFilter->readers[inputPortNum]->maxRead = len;
 }
 
 
@@ -281,12 +300,15 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
 //
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
+    // We only call this in the main thread in start().
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(_qsCurrentFilter);
+    ASSERT(_qsCurrentFilter, "We are not starting");
     ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
     ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
             "We are not starting");
     DASSERT(_qsCurrentFilter->numOutputs);
+    // This would be a user error.
+    ASSERT(outputPortNum < _qsCurrentFilter->numOutputs);
     DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
             "We are stopping");
 

@@ -40,11 +40,11 @@
 // The order that the working threads traverse the stream filter graph is
 // something that could be variable and very important.
 
-// By writing this code in a somewhat agile matter, it would appear that
+// By writing this code in a somewhat agile manner, it would appear that
 // we have found that these job lists are an emergent propriety of the
 // code.  We only required that the threads be able to move from one
 // filter to the next, that we use no allocations as the working threads
-// moved from filter to filter, and the code and data structures be
+// move from filter to filter, and the code and data structures be
 // minimal.
 
 
@@ -337,13 +337,19 @@ void CheckUnlockOutput(struct QsFilter *f) {
 }
 
 
-
+// This is called just after filter input() by the working thread.
+//
 // We may need to vary how this function traverses the stream filter
 // graph.  It may queue-up jobs for any adjacent filters, depending on how
 // working threads are currently distributed across these adjacent
 // filters.  Outputs from and Inputs into this filter, f, trigger queuing
 // jobs into the adjacent (input and output) filters.
+//
+// We must have a stream->mutex lock to call this.
 static inline
 void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
+
+
+
 
 }
