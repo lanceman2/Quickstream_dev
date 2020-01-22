@@ -275,6 +275,17 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
 // Sets maxRead
 /** Set the input read promise
  *
+ * The filter input() promises to read at least one byte of data on a
+ * given input() call, if there is len bytes of input on the port
+ * inputPortNum to read.  If this promise is not kept the program will
+ * fail.  This is to keep the fixed ring buffers from being overrun.
+ *
+ * \param inputPortNum the input port number that the promise is made for.
+ *
+ * \param len length in bytes.
+ *
+ * The default len value is QS_DEFAULTMAXREADPROMISE.  If this default
+ * value is not large enough than you must call this.
  */
 extern
 void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);

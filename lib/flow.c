@@ -17,12 +17,30 @@
 // Returns true if input() can be called more with the current input
 // buffers.
 //
-// We must check the filter mutex lock before calling this.
+// We must have the filter mutex lock (if multi-threaded filter) before
+// calling this.
 static inline
 bool ProcessInput(struct QsFilter *f, struct QsJob *j) {
 
-    bool ret = false;
+    bool keepInputing = false;
 
+    // We use this to catch when all inputs are fushing.
+    // When all inputs are flushing and all the data is gone then we mark
+    // this filter as flushing all its' outputs, and 
+    //bool isFlushing = true;//TODO  ya flushing.
+
+    // We need to check if we need to keep calling input() in this thread;
+    // because sometimes the amount of data input into the filter is to
+    // large for it to swallow, due to have smaller output buffers, or
+    // limited processing capabilities that chock it.
+    for(uint32_t i=0; i<f->numInputs; ++i)
+        if(j->inputLens[i] - j->advanceLens[i] >= f->readers[i]->maxRead) {
+            // Call input until we cut inputLen less than >maxRead
+            keepInputing = true;
+            break;
+        }
+
+    // Now loop again knowing if we will be calling input().
     for(uint32_t i=0; i<f->numInputs; ++i) {
             
         // advanceLen is all we did read.
@@ -45,21 +63,22 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j) {
                 "Filter \"%s\" Buffer over read",
                 f->name);
 
-        // Check for read under-run.  Not enough read that was promised by
-        // the filter.  This is a filter writer error.
+        // Check for read under-run.  Not enough reading that was promised
+        // by the filter.  This is an error in the code of the filter
+        // module.
         ASSERT(advanceLen > 0 || inputLen < reader->maxRead,
+                // To bit hell they go.
                 "Filter \"%s\" Buffer under read "
                 "promise: maxRead=%zu <= input length %zu",
-                f->name, reader->maxRead,  inputLen);
-
-        if(inputLen >= reader->maxRead) {
-            // Call input until we cut inputLen less than >maxRead
-            ret = true;
-        }
+                f->name, reader->maxRead, inputLen);
 
         if(advanceLen) {
             // Advance readPtr.  This filter, f, owns this reader and can
             // read/write reader->readPtr.
+            //
+            // Note: this is a lock-less ring buffer advancement if this
+            // is not a multi-threaded filter.
+            //
             reader->readPtr += advanceLen;
             if(reader->readPtr >= reader->buffer->mem + reader->buffer->mapLength)
                 // Wrap back the circular buffer.
@@ -67,60 +86,21 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j) {
             // Remove length from the input length tally.
             reader->readLength -= advanceLen;
 
-            if(ret) {
-                // We will be calling input() again with these new args:
+            if(keepInputing) {
+                // We will be calling input() again with these new args in
+                // the current thread.  This has to keep using this thread
+                // until it advances all the input buffers to a level less
+                // than reader->maxRead in all input ports.
+                //
+                // If there was no advancelen for any input port than the
+                // args for that port can stay the way they are. 
                 j->inputLens[i] -= advanceLen;
                 j->advanceLens[i] = 0;
                 j->inputBuffers[i] = reader->readPtr;
             }
         }
     }
-    return ret;
-}
-
-
-
-// Returns true to signal call me again, and false otherwise.
-static inline
-bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
-
-
-    int inputRet;
-
-    inputRet = f->input(j->inputBuffers, j->inputLens,
-            j->isFlushing, f->numInputs, f->numOutputs);
-
-
-    // FILTER LOCK  -- does nothing if not a multi-threaded filter
-    CheckLockFilter(f);
-
-    if(inputRet == 0) {
-        if(ProcessInput(f, j)) {
-            // FILTER UNLOCK
-            CheckUnlockFilter(f);
-            // Keep calling RunInput().  We do not process outputs until
-            // calling input() is done with processing enough inputs.
-            return true;
-        }
-    } else {
-        //
-        // This filter is done having input() called for this flow cycle,
-        // so we do not need to mess with input any more.  The
-        // buffers/readers will be reset before the next flow/run cycle,
-        // if there is one.  But we still need to deal with output.
-        //
-        if(inputRet < 0)
-            WARN("filter \"%s\" input() returned error code %d",
-                    f->name, inputRet);
-        // Mark this filter as being done having it's input called.
-        f->mark = true;
-    }
-
-    // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
-    CheckUnlockFilter(f);
-
-
-    return false;
+    return keepInputing;
 }
 
 
@@ -138,8 +118,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 //
 // This function can also spawn new worker threads.
 //
-// We must have the stream->mutex lock to call this.  This adds an inner
-// filter lock to that, so it'll be double locked in here.
+// We must have the filter->mutex lock to call this.  This adds an inner
+// stream lock to that, so it'll be double locked in here.
 static inline
 void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
 
@@ -149,7 +129,7 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f->stream == s);
 
     // LOCK -- Now double
-    CheckLockFilter(f);
+    CHECK(pthread_mutex_lock(&s->mutex));
 
     // It's just a little bit faster to go through the filter outputs
     // backwards in port numbers because we do not have to setup a
@@ -181,8 +161,55 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
         }
     }
 
-    CheckUnlockFilter(f);
+    CHECK(pthread_mutex_lock(&s->mutex));
     // UNLOCK -- Inner filter lock
+}
+
+
+
+// Returns true to signal call me again, and false otherwise.
+static inline
+bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
+
+
+    int inputRet;
+
+    inputRet = f->input(j->inputBuffers, j->inputLens,
+            j->isFlushing, f->numInputs, f->numOutputs);
+
+
+    // FILTER LOCK  -- does nothing if not a multi-threaded filter
+    CheckLockFilter(f);
+
+    bool canReadMore = false;
+
+    if(inputRet == 0) {
+        if(ProcessInput(f, j)) {
+            // Keep calling RunInput().  We do not process outputs until
+            // calling input() is done with processing enough inputs.
+            canReadMore = true;
+        }
+    } else {
+        //
+        // This filter is done having input() called for this flow cycle,
+        // so we do not need to mess with input any more.  The
+        // buffers/readers will be reset before the next flow/run cycle,
+        // if there is one.  But we still need to deal with output.
+        //
+        if(inputRet < 0)
+            WARN("filter \"%s\" input() returned error code %d",
+                    f->name, inputRet);
+        // Mark this filter as being done having it's input called.
+        f->mark = true;
+    }
+
+    PushJobsToStreamQueue(s, f);
+
+    // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
+    CheckUnlockFilter(f);
+
+
+    return canReadMore;
 }
 
 
@@ -255,8 +282,7 @@ void *RunningWorkerThread(struct QsStream *s) {
             continue;
         }
 
-        struct QsFilter *f;
-        f = j->filter;
+        struct QsFilter *f = j->filter;
         DASSERT(f);
 
         // This worker has a new job.
@@ -283,8 +309,6 @@ void *RunningWorkerThread(struct QsStream *s) {
 
         // STREAM LOCK
         CHECK(pthread_mutex_lock(&s->mutex));
-
-        PushJobsToStreamQueue(s, f);
 
         // Move this job structure to the filter unused stack.
         FilterWorkingToFilterUnused(j);
