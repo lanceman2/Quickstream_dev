@@ -14,97 +14,16 @@
 
 
 
-// Called where filter, f, is a source.
-//
-// This is only called by the master thread.
-//
-// Create worker threads.  This is called once per filter from the master
-// thread.  Source filters can only be feed by themselves.  So the filter,
-// f, by design, will not have a worker thread working on it at the time
-// of this function call.
-//
-// This function does not block except for a mutex lock, which should be
-// brief and infrequent.
-//
-static inline
-void FeedJobToWorkerThread(struct QsStream *s, struct QsFilter *f) {
-
-    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(s);
-    DASSERT(f);
-
-    /////////////////////////////////////////////////////////////////////
-    /////////////////// HAVE STREAM MUTEX ///////////////////////////////
-    /////////////////////////////////////////////////////////////////////
-    CHECK(pthread_mutex_lock(&s->mutex));
-
-    // We have a job in the filter queue.
-    DASSERT(f->stage);
-    // We are the first to call this for this source filter, f.
-    DASSERT(f->numWorkingThreads == 0);
-    DASSERT(f->maxThreads);
-    DASSERT(GetNumAllocJobsForFilter(s, f) >= 2);
-
-    // Put the job in the queue that the workers get the jobs from.  In
-    // this case, this being the first action on a source filter, there
-    // will be jobs available to move from filter unused to filter
-    // stage.
-    FilterStageToStreamQAndSoOn(s, f);
-
-
-    if(s->numThreads != s->maxThreads) {
-        //
-        // Stream does not have its' quota of worker threads.
-        //
-        pthread_t thread;
-        CHECK(pthread_create(&thread, 0/*attr*/,
-                    (void *(*) (void *)) RunningWorkerThread, s));
-
-        ++s->numThreads;
-
-        // The new thread may be born and get its' job or another worker
-        // thread may finish its' current job and take this job before
-        // that new thread can.  So this thread may end up idle.  It's
-        // works either way.
-
-    } else if(s->numIdleThreads) {
-        //
-        // There is a thread calling pthread_cond_wait(s->cond, s->mutex),
-        // the s->mutex lock before that guarantees it.
-        //
-        CHECK(pthread_cond_signal(&s->cond));
-
-        // At least one (and maybe more) worker threads will wake up
-        // sometime after we release the s->mutex.  The threads that wake
-        // up will handle the numIdleThreads counting.  We are done.
-    }
-
-    // else: a worker thread will get the job from the stream queue later.
-    // We have no idle threads (that's good) and; we are running as many
-    // worker threads as we can.  That may be good too, but running many
-    // threads can cause contention, and the more threads the more
-    // contention.  Performance measures can determine the optimum number
-    // of threads.  Also we need to see how this flow runner method
-    // (quickstream) compares to other streaming frame-works.  We need
-    // benchmarks.
-
-
-    CHECK(pthread_mutex_unlock(&s->mutex));
-    /////////////////////////////////////////////////////////////////////
-    /////////////////// RELEASED STREAM MUTEX ///////////////////////////
-    /////////////////////////////////////////////////////////////////////
-}
-
-
-
 // This function starts the flow by pouring threads into all the source
 // filters.
 static
 uint32_t nThreadFlow(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    DASSERT(s);
 
-    // Set all filter->mark = false
+    // Set all filter->mark = false as in not finishing flowing, or
+    // calling input().
     //
     // filter->mark will be true when the filter is finished.
     // Filters must finish in the order of the filter graph flow.
@@ -114,8 +33,37 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // feeding filter will no longer have input() called.
     StreamSetFilterMarks(s, false);
 
+    // LOCK stream
+    CHECK(pthread_mutex_lock(&s->mutex));
+
+    // 1. First add source filter jobs to the stream queue.
     for(uint32_t i=0; i<s->numSources; ++i)
-        FeedJobToWorkerThread(s, s->sources[i]);
+        FilterStageToStreamQAndSoOn(s, s->sources[i]);
+
+    // 2. Now launch as many threads as we can up to the number of source
+    //    filters.  More threads may get added later, if there is demand;
+    //    or threads could be removed if they are too idle, or too
+    //    contentious; if we figured out how to write that kind of code.
+    //
+    //    If there there are fewer threads than there are source filters
+    //    that's fine.  The jobs are queued up, and will be worked on as
+    //    worker threads finish their current jobs.
+    for(uint32_t i=0; i<s->numSources; ++i) {
+        if(s->numThreads == s->maxThreads)
+            break;
+        //
+        // Stream does not have its' quota of worker threads.
+        //
+        pthread_t thread;
+        CHECK(pthread_create(&thread, 0/*attr*/,
+                    (void *(*) (void *)) RunningWorkerThread, s));
+
+        ++s->numThreads;
+    }
+
+    // UNLOCK stream
+    CHECK(pthread_mutex_unlock(&s->mutex));
+
 
     // Now the worker threads will run wild in the stream.
 

@@ -522,7 +522,8 @@ struct QsFilter {
     // it into the filter's unused stack.
     //
     // Note: filter maxThreads is the maximum number of working threads so
-    // long as it is less than the streams maxThreads.
+    // long as it is less than the streams maxThreads.  See
+    // GetNumAllocJobsForFilter() below.
     //
     uint32_t numWorkingThreads; // number of threads working for the filter
     struct QsJob *workingFirst; // First in thread working queue
@@ -539,10 +540,16 @@ struct QsFilter {
     // TODO: It'd be nice not to have this extra data.  It's not needed
     // when the stream is flowing.
     //
-    // mark is extra data in this struct so that we can save a marker
-    // as we look through the filters in the graph, because if the graph
-    // has cycles in it, it's not easy to look at each filter just once
+    // mark is extra data in this struct so that we can save a marker as
+    // we look through the filters in the graph, because if the graph has
+    // cycles in it, it's not easy to look at each filter just once
     // without a marker to mark a filter as looked at.
+    //
+    // This mark is used for different things at different stages of the
+    // flow stream.  It's just a multipurpose flag.
+    //
+    // TODO: make mark a union with descriptive names for the different
+    // uses.
     uint32_t mark;
 };
 
