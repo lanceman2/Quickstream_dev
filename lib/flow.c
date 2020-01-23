@@ -226,7 +226,6 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
-
     int inputRet;
 
     inputRet = f->input(j->inputBuffers, j->inputLens,
