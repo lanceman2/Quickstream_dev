@@ -37,6 +37,17 @@ uint32_t nThreadFlow(struct QsStream *s) {
     CHECK(pthread_mutex_lock(&s->mutex));
 
     // 1. First add source filter jobs to the stream queue.
+    //
+    // TODO: We need to consider adding a functionality that wraps
+    // epoll_wait(2) to add a different way to add jobs for filters that
+    // can block calling read(2) or write(2) (or like system call) to the
+    // stream queue that is triggered by epoll events from file
+    // descriptors that that are registered for a given filter.  For
+    // filter stream with many sources and sinks that read and write file
+    // descriptors this could increase performance considerably.  It
+    // could get rid of a lot of threads that are just waiting on blocked
+    // system calls.
+    //
     for(uint32_t i=0; i<s->numSources; ++i)
         FilterStageToStreamQAndSoOn(s, s->sources[i]);
 
