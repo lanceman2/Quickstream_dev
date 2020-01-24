@@ -11,7 +11,11 @@ quickstream is the next generation of a stream flow graph API that we
 wrote a year or more ago.  The old stream flow graph API was the subset of
 larger project, with a larger scope.  I consider quickstream a smaller
 more refined spin-off project.  I hope to give quickstream more polish
-than it's previous generation.
+and usability than it's previous generation.
+
+The quickstream starting point is this web page at
+https://github.com/lanceman2/quickstream.git, should it move we wish to
+keep that URL current.
 
 
 ## Development Status
@@ -113,7 +117,7 @@ package.  Then run:
 make dist
 ```
 
-which should generate the tarball file *quickstream-0.0.1.tar.gz* and
+which should generate the tarball file *quickstream-VERSION.tar.gz* and
 other compression format versions of tarball files.
 
 
@@ -129,7 +133,7 @@ compile and test cycle.  The same, more-so, can be said of CMake.  As a
 code developer we just want to quickly compile source and run it from the
 source directory, without installing anything.  Imposing this requirement
 on this project has the added benefit of forcing the source code to have
-the same directory structure as the installed files, whereby making is
+the same directory structure as the installed files, whereby making it
 very easy to understand the file structure of the source code.
 
 The use of quickbuild is for quickstream developers, not users.
@@ -137,7 +141,7 @@ quickbuild is just some "GNU make" make files and some bash scripts.  We
 added these make files named "Makefile" and other files so that we could
 develop, compile and run programs without being forced to install files.
 We use "makefile" as the make file for GNU autotools generated make files,
-which overrides "Makefile" at least for GNU make.
+which overrides "Makefile", at least for GNU make.
 
 
 ### quickbuild quick and easy
@@ -189,7 +193,7 @@ you can run *make install PREFIX=MY_PREFIX*.
 
 If you wish to remove all files that are generated from the build scripts
 in this package, leaving you with just files that are from the repository
-and your added costume files you can run *./RepoClean*.  Do not run
+and your added costume files, you can run *./RepoClean*.  Do not run
 *./RepoClean* if you need a clean tarball form of the package source,
 use *make distclean* for that.
 
@@ -219,50 +223,28 @@ filter streams.
 
 ## Restricting filters modules leads to user control and runtime optimisation
 
-quickstream provides generic management for the connecting and running of
-filter streams.  You may change and optimise the distribution of threads
-and processes running each of the filters in the stream while your program
-is running.  quickstream restricts filter interfaces so that it may
-provide an abstraction layer so that filters may be run with their own
-thread or run in a inter-filter shared thread as just a function call on
-the call stack.  Similarly the distribution of filters across processes
-may also be managed at runtime.  This enables you to find what
-distribution of threads and processes that is needed to run your stream
-fast and use less system resources.
+quickstream restricts filter interfaces so that it may provide an
+abstraction layer so that it may vary how it distributes threads and
+filter modules at runtime, unlike all other high performance streaming
+toolkits.  The worker threads in quickstream are not assigned to a given
+filter module and migrate to filters modules that are in need of workers.
+In this way threads do a lot less waiting for work, whereby eliminating
+the need for threads that do a lot of sleeping, whereby eliminating lots
+of system calls, and also eliminating inter thread contention, at runtime.
+Put another way, quickstream will run less threads and keep the threads
+busier by letting them migrate among the filter modules.
 
 
-## Description
-
-It's like UNIX streams but much faster.  Filter modules in the stream, or
-pipe-line, may be run in separate processes, or separate threads in the
-same process, or modules may be run together in a single thread.   The way
-processes and threads are distributed across the filter modules in the
-running flow stream is not necessarily constrained in any way.  The stream
-can be any general directed graph without (or with) cycles.
-
-It's faster because the data flowing between the modules is passed through
-shared memory and not a kernel buffer, as in UNIX file streams.  In a UNIX
-file stream, or a UNIX pipe-line, in order to get data from one program
-(module) to the next program the data is transferred to a buffer that the
-kernel must write on behave of the program, costing a mode switch, and
-then the reading program must have the kernel read the buffer on its
-behave, costing another mode switch.  In addition to these two kernel
-(system) calls the data is copied twice, once to the kernel buffer for the
-writer and once from the kernel buffer to the reader processes buffer.
-Comparing these resource costs with passing data via shared memory for the
-non-contentious case there is no data copying, and there is no kernel, or
-system call, and so we expect it to be much faster.  We expect that a
-contentious case to be infrequent and still much faster than the UNIX
-pipe-line when running in its normal mode.  We also can eliminate most
-contentious cases by using a lock-less circular buffer, where each
-producer and consumer module makes promises as to how they will access the
-circular buffer in order to guarantee consistent lock-less operation.
+## Pass-through buffers
 
 quickstream provides the buffering between module filters in the flow.
 The filters may copy the input buffer and then send different data to it's
 outputs, or if the output buffers are or the same size as the input
 buffers, it may modify an input buffer and send it through to an output
 without copying any data whereby eliminating an expensive copy operation.
+
+
+## Description
 
 quickstream is minimalistic and generic.  It is software not designed for
 a particular use case.  It is intended to introduce a software design
@@ -311,7 +293,7 @@ player with the video already selected.  A high level user will not see
 the transition though the *pause* on the way to exit, but it is there.
 
 If we wish to see more programming detail the stream state diagram can be
-explained to this:
+expanded to this:
 
 ![image of stream expanded state](
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/stateExpaned.png)
@@ -332,24 +314,23 @@ except that sources are no longer being feed.
   interactive programs.
 - **configure** While in this mode the stream can be configured.  All the
   filter modules are loaded, filter modules *construct* functions are
-  called, and stream filter connections are figured out.  The thread and
-  process repartitioning can only happen in the *configure* state.  Filter
-  modules can also have their *destroy* functions called and they can be
-  unloaded.  Reasoning: *construct* functions may be required to be called
-  so that constraints that only known by the filter are shown to the user,
-  so that the user can construct the stream.  The alternative would be to
-  have particular filter connection constrains exposed separately from
-  outside the module dynamic share object (DSO), which would make filter
-  module management a much larger thing, like most other stream toolkits.
-  We keep it simple at the quickstream programming level.
+  called, and stream filter connections are figured out.  Filter modules
+  can also have their *destroy* functions called and they can be unloaded.
+  Reasoning: *construct* functions may be required to be called so that
+  constraints that only known by the filter are shown to the user, so that
+  the user can construct the stream.  The alternative would be to have
+  particular filter connection constrains exposed separately from outside
+  the module dynamic share object (DSO), which would make filter module
+  management a much larger thing, like most other stream toolkits.  We
+  keep it simple at the quickstream programming level.
 - **start**: the filters start functions are called. Filters will see how
   many input and output channels they will have just before they start
   running.  There is only one thread running.  No data is flowing in the
   stream when it is in the start state.
-- **flow**: the filters feed each other and the number of threads and
-  processes running depends on the thread and process partitioning scheme
-  that is being used.  A long running program that keeps busy will spend
-  most of its time in the *flow* state.
+- **flow**: the filters feed each other and the number of threads running
+  depends on the thread partitioning scheme that is being used.  A long
+  running program that keeps busy will spend most of its time in the
+  *flow* state.
 - **flush**: stream sources are no longer being feed, and all other
   non-source filters are running until all input the data drys up.
 - **stop**: the filters stop functions are being called. There is only one
@@ -357,12 +338,12 @@ except that sources are no longer being feed.
   stop state.
 - **destroy** in reverse load order, all remaining filter modules
   *destroy* functions are called, if they exist, and then they are
-  unload.
-- **return**: no processes are running.
+  unloaded.
+- **return**: no process is running.
 
 The stream may cycle through the flow state loop any number of times,
 depending on your use, or it may not go through the flow state at all,
-and go from pause to exit.
+and go from pause to exit; which is a useful case for debugging.
 
 
 ### Filter
@@ -370,11 +351,11 @@ and go from pause to exit.
 A module reads input and writes outputs in the stream.  The number of
 input channels and the number of output channels may be from zero to any
 integer.  Filters do not know if they are running as a single thread by
-themselves or they are sharing their thread execution with other filters.
-From the quickstream user, the filters just provide executable object
-code in the form of C functions.  The filters just read input and write
-output.  At the quickstream level the filters don't know what filters
-they are reading and writing to.
+themselves or they are sharing their thread execution with other
+filters.  From the quickstream user, the filters just provide executable
+object code in the form of C/C++ (maybe RUST) functions.  The filters just
+read input and write output.  At the quickstream level the filters don't
+know what filters they are reading and writing to.
 
 
 ### Controller
@@ -399,25 +380,34 @@ input or output channels.  The filters may decide how many input and
 output channels they will work with.
 
 
+### Shared buffers and Port
+
+Channels connect any number of output ports to one input port.  There can
+only be one writing filter at a given channel level.  If there is a
+"pass-though" channel, than there can a trailing "pass-through" writer at
+each "pass-though" level.  The "pass-through" writer writes behind all the
+reading ports in the level above.
+
+
 ### Source
 
-A filter with no inputs is a source filter.  It may get "input" from
-something other than the stream, like a file, or a socket, but those kinds
-of inputs are external from the quickstream, that is they do not get any
-input from the quickstream buffering system.  So in a more global sense
-they may not be sources with data input, but with respect to quickstream
-they are sources which have no data input.
+A filter module with no inputs is a source filter.  It may get "input"
+from something other than the stream, like a file, or a socket, but those
+kinds of inputs are external from the quickstream, that is they do not get
+any input from the quickstream buffering system.  So in a more global
+sense they may not be sources with data input, but with respect to
+quickstream they are sources which have no data input.
 
 
 ### Sink
 
-A filter with no outputs is a sink filter.  It may write "output" to
-something other than the stream, like a file, a socket, or display device,
-but those kinds of outputs are external from the quickstream, that is they
-do not read from quickstream buffering system using the quickstream API.
-In a more global sense that may not be sinks and they may produce output,
-but with respect to quickstream they are sinks and they produce no
-quickstream output channels.
+A filter module with no outputs is a sink filter.  It may write "output"
+to something other than the stream, like a file, a socket, or display
+device, but those kinds of outputs are external from the quickstream, that
+is they do not read from quickstream buffering system using the
+quickstream API.  In a more global sense that may not be sinks and they
+may produce output, but with respect to quickstream they are sinks and
+they produce no quickstream output channels.
 
 
 ## Interfaces
@@ -427,12 +417,14 @@ utility programs.  Both APIs in use the libquickstream library.  The main
 parts are:
 
 - a filter API **filter.h**: which is used to build a quickstream filter
-  dynamic shared object filter modules using predeclared functions, one
-  required and other optional functions.
+  dynamic shared object filter modules may provide predeclared functions.
 - a stream program API **app.h**: which is used to build programs that run
-  a quickstream with said filters.
+  a quickstream with said filters modules.
 - the program **quickstream**: which uses *app.h* and libquickstream
   library to run a quickstream flow graph with said filters.
+
+quickstream can load the same filter module more than once.  Each loaded
+filter module will run in a different shared object library space.
 
 
 ## OS (operating system) Ports
@@ -458,28 +450,20 @@ the same ideas.  We study them and learn.
 Summary: Run faster with less system resources.  Be simple.
 
 In principle it should be able to run fast.  We have no controlling task
-manager thread that synchronizes the running processes and/or threads.  We
-let the operating system do its' thing, and try not to interfere with a
-task managing code.  If any task management is needed we let it happen
-in a higher layer.  All filters keep processing input until they are
-blocked by a slower down-stream filter (clogged), or they are waiting for
-input from an up-stream filter (throttled).  The amount of "queuing"
-between modules (filters) can be varied depending on how much latency is
-tolerable. In general the clogging and throttling of the stream flows is
-determined by the current inter-filter buffering parameters.
+manager thread that synchronizes the running threads.  We let the
+operating system do its' thing, and try not to interfere with a task
+managing code.  If any task management is needed we let it happen in a
+higher layer.  All filters keep processing input until they are blocked by
+a slower down-stream filter (clogged), or they are waiting for input from
+an up-stream filter (throttled).  In general the clogging and throttling
+of the stream flows is determined by the current inter-filter buffering
+parameters.
 
 "Simple" filters can share the same thread, and whereby use less system
 resources, and thereby run the stream faster by avoiding thread context
 switches using less time and memory than running filters in separate
 threads (or processes).  When a filter gets more complex we can let the
-filter run in it's own thread (or process).  Shared memory is clearly the
-fastest inter-thread and inter-process communication mechanism, and we use
-shared memory with a consistent lock-less circular buffer.  Memory is not
-required to be copied between filters and can be modified and passed
-through filters.  Then the stream is in the flow state there are no
-systems call, except those that a filter may introduce, and memory copies
-across from one filter to another can be completely avoided using a
-pass-through buffer.
+filter run in it's own thread (or process).
 
 It's simple.  There is no learning curve.  There's just less there.  There
 is only one interface for a given quickstream primitive functionality.  No
@@ -487,18 +471,8 @@ guessing which class to inherit.  No built-in inter-filter data typing.
 We provide just a modular streaming paradigm without a particular end
 application use case.  The idea of inter-module data types is not
 introduced, that would limit it's use, and can be considered at a higher
-software interface layer.  So we keep inter-module data typing outside the
-scope of quickstream.
-
-The stream may repartition its' process and threading scheme at launch-time
-and run-time based on stream flow measures, and so it can be adaptive and
-can be programmed to be self optimizing at run-time.  Most of the other
-stream frame-works just can't do that, they only have one thread and
-process running scheme that is hard coded, like one thread per filter, or
-one process per filter which for "simple" filters would be suboptimal.
-
-You can change the filter stream topology on the fly.  Loading and
-unloading filters and reconnecting filters at run-time.
+software interface layer.  So we keep inter-module data typing outside
+the scope of quickstream.
 
 In the future benchmarking will tell.  TODO: Add links here...
 
@@ -515,6 +489,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
 ## Developer notes
 
 - quickstream code is written in fairly simple C with very few dependences.
+  Currently runtime libraries linked are -lpthread -ldl and -lrt.
 - The API (application programming interface) user sees data structures as
   opaque.  They just know that they are pointers to data structures, and
   they do not see elements in the structures.  We don't use typedef, for
@@ -530,20 +505,24 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
     the same way as in the installed files as with the files in the
     source,
   - we use the compilers relative linking options to link and run
-    programs (libtool may not do this), and
+    programs (libtool may not do this, but quickbuild does), and
   - you can move the whole encapsulated installation (top install
     directory) and everything runs the same.
+    - there are not full path strings compiled in the libarary.
 - Environment variables allow users to tell quickstream programs where to
   find users files that are not in the quickstream source code.
 - The installation prefix directory is not used in the quickstream code,
   only relative paths are needed for running quickstream files to find
-  themselves.  One needs to worry about package installation schemes that
-  brake the encapsulation of the installed files.
-- C++ code can link with quickstream.
+  themselves.  On a bad note: One needs to worry about package
+  installation schemes that brake the encapsulation of the installed
+  files.
+- C++ (TODO: RUST) code can link with quickstream.
 - The public interfaces are object oriented in a C programming sense.
 - The private code is slightly more integrated than the public interfaces
   may suggest.
 - We wish to keep this C code small and manageable.
+  - Run: *./dev_tests/linesOfCCode.bash* to see the number of lines of
+    code.
 - Minimize the use of CPP macros, so that understanding the code is easy
   and not a CPP macro nightmare like many C and C++ APIs.  Every
   programmer knows that excessive use of CPP macros leads to code that is
@@ -560,11 +539,15 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
 - The standard C library is a thing we use.  The GNU/Linux and BSD (OSX)
   operating systems are built on it.  For the most part C++ has not
   replaced it, but has just wrapped it.
+- The linux kernel and the standard C library may be old but they are
+  still king, and used by all programs whither people know it or not.
 - If you wish to make a tarball release use the GNU autotool building
   method and run *./configure* and *make dist*.
 - There will be no downloading of files in the build step.  Downloading
   may happen in the bootstrap step.  In building from a tarball release
-  there will be no downloads or bootstrapping.
+  there will be no downloads or bootstrapping.  Packages that do this
+  make the job of distributing software very difficult, and suggest poor
+  quality.
 - Files in the source are located in the same relative path of files that
   they are most directly related to in the installed paths.
 - All filter modules do not share the global variable space that came from
@@ -572,19 +555,18 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_c
   Most module loading systems do not consider this case, but with simple
   filters there is a good chance you may want to load a filter more than
   once, with the same filter plugin in different positions in the stream.
-  As a result of considering this case, the filter module writer may
-  choose to dynamically create objects, or make them statically.  In
-  either case the data in the modules stays accessible only in that
-  module.  Modules that wish to share variables with other modules may do
-  so by using other non-filter DSOs (dynamic shared objects), basically
-  any other library than the filter DSO.
+  As a result of considering this case, we have the added feature that the
+  filter module writer may choose to dynamically create objects, or make
+  them statically.  In either case the data in the modules stays
+  accessible only in that module.  Modules that wish to share variables
+  with other modules may do so by using other non-filter DSOs (dynamic
+  shared objects), basically any other library than the filter DSO.
 - quickstream is not OOP (object oriented programming).  We only make
-  objects when it is necessary.  OOP can lead to more complexity which we
-  want to avoid.
+  objects when it is necessary.  Excessive OOP can lead to more complexity
+  and bloat, which we want to avoid.
 - Don't put stuff in quickstream that does not belong in quickstream.  You
   can always build higher level APIs on top of quickstream.
 - If you don't like quickstream don't use it.
-
 
 
 ## Driving concerns and todo list
