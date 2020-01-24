@@ -40,10 +40,10 @@ uint32_t nThreadFlow(struct QsStream *s) {
     //
     // TODO: We need to consider adding a functionality that wraps
     // epoll_wait(2) to add a different way to add jobs for filters that
-    // can block calling read(2) or write(2) (or like system call) to the
-    // stream queue that is triggered by epoll events from file
-    // descriptors that that are registered for a given filter.  For
-    // filter stream with many sources and sinks that read and write file
+    // can call would be blocking read(2) or write(2) (or like system
+    // call) to the stream queue that is triggered by epoll events from
+    // file descriptors that that are registered for a given filter.  For
+    // filter streams with many sources and sinks that read and write file
     // descriptors this could increase performance considerably.  It
     // could get rid of a lot of threads that are just waiting on blocked
     // system calls.
@@ -56,12 +56,12 @@ uint32_t nThreadFlow(struct QsStream *s) {
     //    or threads could be removed if they are too idle, or too
     //    contentious; if we figured out how to write that kind of code.
     //
-    //    If there there are fewer threads than there are source filters
-    //    that's fine.  The jobs are queued up, and will be worked on as
-    //    worker threads finish their current jobs.
-    for(uint32_t i=0; i<s->numSources; ++i) {
-        if(s->numThreads == s->maxThreads)
-            break;
+    //    If there are fewer threads than there are source filters that's
+    //    fine.  The jobs are queued up, and will be worked on as worker
+    //    threads finish their current jobs.
+    //
+    for(uint32_t i=0; i<s->numSources &&
+            s->numThreads < s->maxThreads; ++i) {
         //
         // Stream does not have its' quota of worker threads.
         //
@@ -71,6 +71,9 @@ uint32_t nThreadFlow(struct QsStream *s) {
 
         ++s->numThreads;
     }
+
+    // The order of the two above loops do not matter.  All starting
+    // threads will just wait on getting this stream mutex lock anyway.
 
     // UNLOCK stream
     CHECK(pthread_mutex_unlock(&s->mutex));

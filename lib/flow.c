@@ -78,7 +78,7 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
                 reader->buffer->mem + reader->buffer->mapLength);
 
         // Check for read overrun.  This should have been checked in
-        // qsAdvanceInput().
+        // qsAdvanceInput(), so we just DASSERT() here.
         DASSERT(advanceLen <= inputLen,
                 "Filter \"%s\" Buffer over read",
                 f->name);
@@ -108,12 +108,12 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
             reader->readLength -= advanceLen;
 
             if(keepInputing) {
-                // We will be calling input() again with these new args in
-                // the current thread.  This has to keep using this thread
-                // until it advances all the input buffers to a level less
-                // than reader->maxRead in all input ports.
+                // We will be calling input() again with these new (j)
+                // args in the current thread.  This has to keep using
+                // this thread until it advances all the input buffers to
+                // a level less than reader->maxRead in all input ports.
                 //
-                // If there was no advancelen for any input port than the
+                // If there was no advanceLen for any input port than the
                 // args for that port can stay the way they are. 
                 j->inputLens[i] -= advanceLen;
                 j->advanceLens[i] = 0;
@@ -140,10 +140,12 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
 //
 // This function can spawn new worker threads.
 //
-// We must have the filter->mutex lock to call this.  This adds an inner
-// stream lock to that, so it'll be double locked in here.
+// We must have the filter->mutex lock to call this, for multi-threaded
+// filters.  This adds an inner stream lock to that, so it'll be double
+// locked in here (for multi-threaded filters).
 static inline
-void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
+void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
+            bool willInputMore) {
 
     DASSERT(s);
     DASSERT(f);
@@ -165,11 +167,16 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
 
         struct QsOutput *output = f->outputs + i;
 
-        DSPEW("%p", output);
 
+        // TODO: this code.
+
+
+        DSPEW("%p", output);
     }
 
-    if(f->isSource) {
+
+
+    if(f->isSource && !willInputMore) {
 
         // TODO: this code.
     }
@@ -185,8 +192,8 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
         if(numIdleThreads) {
             // case 1. Steady state case would already have the max
             // threads spawned if it is possible, so we do the idle thread
-            // case first.  Is better employ old workers than create new
-            // workers.
+            // case first.  Is better to employ old workers than create
+            // new workers.
             //
             // There is a thread calling pthread_cond_wait(s->cond, s->mutex),
             // the s->mutex lock before that guarantees it.
@@ -195,7 +202,7 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f) {
 
             // At least one (and maybe more) worker threads will wake up
             // sometime after we release the s->mutex.  The threads that wake
-            // up will handle the numIdleThreads counting.  We are done.
+            // up will handle the numIdleThreads counting.
             --newJobs;
 
         } else if(s->numThreads < s->maxThreads) {
@@ -261,7 +268,10 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         f->mark = true;
     }
 
-    PushJobsToStreamQueue(s, f);
+    // Whither or not the filter, f, input() will be called again by this
+    // thread, we still need to check the output buffers, and see if there
+    // will be jobs added to the stream queue.
+    PushJobsToStreamQueue(s, f, willInputMore);
 
 
     // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
