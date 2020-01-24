@@ -48,9 +48,14 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 # It's just so that we can push binary image files to the github.com web
 # pages.  It's a different repo than
 # https://github.com/lanceman2/quickstream/ so that we don't put generated
-# binary image files in the source repository.
+# files into the quickstream source repository.
 #
-# For 'make web_docs'
+# Running 'make web_docs' may push changes to
+# git@github.com:lanceman2/quickstream.doc.
+#
+# If the directory WEB_DOCS_TARGET_DIR does not exist than we do not
+# make the make rules for it.  See ifneq below.
+
 #
 WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream_webpages
 
@@ -59,13 +64,6 @@ DOT := $(sort\
  $(wildcard *.dot)\
  quickstream_complex.dot\
  quickstream_simple.dot)
-
-
-WEB_DOCS :=\
- $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
- $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))\
- $(WEB_DOCS_TARGET_DIR)/html
-
 
 
 
@@ -96,10 +94,42 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 build: $(IMAGES) $(DOX_TARGET)
 
 
-$(WEB_DOCS_TARGET_DIR)/html: $(DOX_TARGET)
-	rm -rf $(WEB_DOCS_TARGET_DIR)/html
-	cp -a ./html $(WEB_DOCS_TARGET_DIR)/html
-	echo "This is a doxygen generated directory" > $(WEB_DOCS_TARGET_DIR)/html/search/README
+
+ifneq ($(wildcard $(WEB_DOCS_TARGET_DIR)),)
+WEB_DOCS :=\
+ $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
+ $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))\
+ $(WEB_DOCS_TARGET_DIR)/html
+# Extra make target that only developers need to know.  It makes binary
+# image files for the web that end up in a different repo then the
+# quickstream repo, quickstream.doc repo with branch.
+#
+# There needs to be a directory that is from something like:
+#
+#   git clone https://github.com/lanceman2/quickstream.doc.git quickstream_webpages
+#   cd quickstream_webpages
+#   git checkout --orphan gh-pages
+#   #edit files
+#   git commit -a -m "Adding pages"
+#   git push origin gh-pages
+#
+#
+web_docs_make: $(WEB_DOCS)
+#
+web_docs: web_docs_make $(DOX_TARGET)
+	$(WEB_DOCS_TARGET_DIR)/make_webdocs.bash $(PWD)
+
+
+$(WEB_DOCS_TARGET_DIR)/%.png: images/%.png
+	cp $< $@
+
+$(WEB_DOCS_TARGET_DIR)/%.svg: images/%.svg
+	cp $< $@
+endif
+
+
+$(warning WEB_DOCS=$(WEB_DOCS) WEB_DOCS_TARGET_DIR=$(WEB_DOCS_TARGET_DIR))
+
 
 
 %.o: %.c
@@ -142,12 +172,6 @@ $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	doxygen
 
 
-# Extra make target that only developers need to know.  It makes binary
-# image files for the web that end up in a different repo then the
-# quickstream repo, quickstream.doc repo.
-#
-web_docs: $(WEB_DOCS)
-
 
 
 images/%.svg: %.dot
@@ -156,12 +180,6 @@ images/%.svg: %.dot
 images/%.png: %.dot
 	dot $< -T png > $@
 
-
-$(WEB_DOCS_TARGET_DIR)/%.png: images/%.png
-	cp $< $@
-
-$(WEB_DOCS_TARGET_DIR)/%.svg: images/%.svg
-	cp $< $@
 
 
 show display: $(DOT)

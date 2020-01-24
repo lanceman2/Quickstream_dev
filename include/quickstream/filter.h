@@ -43,9 +43,9 @@
 #define QS_DEFAULTMAXWRITE         ((size_t) 1024)
 
 
-// In general the idea of threshold is related to input triggering.
-// In the simplest case we can set a input channel threshold.
-//
+/** In general the idea of threshold is related to input triggering.
+ * In the simplest case we can set a input channel threshold.
+ */
 #define QS_DEFAULTTHRESHOLD        ((size_t) 1)
 
 

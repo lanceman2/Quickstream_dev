@@ -19,6 +19,10 @@
 //
 //        display ../share/doc/quickstream/jobFlow.dot
 //
+//  or see it on the web at
+//
+//    https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png
+//
 //
 //
 // Notice in the "job flow graph" there are 4 lines connecting 4 types of
