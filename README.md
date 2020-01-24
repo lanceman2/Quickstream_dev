@@ -486,6 +486,18 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_s
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_complex.png)
 
 
+## Other graphviz dot images
+
+![job flow and related data structures](
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
+
+
+## Doxygen generated html
+
+![Doxygen generated html documentation](
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/html/)
+
+
 ## Developer notes
 
 - quickstream code is written in fairly simple C with very few dependences.

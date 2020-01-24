@@ -16,7 +16,7 @@ CHECK_FILES :=\
 # This ifeq mess brakes the make tab completion.
 ifeq (1,0) # So, if this out for now.
 # this ifeq stuff makes it so we know why make fails when
-# we run make in this directory without building libquickstream and
+# we run make in this directory without building lib/libquickstream and
 # include/quickstream/app.h.
 ifeq ($(strip $(MAKELEVEL)),0)
 # The user is running make from this directory.
@@ -41,11 +41,16 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 # WEB_DOCS_TARGET_DIR directory may be a git clone of
 # https://github.com:lanceman2/quickstream.doc.git or
 # git@github.com:lanceman2/quickstream.doc
+# we let git@github.com:lanceman2/quickstream.doc be a repository hell,
+# that has binaries and lots of generated file checked into it.  Kind-of
+# stupid how GitHub manages user web pages that way...
 #
 # It's just so that we can push binary image files to the github.com web
-# pages.  It's a different repo then
+# pages.  It's a different repo than
 # https://github.com/lanceman2/quickstream/ so that we don't put generated
-# binary image files in the source repo.
+# binary image files in the source repository.
+#
+# For 'make web_docs'
 #
 WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream.doc
 
@@ -58,7 +63,9 @@ DOT := $(sort\
 
 WEB_DOCS :=\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
- $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))
+ $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))\
+ $(WEB_DOCS_TARGET_DIR)/html
+
 
 
 
@@ -87,6 +94,12 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 
 
 build: $(IMAGES) $(DOX_TARGET)
+
+
+$(WEB_DOCS_TARGET_DIR)/html: $(DOX_TARGET)
+	rm -rf $(WEB_DOCS_TARGET_DIR)/html
+	cp -a ./html $(WEB_DOCS_TARGET_DIR)/html
+	echo "This is a doxygen generated directory" > $(WEB_DOCS_TARGET_DIR)/html/search/README
 
 
 %.o: %.c
