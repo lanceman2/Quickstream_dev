@@ -495,7 +495,7 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
 ## Doxygen generated html
 
 ![Doxygen generated html documentation](
-https://lanceman2.github.io/quickstream.doc/index.html)
+https://lanceman2.github.io/quickstream.doc/html/index.html)
 
 
 ## Developer notes
