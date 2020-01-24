@@ -52,7 +52,7 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 #
 # For 'make web_docs'
 #
-WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream.doc
+WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream_webpages
 
 
 DOT := $(sort\
