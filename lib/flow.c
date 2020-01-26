@@ -151,9 +151,6 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
     DASSERT(f);
     DASSERT(f->stream == s);
 
-    // LOCK -- Now double  filter and then stream lock
-    CHECK(pthread_mutex_lock(&s->mutex));
-
     // newJobs will count the number of new jobs that will get put into
     // the stream job queue.
     uint32_t newJobs = 0;
@@ -167,8 +164,19 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
 
         struct QsOutput *output = f->outputs + i;
 
+        // Advance the write pointers.
 
-        // TODO: this code.
+        ASSERT(output->advanceLength <= output->maxWrite,
+                "Write buffer overrun");
+
+        output->writePtr += output->advanceLength;
+        if(output->writePtr >= output->buffer->mem +
+                output->buffer->mapLength)
+            // Wrap back the circular buffer.
+            output->writePtr -= output->buffer->mapLength;
+
+        // Check if we can make a job for the filters we are feeding.
+
 
 
         DSPEW("%p", output);
@@ -180,6 +188,14 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
 
         // TODO: this code.
     }
+
+    // LOCK -- Now double  filter and then stream lock
+    bool haveStreamLock = false;
+    if(newJobs) {
+        CHECK(pthread_mutex_lock(&s->mutex));
+        haveStreamLock = true;
+    }
+
 
     // We cannot know how many threads actually wake up for each
     // pthread_cond_signal() call, we only know that at least one is
@@ -223,8 +239,9 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
             break;
     }
 
-    CHECK(pthread_mutex_unlock(&s->mutex));
-    // UNLOCK -- Inner stream unlocked, but we may still have a filter lock.
+    if(haveStreamLock)
+        CHECK(pthread_mutex_unlock(&s->mutex));
+        // UNLOCK -- Inner stream unlocked, but we may still have a filter lock.
 }
 
 

@@ -600,6 +600,9 @@ struct QsOutput {  // points to reader filters
     //
     size_t maxWrite;
 
+    // The number of bytes written in the last write, qsOutput().
+    size_t advanceLength;
+
 
     // readers is where the output data flows to.
     //

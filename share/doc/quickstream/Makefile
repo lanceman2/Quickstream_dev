@@ -38,27 +38,6 @@ quickstream_complex_dot_LDADD := $(QSLIBS)
 quickstream_simple_dot_LDADD := $(QSLIBS)
 
 
-# WEB_DOCS_TARGET_DIR directory may be a git clone of
-# https://github.com:lanceman2/quickstream.doc.git or
-# git@github.com:lanceman2/quickstream.doc
-# we let git@github.com:lanceman2/quickstream.doc be a repository hell,
-# that has binaries and lots of generated file checked into it.  Kind-of
-# stupid how GitHub manages user web pages that way...
-#
-# It's just so that we can push binary image files to the github.com web
-# pages.  It's a different repo than
-# https://github.com/lanceman2/quickstream/ so that we don't put generated
-# files into the quickstream source repository.
-#
-# Running 'make web_docs' may push changes to
-# git@github.com:lanceman2/quickstream.doc.
-#
-# If the directory WEB_DOCS_TARGET_DIR does not exist than we do not
-# make the make rules for it.  See ifneq below.
-
-#
-WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream_webpages
-
 
 DOT := $(sort\
  $(wildcard *.dot)\
@@ -94,22 +73,48 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 build: $(IMAGES) $(DOX_TARGET)
 
 
+# WEB_DOCS_TARGET_DIR directory may be a git clone of
+# https://github.com:lanceman2/quickstream.doc.git or
+# git@github.com:lanceman2/quickstream.doc
+# we let git@github.com:lanceman2/quickstream.doc be a repository hell,
+# that has binaries and lots of generated file checked into it.  Kind-of
+# stupid how GitHub manages user web pages that way...
+#
+# It's just so that we can push binary image files to the github.com web
+# pages.  It's a different repo than
+# https://github.com/lanceman2/quickstream/ so that we don't put generated
+# files into the quickstream source repository.
+#
+# Running 'make web_docs' may push changes to
+# git@github.com:lanceman2/quickstream.doc.
+#
+# If the directory WEB_DOCS_TARGET_DIR does not exist than we do not
+# make the make rules for it.  See ifneq below.
 
-ifneq ($(wildcard $(WEB_DOCS_TARGET_DIR)),)
+#
+WEB_DOCS_TARGET_DIR := $(topdir)/../quickstream_webpages
+
+
+ifneq ($(wildcard $(WEB_DOCS_TARGET_DIR)/),)
 WEB_DOCS :=\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
- $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))\
- $(WEB_DOCS_TARGET_DIR)/html
+ $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))
 # Extra make target that only developers need to know.  It makes binary
 # image files for the web that end up in a different repo then the
 # quickstream repo, quickstream.doc repo with branch.
 #
 # There needs to be a directory that is from something like:
 #
-#   git clone https://github.com/lanceman2/quickstream.doc.git quickstream_webpages
+#   git clone git@github.com:lanceman2/quickstream.doc quickstream_webpages
 #   cd quickstream_webpages
-#   git checkout --orphan gh-pages
-#   #edit files
+#   git checkout gh-pages
+#   cd -
+#   make web_docs
+#
+#   
+# there is a script in quickstream_webpages/ that does stuff
+# like this:
+#
 #   git commit -a -m "Adding pages"
 #   git push origin gh-pages
 #
@@ -117,7 +122,10 @@ WEB_DOCS :=\
 web_docs_make: $(WEB_DOCS)
 #
 web_docs: web_docs_make $(DOX_TARGET)
-	$(WEB_DOCS_TARGET_DIR)/make_webdocs.bash $(PWD)
+	rm -rf $(WEB_DOCS_TARGET_DIR)/html
+	cd $(WEB_DOCS_TARGET_DIR)/
+	cp -a html $(WEB_DOCS_TARGET_DIR)/
+	@echo "\n\n   push pages to the web by running: $(WEB_DOCS_TARGET_DIR)/push_webdocs.bash\n"
 
 
 $(WEB_DOCS_TARGET_DIR)/%.png: images/%.png
@@ -125,10 +133,9 @@ $(WEB_DOCS_TARGET_DIR)/%.png: images/%.png
 
 $(WEB_DOCS_TARGET_DIR)/%.svg: images/%.svg
 	cp $< $@
+else
+$(info make target web_docs disabled)
 endif
-
-
-$(warning WEB_DOCS=$(WEB_DOCS) WEB_DOCS_TARGET_DIR=$(WEB_DOCS_TARGET_DIR))
 
 
 
