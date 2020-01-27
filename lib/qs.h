@@ -407,7 +407,7 @@ struct QsFilter {
         // input buffers, indexed by input port number.
         size_t *advanceLens; // allocated after start and freed at stop
         //
-        // outputLens from qsOuput() and qsGetBuffer() calls from in
+        // outputLens from qsOuput() and qsGetOutputBuffer() calls from in
         // filter input().   Length of this array is filter numOutputs.
         size_t *outputLens; // amount output was advanced in input() call.
 
