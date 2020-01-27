@@ -5,20 +5,10 @@
 
 # Nothing in this directory should be installed.
 
-# If this directory is not recursed into from the directory above this, so
-# we recurse into these directories so that we stay consistent with the
-# source in these directories.   We are testing files in ../lib/,
-# ../include/quickstream, and ../lib/quickstream/plugins/filters by
-# linking and loading with generated files there-in; and while we're at it
-# we test building everything.
-#
+# If this directory is not recursed into from the directory above this
+# we recurse up a directory.
 ifeq ($(strip $(MAKELEVEL)),0)
-SUBDIRS :=\
- ../include/quickstream\
- ../lib\
- ../lib/quickstream/plugins/filters\
- ../bin\
- ../share/doc/quickstream
+SUBDIRS := ..
 endif
 
 

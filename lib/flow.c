@@ -20,7 +20,7 @@
 // We must have the filter mutex lock (if multi-threaded filter) before
 // calling this.
 static inline
-bool ProcessInput(struct QsFilter *f, struct QsJob *j,
+bool AdvancePointersAndStuff(struct QsFilter *f, struct QsJob *j,
         uint32_t numInputs) {
 
     bool keepInputing = false;
@@ -31,13 +31,17 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
     // large for it to swallow, due to having smaller output buffers, or
     // limited processing capabilities that chock it.
     for(uint32_t i=0; i<numInputs; ++i) {
+        // This DASSERT() could be a user error, but it should have been
+        // checked already in qsOutput().
+        DASSERT(j->inputLens[i] >= j->advanceLens[i]);
+
         if(j->inputLens[i] - j->advanceLens[i] >= f->readers[i]->maxRead) {
-            // Call input until we cut inputLen less than maxRead
+            // Call input until we will cut inputLen less than maxRead
             keepInputing = true;
             break;
         }
         if(j->isFlushing[i] == false)
-            // In this case this thread continues to call input() until
+            // Not all inputs are flushing.
             allFlushing = false;
     }
 
@@ -57,6 +61,23 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
             }
     }
 
+    // Advance this filter's output writePtrs.
+    // This filter, f, owns these write pointers.
+    for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
+
+        // TODO: pass-through buffers.
+
+        struct QsOutput *output = f->outputs + i;
+        ASSERT(j->outputLens[i] <= output->maxWrite,
+                "Buffer write overflow");
+        output->writePtr += j->outputLens[i];
+        if(output->writePtr >= output->buffer->end)
+            // Fix ring buffer wrapping in the overhang mapping.
+            output->writePtr -= output->buffer->mapLength;
+        if(keepInputing)
+            // Reset for the next filter input() call.
+            j->outputLens[i] = 0;
+    }
 
     // Now loop again knowing if we will be calling input() again.
     // We need to advance the read pointers and if input() is being called
@@ -114,6 +135,10 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
                 // If there was no advanceLen for any input port than the
                 // args for that port can stay the way they are. 
                 j->inputLens[i] -= advanceLen;
+                j->inputBuffers[i] = reader->readPtr;
+                j->advanceLens[i] = 0;
+                // We'll get j->outputLens[i] later in
+                // PushJobsToStreamQueue().
             }
         }
     }
@@ -321,10 +346,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     inputRet = f->input(j->inputBuffers, j->inputLens,
             j->isFlushing, f->numInputs, f->numOutputs);
 
-
-    // FILTER LOCK  -- does nothing if not a multi-threaded filter
-    CheckLockFilter(f);
-
     // Flag to mark that input() will be called again by this thread
     // without calling any other input() in between.  Even if that's not
     // the case, the input() may be called later by a thread (this or some
@@ -334,8 +355,11 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // filters.
     bool willInputMore = false;
 
+    // FILTER LOCK  -- does nothing if not a multi-threaded filter
+    CheckLockFilter(f);
+
     if(inputRet == 0)
-        willInputMore = ProcessInput(f, j, f->numInputs);
+        willInputMore = AdvancePointersAndStuff(f, j, f->numInputs);
     else {
         //
         // This filter is done having input() called for this flow cycle

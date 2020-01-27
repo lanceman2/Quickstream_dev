@@ -21,7 +21,7 @@ https://gnss-sdr.org/docs/fundamentals/
 
 ## Not a Kahn’s process network
 
-At least not like the GNUradio reversion of one.
+At least not like the GNUradio version of one.
 
 https://en.wikipedia.org/wiki/Kahn_process_networks
 
@@ -53,35 +53,6 @@ less complex.  If bottleneck filters are thread-safe this will be able to
 process data faster than GNUradio.
 
 
-## Add more automatic buffer sizing.
-
-These example cases will not happen but in a couple stream flow cycles
-out of infinity of them.
-
-A qsGetBuffer() call with a length that would overflow the buffer, will
-cause the buffer to increase its' size.
-
-For there to be lock-less ring buffers the writing filter must not
-change the content of the old buffer as it copies it to a new larger
-ring buffer.  When we are sure that all filters that may be reading
-the old ring buffer are finished with the old ring buffer, it may be
-freed (removed/unmapped/whatever).
-
-Pass-through buffers may not be possible with lock-less ring buffers and
-the automatic buffer sizing feature.
-
-Next Question: How do we know when we can remove "old-resized" ring
-buffers?
-
-  CASES:
-
-    * All filters reading the buffer are in the same thread as the
-      filter that is writing (owns) the ring buffer.  Then just
-      remove it at the time the new ring buffer is created.
-
-    * For a given ring buffer, some reading filters may be in another
-      thread.
-
 
 ## Feature: reuse ring buffers between restarts??
 
@@ -91,13 +62,16 @@ buffers?
 
 Metadata the is not in the stream channels data, but may be paired with
 points in the streams channel data.  Controls are published via filter
-name and control name.
+name and control/parameter name.  Controls are either setters or getters.
+The getters are monitors.  Monitor and control will be lumped in one term,
+control.
 
 We must separate controls that are setters and controls that are getters
 of parameters.  Example: The setting of frequency in a TX filter can then
 pop a getter of the frequency.  With the setter and getter model we then
 only have one code that is writing the getter and many codes that are
-writing the setter with one reading.
+writing the setter with one reading.  The success of a setter is
+determined by monitoring a getting.
 
 Each control can have many keys, so we queue up key value pairs.  Each key
 is a parameter, but there may be relations between setters and getters

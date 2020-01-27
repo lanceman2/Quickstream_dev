@@ -48,6 +48,10 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // could get rid of a lot of threads that are just waiting on blocked
     // system calls.
     //
+    // TODO: If a source filter is multi-threaded we should loop again and
+    // again until there the source filters can have their fill of
+    // threads.
+    //
     for(uint32_t i=0; i<s->numSources; ++i)
         FilterStageToStreamQAndSoOn(s, s->sources[i]);
 
@@ -72,8 +76,9 @@ uint32_t nThreadFlow(struct QsStream *s) {
         ++s->numThreads;
     }
 
-    // The order of the two above loops do not matter.  All starting
-    // threads will just wait on getting this stream mutex lock anyway.
+    // All starting threads will just wait on getting this stream mutex
+    // lock.  So they cannot possibly do anything but wait for a mutex
+    // lock until we unlock the stream mutex below.
 
     // UNLOCK stream
     CHECK(pthread_mutex_unlock(&s->mutex));
