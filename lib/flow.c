@@ -74,8 +74,7 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
         DASSERT(reader->readLength >= inputLen);
 
         DASSERT(inputLen <= reader->buffer->mapLength);
-        DASSERT(reader->readPtr <
-                reader->buffer->mem + reader->buffer->mapLength);
+        DASSERT(reader->readPtr < reader->buffer->end);
 
         // Check for read overrun.  This should have been checked in
         // qsAdvanceInput(), so we just DASSERT() here.
@@ -100,8 +99,7 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
             // is not a multi-threaded filter.
             //
             reader->readPtr += advanceLen;
-            if(reader->readPtr >= reader->buffer->mem +
-                    reader->buffer->mapLength)
+            if(reader->readPtr >= reader->buffer->end)
                 // Wrap back the circular buffer.
                 reader->readPtr -= reader->buffer->mapLength;
             // Remove length from the input length tally.
@@ -116,8 +114,6 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
                 // If there was no advanceLen for any input port than the
                 // args for that port can stay the way they are. 
                 j->inputLens[i] -= advanceLen;
-                j->advanceLens[i] = 0;
-                j->inputBuffers[i] = reader->readPtr;
             }
         }
     }
@@ -145,7 +141,7 @@ bool ProcessInput(struct QsFilter *f, struct QsJob *j,
 // locked in here (for multi-threaded filters).
 static inline
 void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
-            bool willInputMore) {
+        struct QsJob *j, bool willInputMore) {
 
     DASSERT(s);
     DASSERT(f);
@@ -157,26 +153,50 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
 
     // It's just a little bit faster to go through the filter outputs
     // backwards in port numbers because we do not have to setup a
-    // numOutputs variable or dereference f in the top of the loop like
+    // numOutputs variable or dereference f in the top of each loop like
     // in: for(uint32_t i=0; i<f->numOutputs; ++i)
     //
     for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
 
         struct QsOutput *output = f->outputs + i;
 
-        // Advance the write pointers.
+        // 1. Advance the write pointers.
 
-        ASSERT(output->advanceLength <= output->maxWrite,
+        ASSERT(j->outputLens[i] <= output->maxWrite,
                 "Write buffer overrun");
 
-        output->writePtr += output->advanceLength;
-        if(output->writePtr >= output->buffer->mem +
-                output->buffer->mapLength)
+        output->writePtr += j->outputLens[i];
+        if(output->writePtr >= output->buffer->end)
             // Wrap back the circular buffer.
             output->writePtr -= output->buffer->mapLength;
 
+        // 2. We add this data to the receiving filter staging area.
+        //    As the feeding filters, we own the stage job so we don't
+        //    need a stream mutex lock to write to the stage.
+
+        for(uint32_t k=output->numReaders; k!=-1; --k) {
+            struct QsReader *reader = output->readers + k;
+            uint32_t inPort = reader->inputPortNum;
+            DASSERT(reader->filter);
+            DASSERT(inPort < reader->filter->numInputs);
+            struct QsJob *stage = reader->filter->stage;
+            // There should always be a stage job for every filter that
+            // has input ports (input channels).  Readers do not point to
+            // source filters.  The filter lock handles multi-threaded
+            // filter access to the stage job.
+            DASSERT(stage);
+            DASSERT(stage->inputBuffers);
+            DASSERT(stage->inputBuffers[inPort]);
+            DASSERT(stage->inputLens);
+            //
+            // Append to to inputLength.
+            stage->inputLens[inPort] += j->outputLens[i];
+        }
+
+
         // Check if we can make a job for the filters we are feeding.
 
+        
 
 
         DSPEW("%p", output);
@@ -250,6 +270,52 @@ void PushJobsToStreamQueue(struct QsStream *s, struct QsFilter *f,
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
+
+    // At this point this filter/thread owns this job.
+    //
+    // First we find where the filter buffer pointers from the QsReader
+    // readPtr and readLength, and the job inputBuffers[] and job
+    // inputLens[].
+    //
+    // This filter, f, owns readPtr and readLength, and so only this
+    // filter, f, can read and write to readPtr and readLength.  That's
+    // how we get lock-less buffers (but not in the multi-threaded filter
+    // case).
+
+    // multi-threaded filters pay a toll.
+    //
+    // FILTER LOCK  -- does nothing if not a multi-threaded filter
+    CheckLockFilter(f);
+
+    for(uint32_t i=f->numInputs; i!=-1; --i) {
+
+        // Reset the job input() args:
+
+        j->advanceLens[i] = 0;
+
+        // The feed filter could not do this, because it
+        // was not the owner of readers[i]->readPtr like the current
+        // thread/filter.
+        j->inputBuffers[i] = f->readers[i]->readPtr;
+
+        // Add the leftover unread length to the length that the feed
+        // filter gave us.  That feed filter could not do this, because it
+        // was not the owner of readers[i]->readLength like the current
+        // thread/filter, f.
+        j->inputLens[i] += f->readers[i]->readLength;
+    }
+
+    // Initialize the record of output lengths to output buffers in this
+    // thread.  This could just be a counter in the QsOutput, but we need
+    // one of these counters for each thread, so it's in the job.
+    for(uint32_t i=f->numOutputs; i!=-1; --i)
+        j->outputLens[i] = 0;
+
+
+    // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
+    CheckUnlockFilter(f);
+
+
     int inputRet;
 
     inputRet = f->input(j->inputBuffers, j->inputLens,
@@ -288,18 +354,20 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // Whither or not the filter, f, input() will be called again by this
     // thread, we still need to check the output buffers, and see if there
     // will be jobs added to the stream queue.
-    PushJobsToStreamQueue(s, f, willInputMore);
+    PushJobsToStreamQueue(s, f, j, willInputMore);
 
 
     // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
     CheckUnlockFilter(f);
-
+ 
+    // If willInputMore==true this function is called again immediately.
+    //
     return willInputMore;
 }
 
 
 
-// This is the function called by worker threads.
+// This is the first function called by worker threads.
 //
 void *RunningWorkerThread(struct QsStream *s) {
 
@@ -342,6 +410,13 @@ void *RunningWorkerThread(struct QsStream *s) {
             // We are unemployed.  We have no job.  Just like I'll be,
             // after I finish writing this fucking code.
 
+            if(s->numIdleThreads == s->numThreads - 1) {
+                // All other threads are idle so we are done
+                // working/living.
+                living = false;
+                continue;
+            }
+
             // We count ourselves in the ranks of the unemployed.
             ++s->numIdleThreads;
 
@@ -349,13 +424,21 @@ void *RunningWorkerThread(struct QsStream *s) {
                     "thread(s) waiting for work",
                     s->numIdleThreads, s->numThreads);
 
-            // STREAM UNLOCK
+            // STREAM UNLOCK  -- at wait
             // wait
             CHECK(pthread_cond_wait(&s->cond, &s->mutex));
-            // STREAM LOCK
+            // STREAM LOCK  -- when woken.
 
             // Remove ourselves from the numIdleThreads.
             --s->numIdleThreads;
+
+            if(s->numIdleThreads == s->numThreads - 1) {
+                // All other threads are idle so we are done
+                // working/living.
+                living = false;
+                continue;
+            }
+
 
             DSPEW("Now %" PRIu32 " out of %" PRIu32
                     "thread(s) waiting for work",
@@ -367,6 +450,9 @@ void *RunningWorkerThread(struct QsStream *s) {
             continue;
         }
 
+        // STREAM UNLOCK
+        CHECK(pthread_mutex_unlock(&s->mutex));
+
         struct QsFilter *f = j->filter;
         DASSERT(f);
 
@@ -375,17 +461,13 @@ void *RunningWorkerThread(struct QsStream *s) {
         // This thread can now read and write to this job, j, without a
         // mutex.  No other thread will access this job while it is
         // here.
-
+        //
         // Put it in this thread specific data so we can find it in the
         // filter input() when this thread runs things like
         // qsAdvanceInput(), qsOutput(), and other quickstream/filter.h
         // functions.
         //
         CHECK(pthread_setspecific(_qsKey, j));
-
-
-        // STREAM UNLOCK
-        CHECK(pthread_mutex_unlock(&s->mutex));
 
 
         // call input() as many times as needed
@@ -399,10 +481,27 @@ void *RunningWorkerThread(struct QsStream *s) {
         FilterWorkingToFilterUnused(j);
     }
 
+    --s->numThreads;
+
+    // Now this thread does not count in s->numThreads or
+    // s->numIdleThreads
+    if(s->numThreads && s->numIdleThreads == s->numThreads) {
+
+        // Wait up the all these lazy workers so they can return.
+        CHECK(pthread_cond_broadcast(&s->cond));
+        // TODO: pthread_cond_broadcast() does nothing if it was called by
+        // another thread on the way out.  Maybe add a flag so we do not
+        // call it more than once in this case.
+    }
+
+    if(s->numThreads == 0 && s->masterWaiting)
+        // this last thread out signals the master.
+        CHECK(pthread_cond_broadcast(&s->masterCond));
+
 
     // STREAM UNLOCK
     CHECK(pthread_mutex_unlock(&s->mutex));
 
 
-    return 0; // We're dead now.  It was a good life.
+    return 0; // We're dead now.  It was a good life for a worker/slave.
 }

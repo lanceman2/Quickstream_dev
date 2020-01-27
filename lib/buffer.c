@@ -99,15 +99,16 @@ void FreeBuffers(struct QsFilter *f) {
         struct QsBuffer *b = output->buffer;
         // There is no failure mode (accept for ASSERT) between allocating
         // the buffer and mapping the memory, therefore:
-        DASSERT(b->mem);
+        DASSERT(b->end);
         DASSERT(b->mapLength);
         DASSERT(b->overhangLength);
 #ifdef DEBUG
         // TODO: Is this really useful?
-        memset(b->mem, 0, b->mapLength);
+        memset(b->end - b->mapLength, 0, b->mapLength);
 #endif
         // freeRingBuffer() calls munmap() ...
-        freeRingBuffer(b->mem, b->mapLength, b->overhangLength);
+        freeRingBuffer(b->end - b->mapLength, b->mapLength,
+                b->overhangLength);
 #ifdef DEBUG
         memset(b, 0, sizeof(*b));
 #endif
@@ -124,13 +125,15 @@ void CheckMakeRingBuffer(struct QsBuffer *b,
 
     DASSERT(b);
     
-    if(b->mem != 0) return;
+    if(b->end != 0) return;
 
     b->mapLength = len;
     b->overhangLength = overhang;
     // makeRingBuffer() will round up mapLength and
     // overhangLength to the nearest page.
-    b->mem = makeRingBuffer(&b->mapLength, &b->overhangLength);
+    b->end = makeRingBuffer(&b->mapLength, &b->overhangLength);
+    // makeRingBuffer() returns the start, we save this value in "end".
+    b->end += b->mapLength;
 }
 
 
@@ -147,8 +150,6 @@ void MapRingBuffers(struct QsFilter *f) {
             // This is NOT a pass through buffer. 
             DASSERT(output->buffer);
             CheckMakeRingBuffer(output->buffer, 1, 1);
-            // Initialize the writer
-            output->writePtr = output->buffer->mem;
         } else {
             // This is a pass through buffer.
             struct QsOutput *o = output->prev;
@@ -162,15 +163,17 @@ void MapRingBuffers(struct QsFilter *f) {
             // share this buffers memory mapping.
             DASSERT(o->buffer);
             output->buffer = o->buffer;
-            output->writePtr = output->buffer->mem;
         }
+
+        // Initialize the writer
+        output->writePtr = output->buffer->end - output->buffer->mapLength;
 
         DASSERT(output->numReaders);
         DASSERT(output->readers);
 
         for(uint32_t j=0; j<output->numReaders; ++j) {
             // Initialize the readers
-            output->readers[j].readPtr = output->buffer->mem;
+            output->readers[j].readPtr = output->writePtr;
             output->readers[j].buffer = output->buffer;
         }
     }
@@ -188,6 +191,7 @@ void MapRingBuffers(struct QsFilter *f) {
 }
 
 
+
 void qsOutput(uint32_t portNum, const size_t len) {
 
 
@@ -202,6 +206,7 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     // Get the filter.
     struct QsJob *job = pthread_getspecific(_qsKey);
     ASSERT(job, "thread_getspecific(_qsKey) failed");
+    DASSERT(job->magic == _QS_IS_JOB);
     struct QsFilter *f = job->filter;
     DASSERT(f);
     DASSERT(maxLen);
@@ -274,21 +279,19 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
 
     // We only call this in the main thread in start().
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    ASSERT(_qsCurrentFilter, "We are not starting");
-    DASSERT(_qsCurrentFilter->stream);
-    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
-            "We are not starting");
-    DASSERT(_qsCurrentFilter->numInputs, "Filter \"%s\" has no inputs",
-            _qsCurrentFilter->name);
-    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
-            "We are stopping");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_START, "Not in filter start()");
+    struct QsStream *s = f->stream;
+    DASSERT(s);
+    ASSERT(f->stream->flags & _QS_STREAM_START, "Stream is not starting");
+    DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
     // This would be a user error.
-    ASSERT(inputPortNum > _qsCurrentFilter->numInputs);
+    ASSERT(inputPortNum >= f->numInputs);
+    DASSERT(f->readers);
 
-    DASSERT(_qsCurrentFilter->readers);
-
-
-    _qsCurrentFilter->readers[inputPortNum]->maxRead = len;
+    f->readers[inputPortNum]->maxRead = len;
 }
 
 
@@ -302,35 +305,42 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     // We only call this in the main thread in start().
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    ASSERT(_qsCurrentFilter, "We are not starting");
-    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
-    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
-            "We are not starting");
-    DASSERT(_qsCurrentFilter->numOutputs);
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_START, "Not in filter start()");
+    struct QsStream *s = f->stream;
+    DASSERT(s);
+    ASSERT(f->stream->flags & _QS_STREAM_START, "Stream is not starting");
+    DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
     // This would be a user error.
-    ASSERT(outputPortNum < _qsCurrentFilter->numOutputs);
-    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
-            "We are stopping");
-
+    ASSERT(outputPortNum >= f->numOutputs);
+    DASSERT(f->outputs);
 
     ASSERT(0, "qsCreateOutputBuffer() is not written yet");
 }
 
 
 int
-qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
+qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
         size_t maxWriteLen) {
-
+    // We only call this in the main thread in start().
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(_qsCurrentFilter);
-    DASSERT(_qsCurrentFilter->mark == 0);
-    ASSERT(_qsCurrentFilter->numOutputs <= _QS_MAX_CHANNELS);
-    ASSERT(_qsCurrentFilter->stream->flags & _QS_STREAM_START,
-            "We are not starting");
-    DASSERT(_qsCurrentFilter->numOutputs);
-    DASSERT(!(_qsCurrentFilter->stream->flags & _QS_STREAM_STOP),
-            "We are stopping");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_START, "Not in filter start()");
+    struct QsStream *s = f->stream;
+    DASSERT(s);
+    ASSERT(f->stream->flags & _QS_STREAM_START, "Stream is not starting");
+    DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
+    // This would be a user error.
+    ASSERT(inPortNum >= f->numInputs);
+    // This would be a user error.
+    ASSERT(outPortNum >= f->numOutputs);
 
+    DASSERT(f->readers);
+    DASSERT(f->outputs);
 
     ASSERT(0, "Write this function");
     return 0; // success

@@ -127,7 +127,7 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
 
 
     /////////////////////////////////////////////////////////////////////
-    // 3. Now clean/reset the filter stage job args.
+    // 3. Now clean/reset the filter new stage job args.
 
     if(f->numInputs) {
         // This is not a source filter.

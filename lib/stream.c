@@ -810,7 +810,8 @@ int qsStreamStop(struct QsStream *s) {
     DASSERT(s->app);
     DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
     DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
-
+    ASSERT(pthread_getspecific(_qsKey) == 0,
+            "stream is in the wrong mode to call this now.");
     ASSERT(s->sources != 0,
             "stream is in the wrong mode to call this now.");
 
@@ -830,11 +831,13 @@ int qsStreamStop(struct QsStream *s) {
 
     for(struct QsFilter *f = s->app->filters; f; f = f->next)
         if(f->stream == s && f->stop) {
-            _qsCurrentFilter = f;
+            CHECK(pthread_setspecific(_qsKey, f));
+            f->mark = _QS_IN_STOP;
             s->flags |= _QS_STREAM_STOP;
             f->stop(f->numInputs, f->numOutputs);
             s->flags &= ~_QS_STREAM_STOP;
-            _qsCurrentFilter = 0;
+            f->mark = 0;
+            CHECK(pthread_setspecific(_qsKey, 0));
         }
 
 
@@ -860,6 +863,8 @@ int qsStreamReady(struct QsStream *s) {
     DASSERT(s->app);
     DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
     DASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
+    ASSERT(pthread_getspecific(_qsKey) == 0,
+            "The stream is in the wrong mode to call this now.");
     ASSERT(s->sources == 0,
             "The stream is in the wrong mode to call this now.");
 
@@ -998,12 +1003,15 @@ int qsStreamReady(struct QsStream *s) {
                 // that if the filter start() calls any filter API
                 // function to get resources we know what filter these
                 // resources belong to.
-                _qsCurrentFilter = f;
+                CHECK(pthread_setspecific(_qsKey, f));
+                f->mark = _QS_IN_START;
                 s->flags |= _QS_STREAM_START;
                 // Call a filter start() function:
                 int ret = f->start(f->numInputs, f->numOutputs);
                 s->flags &= ~_QS_STREAM_START;
-                _qsCurrentFilter = 0;
+                f->mark = 0;
+                CHECK(pthread_setspecific(_qsKey, 0));
+
                 if(ret) {
                     // TODO: Should we call filter stop() functions?
                     //
@@ -1020,7 +1028,7 @@ int qsStreamReady(struct QsStream *s) {
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten
-    // from the filters' start() function.  Now we allocate any output
+    // from the filter's start() function.  Now we allocate any output
     // buffers that have not been explicitly allocated from the filter
     // start() calling qsCreateOutputBuffer().
     //

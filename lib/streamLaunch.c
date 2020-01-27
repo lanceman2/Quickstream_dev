@@ -153,7 +153,10 @@ void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
 
     for(uint32_t i=0; i<numJobs; ++i) {
 
-        f->jobs[i].filter = f; 
+        f->jobs[i].filter = f;
+#ifdef DEBUG
+        f->jobs[i].magic = _QS_IS_JOB;
+#endif
 
         AllocateJobArgs(f, f->jobs + i, numInputs, f->numOutputs);
         // Initialize the unused job stack:

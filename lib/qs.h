@@ -78,10 +78,30 @@
 // For in construct() filter->mark == _QS_IN_CONSTRUCT
 // For in destroy()   filter->mark == _QS_IN_DESTROY
 //
+// Getting random numbers, run:
+//
+//   cat SOME_FILES | sha512sum -
+// 
+// and copy and paste a random chunk of 8 characters in that or run:
+//
+//   od -An -tx -N 4 < /dev/random
+//
+// or flip a coin for an hour.
+//
+//
 // The values are just fixed and random
 #define _QS_IN_CONSTRUCT        ((uint32_t) 0xe583e10c)
 #define _QS_IN_DESTROY          ((uint32_t) 0x17fb51d9)
 
+// Sets filter mark when in filter start()
+#define _QS_IN_START            ((uint32_t) 0xfa74ac1c)
+// Sets filter mark when in filter stop()
+#define _QS_IN_STOP             ((uint32_t) 0x091ba4df)
+
+#define _QS_IN_INPUT            ((uint32_t) 0xbf4834ec)
+
+
+#define _QS_IS_JOB              ((uint32_t) 0x08def4de)
 
 
 
@@ -141,6 +161,19 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
+
+    // The current filter that we are calling construct(), or destroy()
+    // for.
+    //
+    // Stream start and stop "like" actions can't be called from a
+    // filter's construct(), or destroy(); that is you can't call
+    // qsStreamReady(),  qsStreamLaunch(), qsStreamWait(), and
+    // qsStreamStop() from filter's construct(), or destroy().
+    //
+    // We put a pointer to the app in the threads per thread specific
+    // data with pthread_setSpecific().
+    //
+    struct QsFilter *currentFilter;
 };
 
 
@@ -175,11 +208,13 @@ pthread_t _qsMainThread;
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
-// flow state.  Since streams can add and rrsync -av --delete /home/ lance@anvil:cube_home_BACKUP/emove filters when it is not
+// flow state.  Since streams can add and remove filters when it is not
 // flowing the stream needs app to be a list of loaded filters for it.
 //
 struct QsStream {
 
+    // We can have many streams in an app (QsApp).
+    //
     struct QsApp *app;
 
     // maxThreads=0 means do not start any.  maxThreads does not change at
@@ -287,11 +322,25 @@ struct QsStream {
 // stream at a time.  If the filter is added to another stream, it will be
 // removed from the previous stream; so ya, a filter can be only in one
 // stream at a time.  When finished with a filter, the filter is unloaded
-// by its' app.  quickstream users can write filters using
+// by it's app.  quickstream users can write filters using
 // include/quickstream/filter.h.  The quickstream software package also
 // comes with a large selection of filters.
 //
 struct QsFilter {
+
+    // mark is extra data in this struct so that we can save a marker as
+    // we look through the filters in the graph, because if the graph has
+    // cycles in it, it's not easy to look at each filter just once
+    // without a marker to mark a filter as looked at.
+    //
+    // This mark is used for different things at different stages of the
+    // flow stream.  It's just a multipurpose flag.  In some uses it's a
+    // magic number, so it's at the top of the structure.
+    //
+    // TODO: make mark a union with descriptive names for the different
+    // uses.
+    uint32_t mark;
+
 
     void *dlhandle; // from dlopen()
 
@@ -320,6 +369,11 @@ struct QsFilter {
 
     ///////////////////////////////////////////////////////////////////////
     struct QsJob {
+
+
+#ifdef DEBUG
+        uint32_t magic; // is set to _QS_IS_JOB when it's valid.
+#endif
 
         ///////////////// STREAM MUTEX GROUP ////////////////////////////
         //
@@ -408,6 +462,7 @@ struct QsFilter {
         uint8_t *readPtr;
         //
         // The amount of data that is available to be read from readPtr.
+        // readLength is read and written to by only the reading filter.
         size_t readLength;
 
         // The filter that is reading.
@@ -537,20 +592,6 @@ struct QsFilter {
     // when the stream is flowing.
     bool isSource; // startup flag marking filter as a source
 
-    // TODO: It'd be nice not to have this extra data.  It's not needed
-    // when the stream is flowing.
-    //
-    // mark is extra data in this struct so that we can save a marker as
-    // we look through the filters in the graph, because if the graph has
-    // cycles in it, it's not easy to look at each filter just once
-    // without a marker to mark a filter as looked at.
-    //
-    // This mark is used for different things at different stages of the
-    // flow stream.  It's just a multipurpose flag.
-    //
-    // TODO: make mark a union with descriptive names for the different
-    // uses.
-    uint32_t mark;
 };
 
 
@@ -601,7 +642,10 @@ struct QsOutput {  // points to reader filters
     size_t maxWrite;
 
     // The number of bytes written in the last write, qsOutput().
-    size_t advanceLength;
+    //size_t advanceLength;  this is now in job::outputLens[]
+    // because the filter that is owns the output and writePtr could be
+    // multi-threaded which means that with will be many of these
+    // counters.
 
 
     // readers is where the output data flows to.
@@ -630,25 +674,28 @@ struct QsOutput {  // points to reader filters
 struct QsBuffer {
 
     ///////////////////////////////////////////////////////////////////////
-    // The rest of this structure stays constant while the stream is
-    // flowing.
+    // This structure stays constant while the stream is flowing.
     //
-    uint8_t *mem; // Pointer to start of mmap()ed memory.
+    // There are two adjacent memory mappings per buffer.
+    //
+    // The start of the first memory mapping is at end + mapLength.  We
+    // save "end" in the data structure because we use it more in looping
+    // calculations than the "start" of the memory.
+    //
+    uint8_t *end; // Pointer to end of the first mmap()ed memory.
 
     //
     // These two parameters make it a circular buffer or ring buffer.  See
     // makeRingBuffer.c.  The mapLength is the most the buffer can hold to
-    // be read by a filter.
+    // be read by a filter.  The overhangLength is the length of the
+    // "wrap" mapping that is a second memory mapping just after the
+    // mapLength mapping, and is the most that can be written or read in
+    // one filter transfer "operation".
+    //
     size_t mapLength, overhangLength; // in bytes.
 };
 
 
-// The filter that is having construct(), start(), stop(), or destroy()
-// called.  There is only one thread when they are called.
-//
-// TODO: This makes the API not thread-safe.
-extern
-struct QsFilter *_qsCurrentFilter;
 
 
 // These below functions are not API user interfaces:'

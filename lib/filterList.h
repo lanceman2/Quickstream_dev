@@ -34,6 +34,7 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->name);
     DASSERT(f->outputs == 0);
     DASSERT(f->numOutputs == 0);
+    DASSERT(f->app);
 
     DSPEW("Freeing: %s", f->name);
 
@@ -41,23 +42,54 @@ void FreeFilter(struct QsFilter *f) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
         if(destroy) {
 
+            struct QsApp *oldApp = pthread_getspecific(_qsKey);
+            // Check if the user is using more than one QsApp in a single
+            // thread and calling qsApp or qsStream functions from within
+            // other qsApp or qsStream functions.
+            //
+            // You may be able to create more than one QsApp but:
+            //
+            ASSERT(!oldApp || oldApp == f->app,
+                    "You cannot mix QsApp objects in "
+                    "other QsApp function calls");
+
+            DASSERT(f->mark == 0);
+
+            if(!oldApp)
+                // If thread specific data was set already than we do not
+                // set it again here:
+                CHECK(pthread_setspecific(_qsKey, f->app));
+
             // This FreeFilter() function must be re-entrant.  It may be
             // called from a qsFilterUnload() call in a filter->destroy()
             // call; for filters that are super-modules.  Super-modules
             // are filters that can load and unload other filters.
+            //
             // However, filters cannot unload themselves.
             //
-            struct QsFilter *old_qsCurrentFilter = _qsCurrentFilter;
+            // So ya, this code block looks like stupid variable tossing
+            // shit, but it's not.
+            //
+            struct QsFilter *old_qsCurrentFilter = f->app->currentFilter;
+            // A filter cannot unload itself.
+            DASSERT(old_qsCurrentFilter != f);
             // Use the mark variable at a state marker.
             f->mark = _QS_IN_DESTROY;
-            _qsCurrentFilter = f;
+
             int ret = destroy();
-            _qsCurrentFilter = old_qsCurrentFilter;
-            // Not in destroy() phase anymore.
+
+            // Filter f is not in destroy() phase anymore.
             f->mark = 0;
+            f->app->currentFilter = old_qsCurrentFilter;
+
+            if(old_qsCurrentFilter == 0)
+                // We are the last in this filter unload call stack.
+                CHECK(pthread_setspecific(_qsKey, 0));
+
 
             if(ret) {
                 // TODO: what do we use this return value for??
+                //
                 // Maybe just to print this warning.
                 WARN("filter \"%s\" destroy() returned %d", f->name, ret);
             }
