@@ -32,7 +32,7 @@ bool AdvancePointersAndStuff(struct QsFilter *f, struct QsJob *j,
     // limited processing capabilities that chock it.
     for(uint32_t i=0; i<numInputs; ++i) {
         // This DASSERT() could be a user error, but it should have been
-        // checked already in qsOutput().
+        // checked already in qsAdvanceInput().
         DASSERT(j->inputLens[i] >= j->advanceLens[i]);
 
         if(j->inputLens[i] - j->advanceLens[i] >= f->readers[i]->maxRead) {
@@ -45,13 +45,14 @@ bool AdvancePointersAndStuff(struct QsFilter *f, struct QsJob *j,
             allFlushing = false;
     }
 
-    // We got to be careful if all input feeds to this filter have
-    // finished, isFlushing=true for all feeds, then without the feeds the
-    // input() needs to keep being called until input() returns non-zero
-    // or all input data is gone.  Note: This extra loop is not accessed
-    // often, this only happens at the end of the flow, at flushing
-    // time.
     if(allFlushing && !keepInputing) {
+        // We got to be careful if all input feeds to this filter have
+        // finished, isFlushing=true for all feeds, then without the feeds
+        // the input() needs to keep being called until input() returns
+        // non-zero or all input data is gone.  Note: This extra loop is
+        // not accessed often, this only happens at the end of the flow,
+        // at flushing time.
+
         for(uint32_t i=0; i<numInputs; ++i)
             if(j->inputLens[i] > 0) {
                 // There is some input data to read and we have no input

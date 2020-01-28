@@ -481,11 +481,13 @@ struct QsFilter {
         size_t threshold; // Length in bytes to cause input() to be called.
 
         // The reading filter promises to read some input data so long as
-        // the buffer input length >= maxRead.  It only has to read 1
-        // byte to fulfill this promise, but so long as the readable
-        // amount of data on this port is >= maxRead is will keep
-        // having it's input() called until the readable amount of data on
-        // this port is < maxRead.
+        // the buffer input length >= maxRead.
+        //
+        // It only has to read 1 byte to fulfill this promise, but so long
+        // as the readable amount of data on this port is >= maxRead is
+        // will keep having it's input() called until the readable amount
+        // of data on this port is < maxRead or an output buffer write
+        // pointer is at a limit (???).
         //
         // This parameter guarantees that we can calculate a fixed ring
         // buffer size that will not be overrun.
