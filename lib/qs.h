@@ -492,7 +492,7 @@ struct QsFilter {
         // This parameter guarantees that we can calculate a fixed ring
         // buffer size that will not be overrun.
         //
-        size_t maxRead; // Length in bytes to keep input() being called.
+        size_t maxRead; // Length in bytes.
 
         // The input port number that this filter being written to sees in
         // it's input(,,portNum,) call.
@@ -642,6 +642,14 @@ struct QsOutput {  // points to reader filters
     // maxWrite bytes to this buffer.
     //
     size_t maxWrite;
+
+    // This is the maximum of maxWrite and all reader maxRead for
+    // this output level in the pass-through buffer list.
+    // See the function: 
+    // This is used to calculate the ring buffer size and than
+    // is used to determine if writing to the buffer is blocked
+    // by buffer being full.
+    size_t maxLength;
 
     // The number of bytes written in the last write, qsOutput().
     //size_t advanceLength;  this is now in job::outputLens[]
