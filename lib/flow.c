@@ -78,7 +78,7 @@ retry: ;
             // This is the BLOCKING case.
             ASSERT(0, "Write this code");
 
-            
+
 
             // FILTER UNLOCK  -- does nothing if not a multi-threaded filter
             CheckUnlockFilter(f);
@@ -113,7 +113,7 @@ retry: ;
 
 // Returns true to signal call me again, and false otherwise.
 static inline
-bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
+void RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
 
     // At this point this filter/thread owns this job.
@@ -174,17 +174,55 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         // reset before the next flow/run cycle, if there is one.  But we
         // still need to deal with output.
         //
+        // The decision to stop having input() called was made by the
+        // filter, in this case.  Another that input() could stop being
+        // calling is that there are no more input data feeding the
+        // filter.
+        //
         if(inputRet < 0)
             WARN("filter \"%s\" input() returned error code %d",
                     f->name, inputRet);
-        // Mark this filter as being done having it's input() called.
-        f->mark = true;
-    }
+        DSPEW("filter \"%s\" is done with this flow cycle", f->name);
 
- 
-    // If willInputMore==true this function is called again immediately.
-    //
-    return false;
+        // STREAM LOCK
+        CHECK(pthread_mutex_lock(&s->mutex));
+
+        // Mark this filter as being done having it's input() called.
+        if(f->mark == 0) {
+
+            // Now we must remove any existing jobs from this filter from in
+            // the stream job queue.
+            //
+            // We only do this once for each filter when they finish, so speed
+            // is not an issue.
+            struct QsJob *next = 0;
+            for(struct QsJob *job = s->jobFirst; job; job = next) {
+                // the job passed to this function, j, is in the filter
+                // working queue and not in the stream job queue.
+                DASSERT(j != job);
+                // Save the job->next because if
+                // StreamQToFilterUnused(job) is called it will make
+                // job->next invalid after it's called.
+                next = job->next;
+                if(job->filter == f)
+                    StreamQToFilterUnused(s, f, job);
+            }
+
+            f->mark = 1;
+        }
+#ifdef SPEW_LEVEL_DEBUG
+        else {
+            ++f->mark;
+            // another thread call to input() also returned non-zero.
+            DSPEW("filter \"%s\": another thread (%" PRIu32 ") calling to input()"
+                    " also returned non-zero", f->name, f->mark);
+            DASSERT(f->mark <= f->maxThreads);
+        }
+#endif
+
+        // STREAM UNLOCK
+        CHECK(pthread_mutex_unlock(&s->mutex));
+    }
 }
 
 
@@ -195,7 +233,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 //
 // returns 0 if all threads would be sleeping.
 static inline
-struct QsJob *WaitForWork(struct QsStream *s) {
+struct QsJob *GetWork(struct QsStream *s) {
 
 #ifdef SPEW_LEVEL_DEBUG
     // So we may spew when the number of working threads changes.
@@ -245,10 +283,14 @@ struct QsJob *WaitForWork(struct QsStream *s) {
         // Remove ourselves from the numIdleThreads.
         --s->numIdleThreads;
 
-        if(s->numIdleThreads == s->numThreads - 1)
-            // All other threads are idle so we are done
-            // working/living.
+        if(s->numIdleThreads == s->numThreads - 1) {
+            // All other threads are idle so we are done working/living.
+            //
+            // In order for this to happen there should be no jobs in the
+            // stream job queue.
+            DASSERT(StreamQToFilterWorker(s) == 0);
             return 0;
+        }
     }
 }
 
@@ -285,7 +327,7 @@ void *RunningWorkerThread(struct QsStream *s) {
 
     // We work until we die.
     //
-    while((j = WaitForWork(s))) {
+    while((j = GetWork(s))) {
  
         // STREAM UNLOCK
         CHECK(pthread_mutex_unlock(&s->mutex));

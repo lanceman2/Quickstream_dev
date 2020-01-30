@@ -337,6 +337,9 @@ struct QsFilter {
     // flow stream.  It's just a multipurpose flag.  In some uses it's a
     // magic number, so it's at the top of the structure.
     //
+    // At flow time mark is used to mark that input() has finished being
+    // called, and the stream mutex is used to access it.
+    //
     // TODO: make mark a union with descriptive names for the different
     // uses.
     uint32_t mark;

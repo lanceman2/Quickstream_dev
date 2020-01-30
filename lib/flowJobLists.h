@@ -57,6 +57,56 @@ extern void *RunningWorkerThread(struct QsStream *s);
 
 
 
+// This removes a job from the stream job queue and puts it in the filter
+// unused job stack.  It's used to clear jobs out of order, because the
+// filter has stopped having it's input() called.  The job must exist in
+// the stream job queue.
+//
+//  1. Remove job from stream job queue.
+//
+//  2. Put the job into the filter unused job stack.
+//
+// We must have a stream->mutex lock to call this.
+static inline
+void StreamQToFilterUnused(struct QsStream *s, struct QsFilter *f,
+        struct QsJob *j) {
+
+    DASSERT(f);
+    DASSERT(s);
+    DASSERT(f->stream == s);
+    DASSERT(j);
+    DASSERT(j->filter == f);
+
+    /////////////////////////////////////////////////////////////////////
+    // 1. Remove job from stream job queue.
+
+    if(j->next) {
+        DASSERT(j != s->jobLast);
+        j->next->prev = j->prev;
+    } else {
+        DASSERT(j == s->jobLast);
+        s->jobLast = j->prev;
+    }
+    if(j->prev) {
+        DASSERT(j != s->jobFirst);
+        j->prev->next = j->next;
+        j->prev = 0;
+    } else {
+        DASSERT(j == s->jobFirst);
+        s->jobFirst = j->next;
+    }
+
+
+    /////////////////////////////////////////////////////////////////////
+    //  2. Put the job into the filter unused job stack.
+
+    j->next = f->unused;
+    f->unused = j;
+
+}
+
+
+
 // 1. Transfer job from the filter->stage to the stream job queue, then
 //
 // 2. transfer a job from filter unused to filter stage (to replace the
@@ -80,6 +130,14 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
     DASSERT(s);
     DASSERT(f);
     DASSERT(f->stream == s);
+
+    if(f->mark) {
+        // This filter is marked as done with this flow cycle, so we just
+        // ignore this request.
+        WARN("filter \"%s\" ignoring stream job queue request", f->name);
+        return;
+    }
+
 
     struct QsJob *j = f->stage;
     DASSERT(j);
