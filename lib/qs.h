@@ -466,6 +466,11 @@ struct QsFilter {
         //
         // The amount of data that is available to be read from readPtr.
         // readLength is read and written to by only the reading filter.
+        //
+        // The feeding filter is not allowed to access this variable.  We
+        // add this to the input lengths that the feeding filters put in
+        // jobs (QsJob) just before we call the filter's input() with the
+        // job.
         size_t readLength;
 
         // The filter that is reading.
@@ -648,7 +653,9 @@ struct QsOutput {  // points to reader filters
 
     // This is the maximum of maxWrite and all reader maxRead for
     // this output level in the pass-through buffer list.
-    // See the function: 
+    //
+    // See the function: ???
+    //
     // This is used to calculate the ring buffer size and than
     // is used to determine if writing to the buffer is blocked
     // by buffer being full.
