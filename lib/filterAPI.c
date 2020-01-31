@@ -9,6 +9,7 @@
 
 #include "./debug.h"
 #include "./qs.h"
+#include "./flowJobLists.h"
 #include "../include/quickstream/filter.h"
 
 

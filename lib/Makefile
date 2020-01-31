@@ -4,6 +4,7 @@ INSTALL_DIR = $(PREFIX)/lib
 libquickstream.so_SOURCES :=\
  app.c\
  filter.c\
+ filterAPI.c\
  stream.c\
  debug.c\
  opts.c\
