@@ -654,7 +654,7 @@ struct QsOutput {  // points to reader filters
     // This is the maximum of maxWrite and all reader maxRead for
     // this output level in the pass-through buffer list.
     //
-    // See the function: GetMappingLengths(
+    // See the function: GetMappingLengths() in buffer.c
     //
     // This is used to calculate the ring buffer size and than
     // is used to determine if writing to the buffer is blocked

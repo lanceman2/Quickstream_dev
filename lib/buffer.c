@@ -192,7 +192,7 @@ void MakeRingBuffer(struct QsOutput *output) {
 }
 
 
-// This function will recurse.
+// This function will recurse, i.e. call itself.
 //
 void MapRingBuffers(struct QsFilter *f) {
 
@@ -207,9 +207,9 @@ void MapRingBuffers(struct QsFilter *f) {
             MakeRingBuffer(output);
         } else {
             // This is a pass through buffer that points to the "real"
-            // buffer in output->prev.  It owns and allocated the output
-            // (QsOutput) data, but that output->buffer is not owned by
-            // the output.
+            // buffer in output->prev.  It owns the allocated output
+            // (QsOutput) data, but output->buffer is not owned by this
+            // output.
             struct QsOutput *o = output->prev;
             // This is a "pass through" buffer so it does not have it's
             // own mapping or buffer struct.  We find the buffer that will

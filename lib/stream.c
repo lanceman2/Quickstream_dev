@@ -1024,7 +1024,7 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: allocate output buffer structures
+     *     Stage: allocate output buffer (QsBuffer) structures
      *********************************************************************/
 
     // Any filters' special buffer requirements should have been gotten
@@ -1043,6 +1043,10 @@ int qsStreamReady(struct QsStream *s) {
 
     // There may be some calculations needed from the buffer structure for
     // the memory mapping, so we do this in a different loop.
+    //
+    // This calculates the memory mapping sizes from the filter promised
+    // write and read sizes and calls mmap().
+    //
     StreamSetFilterMarks(s, true);
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
