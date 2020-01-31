@@ -1038,7 +1038,7 @@ int qsStreamReady(struct QsStream *s) {
 
 
     /**********************************************************************
-     *     Stage: mmap() ring buffers to memory
+     *     Stage: mmap() ring buffers with memory mappings
      *********************************************************************/
 
     // There may be some calculations needed from the buffer structure for

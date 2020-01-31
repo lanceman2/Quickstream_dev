@@ -118,17 +118,72 @@ void FreeBuffers(struct QsFilter *f) {
 }
 
 
-//TODO: rewrite this.
 static inline
-void CheckMakeRingBuffer(struct QsBuffer *b,
-        size_t len, size_t overhang) {
+void GetMappingLengths(struct QsOutput *output, struct QsBuffer *buffer) {
 
-    DASSERT(b);
-    
-    if(b->end != 0) return;
+    // This starts at the top of the output "pass-through" list:
+    DASSERT(output->prev == 0);
+    DASSERT(output->buffer);
+    DASSERT(output->buffer == buffer);
 
-    b->mapLength = len;
-    b->overhangLength = overhang;
+    size_t mapLen = 0; // the bulk memory mapping length
+    size_t overhangLen = 0; // overhanging memory mapping length
+
+    // The overhang length is mapped on the end of the bulk mapping and
+    // maps that end back to the start, making circular buffer.
+
+    // This is the most important code in all of quickstream.  It defines
+    // the size of the memory in the ring (circular) buffers.  The
+    // buffering between filters is defined by the maximum read and write
+    // promises made by the filters.  If the filters do not keep their
+    // read and write promises the code will ASSERT() and stop running, in
+    // place of over-running the memory in the buffers, which could happen
+    // without the ASSERT().
+
+    while(output) {
+
+        // We refer to the level as the distance down the output list in
+        // the linked list of "pass-through" outputs.
+        //
+        size_t levelLen = output->maxWrite;
+
+        // Check the length of all read promises.
+        for(uint32_t i=output->numReaders-1; i!=-1; --i)
+            if(levelLen < output->readers[i].maxRead)
+                levelLen = output->readers[i].maxRead;
+
+        // levelLen is now the maximum length that will be written or
+        // read at this output level.
+
+        output->maxLength = levelLen;
+
+        // grow the total length of the bulk mapping.
+        mapLen += 2*levelLen;
+
+        // The overhang mapping must be the maximum of any single write or
+        // read operation.
+        if(overhangLen < levelLen)
+            overhangLen = levelLen;
+
+        // Down the list we go.
+        output = output->next;
+    }
+
+    buffer->mapLength = mapLen;
+    buffer->overhangLength = overhangLen;
+}
+
+
+// TODO: go through the pass-through buffer list to tally the needed
+// size.
+static inline
+void MakeRingBuffer(struct QsOutput *output) {
+
+    DASSERT(output);
+    struct QsBuffer *b = output->buffer;
+
+    GetMappingLengths(output, b);
+
     // makeRingBuffer() will round up mapLength and
     // overhangLength to the nearest page.
     b->end = makeRingBuffer(&b->mapLength, &b->overhangLength);
@@ -149,13 +204,17 @@ void MapRingBuffers(struct QsFilter *f) {
         if(output->prev == 0) {
             // This is NOT a pass through buffer. 
             DASSERT(output->buffer);
-            CheckMakeRingBuffer(output->buffer, 1, 1);
+            MakeRingBuffer(output);
         } else {
-            // This is a pass through buffer.
+            // This is a pass through buffer that points to the "real"
+            // buffer in output->prev.  It owns and allocated the output
+            // (QsOutput) data, but that output->buffer is not owned by
+            // the output.
             struct QsOutput *o = output->prev;
             // This is a "pass through" buffer so it does not have it's
-            // own mapping.  We find the buffer that will map memory
-            // looking up the "pass through" buffer list.
+            // own mapping or buffer struct.  We find the buffer that will
+            // have the map memory by looking up the "pass through" buffer
+            // list.
             while(o->prev) o = o->prev;
             // o is now the output with the buffer that owns the memory
             // for the buffer.  It's the original output that writes to

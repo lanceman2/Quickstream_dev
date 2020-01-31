@@ -33,7 +33,8 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // feeding filter will no longer have input() called.
     StreamSetFilterMarks(s, false);
 
-    // LOCK stream
+
+    // LOCK stream mutex
     CHECK(pthread_mutex_lock(&s->mutex));
 
     // 1. First add source filter jobs to the stream queue.
@@ -58,29 +59,23 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // 2. Now launch as many threads as we can up to the number of source
     //    filters.  More threads may get added later, if there is demand;
     //    or threads could be removed if they are too idle, or too
-    //    contentious; if we figured out how to write that kind of code.
+    //    contentious; (TODO) if we figured out how to write that kind of
+    //    code.
     //
     //    If there are fewer threads than there are source filters that's
     //    fine.  The jobs are queued up, and will be worked on as worker
     //    threads finish their current jobs.
     //
     for(uint32_t i=0; i<s->numSources &&
-            s->numThreads < s->maxThreads; ++i) {
-        //
-        // Stream does not have its' quota of worker threads.
-        //
-        pthread_t thread;
-        CHECK(pthread_create(&thread, 0/*attr*/,
-                    (void *(*) (void *)) RunningWorkerThread, s));
+            s->numThreads < s->maxThreads; ++i)
+        LaunchWorkerThread(s);
 
-        ++s->numThreads;
-    }
 
     // All starting threads will just wait on getting this stream mutex
     // lock.  So they cannot possibly do anything but wait for a mutex
     // lock until we unlock the stream mutex below.
 
-    // UNLOCK stream
+    // UNLOCK stream mutex
     CHECK(pthread_mutex_unlock(&s->mutex));
 
 
@@ -207,20 +202,36 @@ int qsStreamWait(struct QsStream *s) {
         // threads.
         return -1;
 
-    if(s->numThreads == 0)
+    // LOCK stream mutex
+    CHECK(pthread_mutex_lock(&s->mutex));
+
+    if(s->numThreads == 0) {
         // The number of worker threads is 0 and so there is no reason to
         // wait, and no worker threads to signal this main/master thread.
+        //
+        // UNLOCK stream mutex
+        CHECK(pthread_mutex_unlock(&s->mutex));
         return 1;
+    }
 
-
-    CHECK(pthread_mutex_lock(&s->mutex));
 
     DASSERT(s->masterWaiting == false);
 
     s->masterWaiting = true;
+
     // The last worker to quit will signal this conditional.
+    //
+    // unlock stream mutex via pthread_cond_wait()
+    // 
+    // wait via pthread_cond_wait()
+    //
     CHECK(pthread_cond_wait(&s->masterCond, &s->mutex));
+    //
+    // now it's locked again via pthread_cond_wait()
+    
     s->masterWaiting = false;
+
+    // UNLOCK stream mutex
     CHECK(pthread_mutex_unlock(&s->mutex));
 
     return 0; // yes we did wait.

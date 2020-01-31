@@ -646,15 +646,15 @@ struct QsOutput {  // points to reader filters
     //
     uint8_t *writePtr;
 
-    // The filter that owns this buffer promises to not write more than
-    // maxWrite bytes to this buffer.
+    // The filter that owns this output promises to not write more than
+    // maxWrite bytes to the buffer.
     //
     size_t maxWrite;
 
     // This is the maximum of maxWrite and all reader maxRead for
     // this output level in the pass-through buffer list.
     //
-    // See the function: ???
+    // See the function: GetMappingLengths(
     //
     // This is used to calculate the ring buffer size and than
     // is used to determine if writing to the buffer is blocked
@@ -757,6 +757,9 @@ extern
 void ReallocateFilterArgs(struct QsFilter *f, uint32_t num);
 
 
+extern
+void *RunningWorkerThread(struct QsStream *s);
+
 
 #if 0 // Not needed yet.
 // Set filter->mark = val for every filter in the app.
@@ -812,3 +815,18 @@ GetNumAllocJobsForFilter(struct QsStream *s, struct QsFilter *f) {
 
     return numJobs;
 }
+
+
+static inline
+void LaunchWorkerThread(struct QsStream *s) {
+
+    // Stream does not have its' quota of worker threads.
+    DASSERT(s->numThreads < s->maxThreads);
+
+    pthread_t thread;
+    CHECK(pthread_create(&thread, 0/*attr*/,
+            (void *(*) (void *)) RunningWorkerThread, s));
+
+    ++s->numThreads;
+}
+

@@ -1,7 +1,8 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h> 
+#include <stdlib.h>
+#include <pthread.h>
 
 #include "./debug.h"
 #include "./qs.h"

@@ -202,6 +202,14 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
     CheckLockFilter(f);
 
+    // Note: all these for loop iteration is through just the number of
+    // inputs and outputs to and from the filter.  Usually there'll be
+    // just 1 or 2 inputs and 1 or 2 outputs.
+    //
+    // As this code matures maybe we can mash together more of these for
+    // loops.
+
+
     // Both the inputs and the outputs must be "OK" in order to call
     // input() after this call.
     //
@@ -215,8 +223,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // Advance the output write pointers and see if we can write more.
     //
     // To be able to write more we must be able to write maxLength to all
-    // output readers; because that's what this API promised the filter it
-    // could do.
+    // output readers; because that's what this API promises the filter it
+    // can do.
     //
     // And grow the reader filters stage jobs.
     for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
@@ -255,7 +263,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
 
     // Advance the read pointers that feed this filter, f; and tally the
-    // readers remaining length
+    // readers remaining length.
     for(uint32_t i=f->numInputs-1; i!=-1; --i) {
         struct QsReader *r = f->readers[i];
         // This should have been checked in qsAdvanceInput()
@@ -295,7 +303,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     
     uint32_t numAddedJobs = 0;
 
-    // Add jobs to the stream job queue, for filters we are feeding.
+    // Add jobs to the stream job queue if we can, for filters we are
+    // feeding.
     for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
         struct QsOutput *output = f->outputs + i;
         for(uint32_t k=output->numReaders-1; k!=-1; --k)
@@ -314,30 +323,30 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
                 ++numAddedJobs;
             }
 
-    // num is number of threads to wait up.
-    uint32_t num = numAddedJobs;
-    if(num > s->numIdleThreads)
-        num = s->numIdleThreads;
 
-    if(num)
+    // num is number of threads that are idle that we will wake up.
+    uint32_t num = numAddedJobs;
+    if(num >= s->numIdleThreads)
+        // Wait all idle worker threads.
+        CHECK(pthread_cond_broadcast(&s->cond));
+    else if(num)
+        // Wait just some worker threads.
         while(num--)
             CHECK(pthread_cond_signal(&s->cond));
+    // Note: the idle threads do not wait up until after we unlock the
+    // stream mutex.
 
-    // num is number of threads to create
+
+    // num is now reused as the number of threads to create
     num = 0;
-    if(numAddedJobs > s->numIdleThreads) {
+    if(numAddedJobs > s->numIdleThreads)
         num = numAddedJobs - s->numIdleThreads;
     if(num > s->maxThreads - s->numThreads)
         num = s->maxThreads - s->numThreads;
 
     if(num)
-        while(num--) {
-            pthread_t thread;
-            CHECK(pthread_create(&thread, 0/*attr*/,
-                    (void *(*) (void *)) RunningWorkerThread, s));
-
-            ++s->numThreads;
-        }
+        while(num--)
+            LaunchWorkerThread(s);
 
     bool ret = true;
 
@@ -358,13 +367,13 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             j->advanceLens[i] = 0;
             j->inputBuffers[i] = f->readers[i]->readPtr;
         }
-        
+
         for(uint32_t i=f->numOutputs-1; i!=-1; --i)
             j->outputLens[i] = 0;
 
     } else if(ret)
         ret = false;
-    
+
     CheckUnlockFilter(f);
 
 
@@ -508,6 +517,7 @@ void *RunningWorkerThread(struct QsStream *s) {
             f->readers[i]->readLength = j->inputLens[i];
         }
 
+        // Ya, undo that lock.
         CheckUnlockFilter(f);
 
 
@@ -524,7 +534,7 @@ void *RunningWorkerThread(struct QsStream *s) {
 
 
         // call input() as many times as we can; until it's starved for
-        // imput data or any output is clogged.
+        // input data or any output is clogged.
         while(RunInput(s, f, j));
 
 
@@ -561,4 +571,3 @@ void *RunningWorkerThread(struct QsStream *s) {
 
     return 0; // We're dead now.  It was a good life for a worker/slave.
 }
-

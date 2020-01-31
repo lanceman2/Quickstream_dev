@@ -52,10 +52,6 @@
 // minimal.
 
 
-// The function that a worker thread calls and runs for it's entire life.
-extern void *RunningWorkerThread(struct QsStream *s);
-
-
 
 // This removes a job from the stream job queue and puts it in the filter
 // unused job stack.  It's used to clear jobs out of order, because the
