@@ -176,12 +176,10 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
 }
 
 
-// Outputs can share the same buffer.  The list of output ports is
-// in the QS_ARRAYTERM terminated array outputPortNums[].
-//
 // Here we just allocate the output buffer structure.  Later we will
 // mmap() the ring buffers, after all the filter start()s are called.
 //
+// This will not be a "pass-through" buffer.
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
     // We only call this in the main thread in start().
