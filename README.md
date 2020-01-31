@@ -601,12 +601,15 @@ https://lanceman2.github.io/quickstream.doc/html/index.html
 
 - Add "super filter modules" that load groups of filter modules.
 
+- https://www.valgrind.org/ ya that added to development tests.
+
 
 ## Things to do before a release
 
 - Check that no extra (unneeded) symbols are exposed in libquickstream.
-- Run all tests.
+- Run all tests with compile DEBUG CPP flag set.
+- Run all tests with compile DEBUG CPP flag unset.
+- Run all tests without compiler flag -g.
 - Make doxygen run without any warnings.
 - Proof all docs including this file.
-- https://www.valgrind.org/ ya that.
 

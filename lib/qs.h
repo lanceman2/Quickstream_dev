@@ -86,11 +86,15 @@
 //
 //   od -An -tx -N 4 < /dev/random
 //
-// or flip a coin for an hour.
+// or flip a coin for an hour.  TODO: Maybe prime and random is better.
 //
 //
-// The values are just fixed and random
+// These values are just fixed and random
+//
+// We set filter mark to this when in the corresponding filter functions
+// construct()
 #define _QS_IN_CONSTRUCT        ((uint32_t) 0xe583e10c)
+// and destroy()
 #define _QS_IN_DESTROY          ((uint32_t) 0x17fb51d9)
 
 // Sets filter mark when in filter start()
@@ -98,10 +102,8 @@
 // Sets filter mark when in filter stop()
 #define _QS_IN_STOP             ((uint32_t) 0x091ba4df)
 
-#define _QS_IN_INPUT            ((uint32_t) 0xbf4834ec)
-
-
-#define _QS_IS_JOB              ((uint32_t) 0x08def4de)
+// We set the job magic number when in filter input()
+#define _QS_IS_JOB              ((uint32_t) 0x38def4de)
 
 
 
@@ -506,8 +508,10 @@ struct QsFilter {
         // it's input(,,portNum,) call.
         uint32_t inputPortNum;
     }
-    // array of pointers to readers array that is in feed filter
-    // outputs.  Indexed by input port number 0, 1, 2, 3, ..., numInputs-1
+    // array of pointers to readers array that is in feed filters
+    // and not all the feed filters are the same filter.
+    //
+    // Indexed by input port number 0, 1, 2, 3, ..., numInputs-1
     **readers;
     //
     /////////////////////////////////////////////////////////////////////

@@ -14,41 +14,6 @@
 
 
 
-
-// This function must be thread-safe and restraint.
-//
-// Part of the user filter API.
-void *qsGetOutputBuffer(uint32_t outputPortNum,
-        size_t maxLen, size_t minLen) {
-
-    // Get the filter.
-    struct QsJob *job = pthread_getspecific(_qsKey);
-    ASSERT(job, "thread_getspecific(_qsKey) failed");
-    DASSERT(job->magic == _QS_IS_JOB);
-    struct QsFilter *f = job->filter;
-    DASSERT(f);
-    struct QsStream *s = f->stream;
-    DASSERT(s);
-    ASSERT(maxLen);
-    ASSERT(maxLen >= minLen);
-    DASSERT(f->input);
-    DASSERT(f->numOutputs);
-    DASSERT(f->outputs);
-    ASSERT(f->numOutputs > outputPortNum);
-
-    //pthread_cond_t *cond = f->cond;
-    struct QsOutput *output = f->outputs + outputPortNum;
-    DASSERT(output->readers);
-    DASSERT(output->numReaders);
-    ASSERT(output->maxWrite >= maxLen);
-
-
-    ASSERT(0, "Write this code");
-
-    return output->writePtr;
-}
-
-
 // Stop running input() for this filter, f.
 //
 // Mark the filter, f, as done.

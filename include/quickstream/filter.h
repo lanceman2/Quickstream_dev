@@ -52,7 +52,9 @@
 
 
 
-/** \file
+/** \file quickstream 
+ *
+ * \brief filter module writers application programming interface (API)
  *
  * The required quickstream filter interfaces that the filter module
  * plugins may provide are: input() and help().
