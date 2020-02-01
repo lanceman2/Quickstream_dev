@@ -25,20 +25,10 @@
 //
 //
 //
-// Notice in the "job flow graph" there are 4 lines connecting 4 types of
-// job lists.  That gives us 4 possible transfer C functions, but we need
-// only 3, because the 2 transfers 'filter stage' -> 'stream queue' and
-// 'filter unused' -> 'filter stage' always happen at the same time.  The
-// filter unused and the filter stage really act as one list, with the
-// stage job being a special element in that list.
-//
-//
-// So ya, there are 3 job list transfer functions are in this file.
 
 
-
-// Holding the stream mutex lock is required for all 3 job list transfer
-// functions.
+// Holding the stream mutex lock is required for all 4 of these job list
+// transfer functions.
 
 
 // The order that the working threads traverse the stream filter graph is
@@ -61,6 +51,13 @@
 //  1. Remove job from stream job queue.
 //
 //  2. Put the job into the filter unused job stack.
+//
+// This is an unusual job list transfer function that only happens when a
+// filter module finishes running unexpectedly and so we need to remove
+// queued up jobs from the list that stream job queue that feeds worker
+// threads.  This case is not shown on the "job flow graph".  Just think
+// of it as a filter going into a stopped state, and some of the input
+// data at the end in the remaining queued jobs is discarded.
 //
 // We must have a stream->mutex lock to call this.
 static inline

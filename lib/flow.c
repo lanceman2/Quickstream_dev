@@ -107,7 +107,7 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
         // This filter has a full amount of working threads already.
         return false;
 
-    // If any outputs are clogged than we cannot call input() for filter
+    // If any outputs are clogged than we cannot call input() for filter,
     // f.
     for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
         struct QsOutput *output = f->outputs + i;
@@ -124,8 +124,12 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
         }
     }
 
-    // If any input has meets the threshold we can call input() for this
-    // filter, f.
+    // If any input meets the threshold we can call input() for this
+    // filter, f, we return true.  If this filter, f, decides that this
+    // one simple threshold condition is not enough than that filter's
+    // input() call can just return 0 and than this will try again later
+    // when another feeding filter returns from an input() call and we do
+    // this again.
     for(uint32_t i=f->numInputs-1; i!=-1; --i)
         if(f->stage->inputLens[i] >= f->readers[i]->threshold)
             return true;
@@ -178,10 +182,19 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // Both the inputs and the outputs must be "OK" in order to call
     // input() after this call.
     //
-    // inputsFeeding will be changed to true is one input threshold is
+    // If after all this looping/checking inputs and outputs we have all
+    // 3 of these bools true, we can then continue to call input() for
+    // filter, f.
+
+    // 1. One of the job->advanceLens[] must have have a non-zero value,
+    // otherwise there was no input consumed by the last input() call.
+    bool inputAdvanced = false;
+    //
+    // 2. inputsFeeding will be changed to true if one input threshold is
     // met.
     bool inputsFeeding = false;
-    // outputsHungry will be changed to false if one output is full.
+    //
+    // 3. outputsHungry will be changed to false if one output is full.
     bool outputsHungry = true;
 
 
@@ -233,19 +246,27 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         struct QsReader *r = f->readers[i];
         // This should have been checked in qsAdvanceInput()
 
+        if(j->advanceLens[i] && inputAdvanced == false)
+            inputAdvanced = true;
+
         DASSERT(j->advanceLens[i] <= r->maxRead);
         DASSERT(j->advanceLens[i] <= j->inputLens[i]);
         DASSERT(j->inputLens[i] == r->readLength);
 
         if(r->readLength >= r->maxRead)
+            // This filter module is not written correctly.
             ASSERT(j->advanceLens[i],
                     "The filter \"%s\" did not keep it's read promise",
                     f->name);
 
+        // Advance read pointer 
         r->readPtr += j->advanceLens[i];
+        // Record the length that we have left to read up to the write
+        // pointer (at this pass-through level).
         r->readLength -= j->advanceLens[i];
         if(r->readPtr >= r->buffer->end)
-            // Wrap the circular buffer back toward the start.
+            // Wrap the read pointer back in the circular buffer back
+            // toward the start.
             r->readPtr -= r->buffer->mapLength;
     }
 
@@ -321,7 +342,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     }
 
 
-    if(ret && outputsHungry && inputsFeeding) {
+    if(ret && outputsHungry && inputsFeeding && inputAdvanced) {
         // We will be calling input() again.
 
         // Set up the job, j, for another input call:

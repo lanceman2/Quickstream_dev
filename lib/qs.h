@@ -453,7 +453,6 @@ struct QsFilter {
     // numInput=0.
     //
     //
-    //
     struct QsReader {
         //
         // readPtr points to a location in the mapped memory, "ring

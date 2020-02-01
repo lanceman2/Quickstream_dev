@@ -77,6 +77,9 @@ void qsOutput(uint32_t outputPortNum, const size_t len) {
 
     struct QsOutput *output = f->outputs + outputPortNum;
     DASSERT(len <= output->maxWrite);
+    DASSERT(output->readers);
+    DASSERT(output->numReaders);
+
 
     // This is all this function needed to do.
     j->outputLens[outputPortNum] += len;
@@ -138,17 +141,51 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len) {
     struct QsJob *j = GetJob();
     struct QsFilter *f = j->filter;
 
-
     // TODO:
     ASSERT(f->maxThreads == 1,
             "Filter \"%s\", multi-threaded filter"
             " case is not written yet", f->name);
 
-    ASSERT(0, "Write this code");
+    DASSERT(inputPortNum < f->numInputs);
+
+    j->advanceLens[inputPortNum] += len;
+
+    DASSERT(f->readers);
+
+    // Check if the buffer is being over-read.  If the filter really read
+    // this much data than it will have read past the write pointer.
+    ASSERT(j->advanceLens[inputPortNum] <=
+            f->readers[inputPortNum]->readLength,
+            "Filter \"%s\" on input port %" PRIu32
+            " tried to read to much %zu > %zu available",
+            f->name,
+            inputPortNum, j->advanceLens[inputPortNum],
+            f->readers[inputPortNum]->readLength);
 }
 
 
 void qsSetInputThreshold(uint32_t inputPortNum, size_t len) {
+
+    // We only call this in the main thread in start().
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    // User error checked via magic number _QS_IN_START.
+    ASSERT(f->mark == _QS_IN_START, "Not in filter start()");
+    struct QsStream *s = f->stream;
+    DASSERT(s);
+    ASSERT(s->flags & _QS_STREAM_START, "Stream is not starting");
+    DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
+    DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
+    // This would be a user error.
+    ASSERT(inputPortNum < f->numInputs);
+    DASSERT(f->readers);
+
+    if(len > f->readers[inputPortNum]->maxRead)
+        // maxRead must be <= threshold
+        f->readers[inputPortNum]->maxRead = len;
+
+    f->readers[inputPortNum]->threshold = len;
 
     ASSERT(0, "Write this code");
 }
@@ -171,6 +208,10 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len) {
     // This would be a user error.
     ASSERT(inputPortNum < f->numInputs);
     DASSERT(f->readers);
+
+    if(f->readers[inputPortNum]->threshold > len)
+        // maxRead must be <= threshold
+        f->readers[inputPortNum]->threshold = len;
 
     f->readers[inputPortNum]->maxRead = len;
 }
