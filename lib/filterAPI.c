@@ -245,15 +245,18 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
 
 static inline
 struct QsOutput *FindFeedOutput(struct QsFilter *feed, struct QsFilter *fed,
-        uint32_t inPort) {
+        uint32_t fedInPort) {
 
     for(uint32_t i=feed->numOutputs-1; i!=-1; --i) {
         struct QsOutput *output = feed->outputs + i;
         for(uint32_t j=output->numReaders-1; j!=-1; --j)
-            if(feed->outputs[i]->readers[j].filter == fed &&
-                    feed->outputs[i]->readers[j].inputPortNum == inPort)
+            // See if this output has this fed filter reading it on
+            // fed's input port fedInPort.
+            if(output->readers[j].filter == fed &&
+                    output->readers[j].inputPortNum == fedInPort)
                 return output;
     }
+    return 0;
 }
 
 
@@ -301,7 +304,8 @@ qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
         if((feedOutput = FindFeedOutput(feedFilter = s->sources[i],
                         f, inPortNum)))
             break;
-    if(feed == 0)
+
+    if(feedOutput == 0)
         for(uint32_t i=s->numConnections-1; i!=-1; --i)
             if((feedOutput = FindFeedOutput(
                     feedFilter = s->connections[i].to,
@@ -325,6 +329,8 @@ qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
 
         // This output already has a pass-through writer/reader thingy.
         return 1; // fail
+    }
+
 
     // Now connect these to outputs in a doubly linked list with the feed
     // output being the prev of the filter, f, output.
