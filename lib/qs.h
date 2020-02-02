@@ -475,7 +475,6 @@ struct QsFilter {
         size_t readLength;
 
         // The filter that is reading.
-        // TODO: This may not be needed.
         struct QsFilter *filter;
 
         struct QsBuffer *buffer;
@@ -779,9 +778,9 @@ void StreamSetFilterMarks(struct QsStream *s, bool val) {
 
     if(s->numSources) {
         // Case stream has data structures build for running the flow.
-        for(uint32_t i=0; i<s->numSources; ++i)
+        for(uint32_t i=s->numSources-1; i!=-1; --i)
             s->sources[i]->mark = val;
-        for(uint32_t i=0; i<s->numConnections; ++i)
+        for(uint32_t i=s->numConnections-1; i!=-1; --i)
             s->connections[i].to->mark = val;
         return;
     }

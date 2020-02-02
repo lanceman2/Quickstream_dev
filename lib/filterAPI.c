@@ -15,16 +15,17 @@
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
 // In this file is the implementation of most of C functions in the
 // quickstream filter module writers API (application programming
 // interface).
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
 
 
-// This is boiler plate that is at the top of some functions in this file.
+// GetJob() is boiler plate code
+// (https://en.wikipedia.org/wiki/Boilerplate_code) that is at the top of
+// the API functions that can be called from the filter's input()
+// function.
 static inline
 struct QsJob *GetJob(void) {
 
@@ -34,7 +35,7 @@ struct QsJob *GetJob(void) {
     // be due to a user calling this function while not in a filter module
     // input() call.
     ASSERT(j, "Not from code in a filter module input() function");
-    // Double check if DEBUG
+    // Double check with a magic number if DEBUG
     DASSERT(j->magic == _QS_IS_JOB);
 
 #ifdef DEBUG
@@ -58,12 +59,11 @@ struct QsJob *GetJob(void) {
 // TODO: consider the multi-threaded filter case.
 void qsOutput(uint32_t outputPortNum, const size_t len) {
 
-
     struct QsJob *j = GetJob();
     struct QsFilter *f = j->filter;
 
-    DASSERT(f->numOutputs, "Filter \"%s\" has no outputs",
-            f->name);
+    DASSERT(f->numOutputs, "Filter \"%s\" has no outputs", f->name);
+
     // This would be a user error.
     ASSERT(outputPortNum < f->numOutputs,
             "Filter \"%s\", bad output port number",
@@ -84,7 +84,7 @@ void qsOutput(uint32_t outputPortNum, const size_t len) {
     // This is all this function needed to do.
     j->outputLens[outputPortNum] += len;
 
-    // Another user error:
+    // Check for this user error:
     ASSERT(j->outputLens[outputPortNum] <= output->maxWrite,
                 "Filter \"%s\" writing %zu which is greater"
                 " than the %zu promised",
@@ -118,7 +118,7 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     DASSERT(f->outputs);
     ASSERT(f->numOutputs > outputPortNum);
 
-    // TODO:
+    // TODO:  The multi-threaded case will use the minLen arg.
     ASSERT(f->maxThreads == 1,
             "Filter \"%s\", multi-threaded filter"
             " case is not written yet", f->name);
@@ -237,7 +237,23 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
     ASSERT(outputPortNum < f->numOutputs);
     DASSERT(f->outputs);
 
-    ASSERT(0, "qsCreateOutputBuffer() is not written yet");
+    f->outputs[outputPortNum].maxWrite = maxWriteLen;
+
+    // We allocate the resources needed for this later.
+}
+
+
+static inline
+struct QsOutput *FindFeedOutput(struct QsFilter *feed, struct QsFilter *fed,
+        uint32_t inPort) {
+
+    for(uint32_t i=feed->numOutputs-1; i!=-1; --i) {
+        struct QsOutput *output = feed->outputs + i;
+        for(uint32_t j=output->numReaders-1; j!=-1; --j)
+            if(feed->outputs[i]->readers[j].filter == fed &&
+                    feed->outputs[i]->readers[j].inputPortNum == inPort)
+                return output;
+    }
 }
 
 
@@ -262,7 +278,62 @@ qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
     DASSERT(f->readers);
     DASSERT(f->outputs);
 
-    ASSERT(0, "Write this function");
+    struct QsOutput *output = f->outputs + outPortNum;
+
+    // This cannot be a pass-through output already.
+    ASSERT(output->prev == 0,
+            "filter \"%s\" output port %" PRIu32
+            " is already a pass-through output",
+            f->name, outPortNum);
+
+    // We need to find the output that is feeding the reader at inPortNum.
+    // At flow-time we don't need it, so we did not put it in the reader
+    // (QsReader).
+    //
+    // We search the searched the whole stream to find the feeder filter's
+    // output (QsOutput).
+    //
+    struct QsOutput *feedOutput = 0;
+    struct QsFilter *feedFilter = 0;
+
+    // Searching all filters in the stream
+    for(uint32_t i=s->numSources-1; i!=-1; --i)
+        if((feedOutput = FindFeedOutput(feedFilter = s->sources[i],
+                        f, inPortNum)))
+            break;
+    if(feed == 0)
+        for(uint32_t i=s->numConnections-1; i!=-1; --i)
+            if((feedOutput = FindFeedOutput(
+                    feedFilter = s->connections[i].to,
+                    f, inPortNum)))
+                break;
+
+
+    DASSERT(feedOutput);
+
+    // If this feed output already has a "pass-through" buffer pointing to
+    // it than some other filter already beat this filter, f, to making
+    // this feed output a pass-through buffer.  Not getting the
+    // pass-through setup may not be a fatal error, we leave it to the
+    // filter module to decide.
+
+    if(feedOutput->next) {
+        ERROR("filter \"%s\" cannot make a pass-through buffer from "
+                "input port%" PRIu32 " which is from filter \"%s\""
+            " which is already a pass-through output",
+            f->name, inPortNum, feedFilter->name);
+
+        // This output already has a pass-through writer/reader thingy.
+        return 1; // fail
+
+    // Now connect these to outputs in a doubly linked list with the feed
+    // output being the prev of the filter, f, output.
+    //
+    output->prev = feedOutput;
+    feedOutput->next = output;
+
+    output->maxWrite = maxWriteLen;
+
     return 0; // success
 }
 
