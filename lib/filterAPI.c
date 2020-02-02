@@ -45,7 +45,7 @@ struct QsJob *GetJob(void) {
     DASSERT(s);
     DASSERT(!(s->flags & _QS_STREAM_START), "Stream is starting");
     DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
-    DASSERT(f->mark, "This finished filter \"%s\" "
+    DASSERT(f->mark == 0, "This finished filter \"%s\" "
             "should not be calling input()", f->name);
 #endif
 

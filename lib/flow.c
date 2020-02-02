@@ -295,7 +295,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         struct QsOutput *output = f->outputs + i;
         for(uint32_t k=output->numReaders-1; k!=-1; --k)
             if(CheckFilterInputCallable(output->readers[k].filter)) {
-                FilterStageToStreamQAndSoOn(s, f);
+                FilterStageToStreamQAndSoOn(s, output->readers[k].filter);
                 ++numAddedJobs;
             }
     }
@@ -469,7 +469,7 @@ void *RunningWorkerThread(struct QsStream *s) {
 
 
     DSPEW("The %" PRIu32 " (out of %" PRIu32
-            " worker threads are running.",
+            ") worker threads are running.",
             s->numThreads, s->maxThreads);
 
     struct QsJob *j;
@@ -494,7 +494,7 @@ void *RunningWorkerThread(struct QsStream *s) {
 
         // We need to set get the current read pointer into the current
         // job, j and find the total length that can be read.
-        for(uint32_t i=f->numInputs; i!=-1; --i) {
+        for(uint32_t i=f->numInputs-1; i!=-1; --i) {
             // Add leftover unread length to the length that
             // the feeding filters have added since the last
             // time this filter had input() called.

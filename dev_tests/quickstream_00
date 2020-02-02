@@ -14,9 +14,13 @@ dd if=/dev/urandom count=1 | hexdump > $in
 # input() functions, checking the buffer advancement for the extreme case
 # with a single byte input() at a time.
 #
+
+set -x
 ../bin/quickstream -f stdin\
  -f tests/copy [ --maxRead=7 ]\
  -f stdout -c -R -d -r < $in > $out
 
-#diff $in $out
+
+diff $in $out
+set +x
 echo "$0 SUCCESS"

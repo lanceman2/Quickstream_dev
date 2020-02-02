@@ -30,9 +30,11 @@ run the loaded filters in a flow stream
 
 static void gdb_catcher(int signum) {
 
-    fprintf(stderr, "\n\n  Caught signal %d\n", signum);
-    fprintf(stderr, "\n\n  try running:\n\n   gdb -pid %u\n\n", getpid());
-    while(1) usleep(10000);
+    WARN("\n\n  Caught signal %d\n\n"
+            "   try running:"
+            "  gdb -pid %u\n",
+            signum, getpid());
+    ASSERT(0);
 }
 
 
@@ -98,7 +100,7 @@ int usage(const char *argv0) {
         "               will show stream channel and buffering details.\n"
         "\n"
         "\n"
-        "  -D|--display-wait  likr --display but this waits for the display\n"
+        "  -D|--display-wait  like --display but this waits for the display\n"
         "                     program to exit before going on to the next\n"
         "               argument option.\n"
         "\n"
@@ -117,7 +119,7 @@ int usage(const char *argv0) {
         "\n" 
         "   -R|-ready   ready the stream.  This calls all the filter start()\n"
         "               functions that exist and get the stream ready to flow,\n"
-        "               except for spawning threads and processes.\n"
+        "               except for spawning worker flow threads.\n"
         "\n"
         "\n" 
         "   -r|-run     run the stream.  This readies the stream and runs it.\n"
@@ -142,7 +144,6 @@ int main(int argc, const char * const *argv) {
     struct QsStream *stream = 0;
     int numFilters = 0;
     struct QsFilter **filters = 0;
-    bool gotConnection = false;
     bool verbose = false;
     bool ready = false;
     // TODO: option to change maxThreads.
@@ -238,7 +239,6 @@ int main(int argc, const char * const *argv) {
 
                     qsStreamConnectFilters(stream, filters[from],
                                 filters[to], QS_NEXTPORT, QS_NEXTPORT);
-                    gotConnection = true;
                 }
 
                 DSPEW("option %c = %s", c, arg);
@@ -372,6 +372,8 @@ int main(int argc, const char * const *argv) {
                     return 1;
                 }
 
+                if(qsStreamWait(stream))
+                    return 1;
 
                 if(qsStreamStop(stream))
                     return 1;
@@ -390,15 +392,6 @@ int main(int argc, const char * const *argv) {
     DASSERT(numFilters, "");
 
     DSPEW("Done parsing command-line arguments");
-
-    if(!gotConnection) {
-        // There is no connection list, so by default we
-        // connect filters in the order they are loaded.
-        for(int i=1; i<numFilters; ++i)
-            qsStreamConnectFilters(stream, filters[i-1], filters[i],
-                    QS_NEXTPORT, QS_NEXTPORT);
-    }
-
 
     WARN("SUCCESS");
 
