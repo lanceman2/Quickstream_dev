@@ -310,8 +310,22 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             }
 
 
-    // num is number of threads that are idle that we will wake up.
+    if(s->numThreads > s->numWorkerThreads) {
+        // This 2 counters (numThreads and numWorkerThreads) can differ
+        // because one counts before threads are launched and the other
+        // counts in the thread after it's launched.  We need both
+        // counters.
+        if(numAddedJobs > s->numThreads - s->numWorkerThreads)
+            numAddedJobs -= s->numThreads - s->numWorkerThreads;
+        else
+            numAddedJobs = 0;
+    }
+
+    // num will be the number of threads that are idle that we will wake
+    // up.
     uint32_t num = numAddedJobs;
+
+
     if(num >= s->numIdleThreads)
         // Wait all idle worker threads.
         CHECK(pthread_cond_broadcast(&s->cond));
@@ -322,17 +336,23 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // Note: the idle threads do not wait up until after we unlock the
     // stream mutex.
 
+    num = numAddedJobs;
 
-    // num is now reused as the number of threads to create
-    num = 0;
-    if(numAddedJobs > s->numIdleThreads)
-        num = numAddedJobs - s->numIdleThreads;
+    if(num > s->numIdleThreads)
+        num -= s->numIdleThreads;
+    else
+        num = 0;
+
     if(num > s->maxThreads - s->numThreads)
         num = s->maxThreads - s->numThreads;
 
-    if(num)
+
+    if(num) {
+        DSPEW(" --------- launching %" PRIu32 " threads", num);
         while(num--)
             LaunchWorkerThread(s);
+    }
+
 
     bool ret = true;
 
@@ -404,7 +424,7 @@ struct QsJob *GetWork(struct QsStream *s) {
         // if we slept than the number of working threads has changed.
         if(weSlept && j)
             DSPEW("Now %" PRIu32 " out of %" PRIu32
-                "thread(s) waiting for work",
+                " thread(s) waiting for work",
                 s->numIdleThreads, s->numThreads);
         else if(j == 0)
             weSlept = true;
@@ -421,7 +441,7 @@ struct QsJob *GetWork(struct QsStream *s) {
 
         // TODO: all the spewing in this function may need to be removed.
         DSPEW("Now %" PRIu32 " out of %" PRIu32
-                "thread(s) waiting for work",
+                " thread(s) waiting for work",
                 s->numIdleThreads, s->numThreads);
 
         // STREAM UNLOCK  -- at wait
@@ -457,6 +477,12 @@ void *RunningWorkerThread(struct QsStream *s) {
     // STREAM LOCK
     CHECK(pthread_mutex_lock(&s->mutex));
 
+    // numWorkerThreads is almost the same as numThreads but counts after
+    // mutex lock.  We need this numWorkerThreads counter, because it
+    // counts after the stream mutex lock and the numThreads was counted
+    // before in the master thread.
+    ++s->numWorkerThreads;
+
     // The thing that created this thread must have counted the number of
     // threads in the stream, otherwise if we counted it here and there
     // are threads that are slow to start, than the master thread could
@@ -467,10 +493,9 @@ void *RunningWorkerThread(struct QsStream *s) {
     // maxThreads.  We have the needed stream mutex lock to check this.
     DASSERT(s->numThreads <= s->maxThreads);
 
-
-    DSPEW("The %" PRIu32 " (out of %" PRIu32
-            ") worker threads are running.",
-            s->numThreads, s->maxThreads);
+    DSPEW("%" PRIu32 " worker threads are running (out of %" PRIu32
+            " max)",
+            s->numWorkerThreads, s->maxThreads);
 
     struct QsJob *j;
 
@@ -501,6 +526,8 @@ void *RunningWorkerThread(struct QsStream *s) {
             j->inputLens[i] += f->readers[i]->readLength;
             // We now make the two consistent.
             f->readers[i]->readLength = j->inputLens[i];
+
+            j->inputBuffers[i] = f->readers[i]->readPtr;
         }
 
         // Ya, undo that lock.
@@ -524,8 +551,7 @@ void *RunningWorkerThread(struct QsStream *s) {
         while(RunInput(s, f, j));
 
 
-        // STREAM LOCK
-        CHECK(pthread_mutex_lock(&s->mutex));
+        // STREAM LOCK -- from last RunInput()
 
 
         // Move this job structure to the filter unused stack.
@@ -546,10 +572,15 @@ void *RunningWorkerThread(struct QsStream *s) {
         // call it more than once in this case.
     }
 
-    if(s->numThreads == 0 && s->masterWaiting)
-        // this last thread out signals the master.
-        CHECK(pthread_cond_broadcast(&s->masterCond));
+    if(s->numThreads == 0) {
+        if(s->masterWaiting)
+            // this last thread out signals the master.
+            CHECK(pthread_cond_broadcast(&s->masterCond));
+        DSPEW("Last worker thread exiting");
+    }
 
+
+    --s->numWorkerThreads;
 
     // STREAM UNLOCK
     CHECK(pthread_mutex_unlock(&s->mutex));

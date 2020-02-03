@@ -358,8 +358,6 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
     }
 
 
-    --f->numWorkingThreads;
-
 
     /////////////////////////////////////////////////////////////////////
     //  2. Put the job into the filter unused stack.
@@ -376,6 +374,8 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
 #endif
 
     f->unused = j;
+
+    --f->numWorkingThreads;
 
 
     // The job args will be cleaned up later in FilterStageToStreamQAndSoOn().

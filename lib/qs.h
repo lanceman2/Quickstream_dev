@@ -263,6 +263,11 @@ struct QsStream {
     // stream mutex lock to access numThreads.
     uint32_t numThreads;
     //
+    // This will be equal to numThreads after the thread gets past the
+    // first STREAM LOCK CHECK(pthread_mutex_lock(&s->mutex));
+    //
+    uint32_t numWorkerThreads;
+    //
     // We do not need to keep list of idle threads.  We just have all idle
     // threads call pthread_cond_wait() with the above mutex and cond.
     //

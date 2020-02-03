@@ -30,11 +30,7 @@ run the loaded filters in a flow stream
 
 static void gdb_catcher(int signum) {
 
-    WARN("\n\n  Caught signal %d\n\n"
-            "   try running:"
-            "  gdb -pid %u\n",
-            signum, getpid());
-    ASSERT(0);
+    ASSERT(0, "Caught signal %d\n", signum);
 }
 
 
