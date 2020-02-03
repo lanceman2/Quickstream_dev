@@ -17,11 +17,19 @@ dd if=/dev/urandom count=10 | hexdump > $in
 
 set -x
 ../bin/quickstream -f stdin\
+ -f tests/copy\
+ -f stdout -c -R -r < $in > $out
+
+
+du -sh $in $out
+diff -q $in $out
+set +x
+echo -e "\n                  $0 SUCCESS\n"
+
+exit
+
+../bin/quickstream -f stdin\
  -f tests/copy [ --maxRead=7 ]\
  -f stdout -c -R -d -r < $in > $out
 
 
-diff $in $out
-du -sh $in
-set +x
-echo "$0 SUCCESS"

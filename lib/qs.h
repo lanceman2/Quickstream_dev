@@ -482,6 +482,9 @@ struct QsFilter {
         // The filter that is reading.
         struct QsFilter *filter;
 
+        // feedFilter is the filter that is writing to this reader.
+        struct QsFilter *feedFilter;
+
         struct QsBuffer *buffer;
 
         // This threshold will trigger a filter->input() call, independent
@@ -835,5 +838,8 @@ void LaunchWorkerThread(struct QsStream *s) {
             (void *(*) (void *)) RunningWorkerThread, s));
 
     ++s->numThreads;
+
+    DSPEW("Launching thread %" PRIu32 " (out of %" PRIu32 " max)",
+            s->numThreads, s->maxThreads);
 }
 

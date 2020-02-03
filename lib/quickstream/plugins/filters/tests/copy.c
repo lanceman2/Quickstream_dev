@@ -59,6 +59,8 @@ int input(void *buffers[], const size_t lens[],
     DASSERT(numOutPorts, "");
     DASSERT(lens[0], "");
 
+DSPEW(" ++++++++++++++++++++++++++++ inputLen=%zu", lens[0]);
+
     size_t len = lens[0];
     if(len > maxWrite)
         len = maxWrite;

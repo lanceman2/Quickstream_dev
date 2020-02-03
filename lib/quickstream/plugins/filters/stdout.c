@@ -23,6 +23,8 @@ int input(void *buffers[], const size_t lens[],
     size_t ret = fwrite(buffers[0], 1, lens[0], stdout);
     fflush(stdout);
 
+DSPEW("                 --------- wrote %zu", ret);
+
     qsAdvanceInput(0, ret);
 
     if(ret != lens[0]) return -1; // ?

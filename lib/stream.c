@@ -618,6 +618,7 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
                     ) {
                 struct QsReader *reader = readers + readerIndex;
                 reader->filter = s->connections[i].to;
+                reader->feedFilter = f;
                 reader->threshold = QS_DEFAULTTHRESHOLD;
                 reader->maxRead = QS_DEFAULTMAXREADPROMISE;
 
