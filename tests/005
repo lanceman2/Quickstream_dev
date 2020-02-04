@@ -15,3 +15,4 @@ dd if=/dev/urandom count=1300 of=$in
  -c -R -r < $in > $out
 
 diff $in $out
+echo "$0 SUCCESS"

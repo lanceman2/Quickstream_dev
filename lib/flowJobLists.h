@@ -201,6 +201,17 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
         DASSERT(j->advanceLens == 0);
     }
 #endif
+
+    if(f->numOutputs) {
+        DASSERT(j->outputLens);
+        memset(j->outputLens, 0, f->numOutputs*sizeof(*j->outputLens));
+    }
+#ifdef DEBUG
+    else {
+        DASSERT(j->outputLens == 0);
+    }
+#endif
+
 }
 
 

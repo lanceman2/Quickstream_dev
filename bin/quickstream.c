@@ -33,6 +33,8 @@ static void gdb_catcher(int signum) {
     ASSERT(0, "Caught signal %d\n", signum);
 }
 
+#define DEFAULT_MAXTHREADS  ((uint32_t) 5)
+
 
 static
 int usage(const char *argv0) {
@@ -113,17 +115,24 @@ int usage(const char *argv0) {
         "   -h|--help   print this help to stderr and exit.\n"
         "\n"
         "\n" 
-        "   -R|-ready   ready the stream.  This calls all the filter start()\n"
-        "               functions that exist and get the stream ready to flow,\n"
-        "               except for spawning worker flow threads.\n"
+        "   -R|--ready   ready the stream.  This calls all the filter start()\n"
+        "                functions that exist and get the stream ready to flow,\n"
+        "                except for spawning worker flow threads.\n"
         "\n"
         "\n" 
-        "   -r|-run     run the stream.  This readies the stream and runs it.\n"
+        "   -r|--run     run the stream.  This readies the stream and runs it.\n"
+        "\n"
+        "\n"
+        "   -t|--threads NUM  when and if the stream is launched, run at most\n"
+        "                     NUM threads.  The default is %" PRIu32 ".\n"
+        "                     If this option is not given before a --run option\n"
+        "                     this option will not effect that --run option.\n"
+        "                     The largest NUM may be is %" PRIu32 ".\n"
         "\n"
         "\n"
         "   -V|--version  print %s version information to stdout an than exit.\n"
         "\n",
-        argv0, argv0);
+        argv0, DEFAULT_MAXTHREADS, QS_STREAM_MAXMAXTHREADS, argv0);
 
     return 1; // non-zero error code
 }
@@ -143,7 +152,7 @@ int main(int argc, const char * const *argv) {
     bool verbose = false;
     bool ready = false;
     // TODO: option to change maxThreads.
-    uint32_t maxThreads = 5;
+    uint32_t maxThreads = DEFAULT_MAXTHREADS;
 
     int i = 1;
     const char *arg = 0;
@@ -349,6 +358,22 @@ int main(int argc, const char * const *argv) {
                 ready = true;
                 break;
 
+            case 't':
+
+                if(!arg) {
+                    fprintf(stderr, "Bad --threads option\n\n");
+                    return usage(argv[0]);
+                }
+                errno = 0;
+                maxThreads = strtoul(arg, 0, 10);
+                if(maxThreads > QS_STREAM_MAXMAXTHREADS ||
+                        maxThreads == 0) {
+                    fprintf(stderr, "Bad --threads option\n\n");
+                    return usage(argv[0]);
+                }
+
+                break;
+
             case 'r':
 
                 if(!app) {
@@ -388,8 +413,6 @@ int main(int argc, const char * const *argv) {
     DASSERT(numFilters, "");
 
     DSPEW("Done parsing command-line arguments");
-
-    WARN("SUCCESS");
 
     return 0;
 }

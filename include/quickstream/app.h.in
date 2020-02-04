@@ -66,6 +66,10 @@
  */
 #define QS_NEXTPORT  ((uint32_t) -2)
 
+/** In qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) it is the
+ *  maximum of maxThreads.  This value is somewhat arbitrary.
+ */
+#define QS_STREAM_MAXMAXTHREADS ((uint32_t) 2130)
 
 
 /** used in qsStreamLaunch()

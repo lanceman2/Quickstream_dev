@@ -7,7 +7,7 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-dd if=/dev/urandom count=10 | hexdump > $in
+dd if=/dev/urandom count=300 | hexdump > $in
 
 
 # This will call the tests/copy input() function lots more than all other

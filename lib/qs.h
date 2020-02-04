@@ -43,10 +43,6 @@
 
 
 
-// For qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) it is the
-// maximum of maxThreads.  This value is somewhat arbitrary.
-//
-#define _QS_STREAM_MAXMAXTHREADS (213)
 
 // bit Flags for the stream
 //
