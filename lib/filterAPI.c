@@ -231,7 +231,6 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen) {
     struct QsStream *s = f->stream;
     DASSERT(s);
     ASSERT(s->flags & _QS_STREAM_START, "Stream is not starting");
-    DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
     DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
     // This would be a user error.
     ASSERT(outputPortNum < f->numOutputs);

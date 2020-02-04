@@ -6,34 +6,34 @@
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
-#ifdef SPEW_LEVEL_DEBUG
-static int count = 0;
-#endif
-
 
 
 void help(FILE *f) {
     fprintf(f,
-        "test filter module that copies all input to each output\n"
+        "test filter module that copies 1 input to each output\n"
+        "There may be no outputs.  There must be 1 input.\n"
         "\n"
         "                       OPTIONS\n"
         "\n"
-        "      --maxWrite BYTES      default value %zu\n"
+        "      --maxRead BYTES      default value %zu\n"
         "\n"
         "\n",
         QS_DEFAULTMAXWRITE);
 }
 
 
-static size_t maxWrite;
+static size_t maxRead;
+static uint64_t count;
 
 
 int construct(int argc, const char **argv) {
 
     DSPEW();
 
-    maxWrite = qsOptsGetSizeT(argc, argv,
-            "maxWrite", QS_DEFAULTMAXWRITE);
+    maxRead = qsOptsGetSizeT(argc, argv,
+            "maxRead", QS_DEFAULTMAXWRITE);
+
+    maxRead += maxRead%8;
   
     return 0; // success
 }
@@ -42,12 +42,15 @@ int construct(int argc, const char **argv) {
 int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
     ASSERT(numInPorts == 1, "");
-    ASSERT(numOutPorts, "");
-    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
-            count++, numInPorts, numOutPorts);
+    DSPEW("%" PRIu32 " inputs and  %" PRIu32 " outputs",
+            numInPorts, numOutPorts);
+
+    qsSetInputReadPromise(0, maxRead);
 
     for(uint32_t i=0; i<numOutPorts; ++i)
-        qsCreateOutputBuffer(i, maxWrite);
+        qsCreateOutputBuffer(i, maxRead);
+
+    count = 0;
 
     return 0; // success
 }
@@ -59,21 +62,34 @@ int input(void *buffers[], const size_t lens[],
 
     DASSERT(lens, "");
     DASSERT(numInPorts == 1, "");
-    DASSERT(numOutPorts, "");
     DASSERT(lens[0], "");
 
 DSPEW(" ++++++++++++++++++++++++++++ inputLen=%zu", lens[0]);
 
     size_t len = lens[0];
-    if(len > maxWrite)
-        len = maxWrite;
+    if(len > maxRead)
+        len = maxRead;
 
-    for(uint32_t i=0; i<numOutPorts; ++i) {
-        memcpy(qsGetOutputBuffer(i, len, len), buffers[0], len);
-        qsOutput(i, len);
+    len -= len%8;
+
+    if(len == 0) return 0;
+
+    size_t num = len/8;
+
+    uint64_t *in = buffers[0];
+
+    for(size_t i=0; i<num; ++i) {
+        ASSERT(count == in[i], "(%zu/%zu) count %" PRIu64 " != %"
+                PRIu64 " failed ", i, num, count, in[i]);
+        ++count;
     }
 
     qsAdvanceInput(0, len);
-    
+
+    for(uint32_t i=0; i<numOutPorts; ++i) {
+        memcpy(qsGetOutputBuffer(i, len, len), in, len);
+        qsOutput(i, len);
+    }
+
     return 0; // success
 }
