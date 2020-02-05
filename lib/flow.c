@@ -239,6 +239,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             // the current working job, but the readLength will be either
             // added to the working job, or it will become a stream queued
             // job later.
+            //
+            // Tally the read length in the filter (not f) we are feeding.
             rf->readers[inPort]->readLength += j->outputLens[i];
 
             if(rf->readers[inPort]->readLength >= output->maxLength &&
@@ -274,6 +276,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         r->readPtr += j->advanceLens[i];
         // Record the length that we have left to read up to the write
         // pointer (at this pass-through level).
+        //
+        // f is the reading filter.
         f->readers[i]->readLength -= j->advanceLens[i];
 
         if(r->readPtr >= r->buffer->end)
@@ -295,7 +299,9 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
                 // TODO: Multi-threaded filter may not be able to extend
                 // the input in the reader from the reader readLength.
-                DASSERT(GetNumAllocJobsForFilter(s, f) == 2);
+                ASSERT(GetNumAllocJobsForFilter(s, f) == 1,
+                        "We need to write the multi-threaded"
+                        " filter code");
 
                 if(f->readers[i]->readLength >= f->readers[i]->threshold) {
                     // The amount of input data left meets the needed

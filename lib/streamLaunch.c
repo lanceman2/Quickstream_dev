@@ -171,7 +171,7 @@ void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
     f->unused = f->jobs;
 
     // Am I a stupid-head?
-    DASSERT(f->jobs->next);
+    DASSERT(f->jobs->next || numJobs == 1);
     DASSERT((f->jobs+numJobs-1)->next == 0);
 
 

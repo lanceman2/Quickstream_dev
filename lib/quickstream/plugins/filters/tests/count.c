@@ -2,7 +2,7 @@
 #include "../../../../../lib/debug.h"
 
 
-#define DEFAULT_LEN   ((size_t) 8000000)
+#define DEFAULT_LEN   ((size_t) 800000)
 
 void help(FILE *f) {
 
@@ -88,10 +88,10 @@ int input(void *buffers[], const size_t lens[],
     }
 
     for(uint32_t i=0; i<numOutputs; ++i) {
-        uint64_t *buf = qsGetOutputBuffer(0, maxWrite, maxWrite);
+        uint64_t *buf = qsGetOutputBuffer(0, n*8, n*8);
         for(size_t j=0; j<n; ++j)
             buf[j] = count++;
-        qsOutput(i, maxWrite);
+        qsOutput(i, n*8);
     }
 
 

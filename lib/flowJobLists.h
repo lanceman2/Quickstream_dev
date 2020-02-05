@@ -100,7 +100,6 @@ void StreamQToFilterUnused(struct QsStream *s, struct QsFilter *f,
 }
 
 
-
 // 1. Remove job from filter unused job stack.
 //
 // 2. transfer that job to stream job queue.
@@ -253,10 +252,6 @@ struct QsJob *StreamQToFilterWorker(struct QsStream *s) {
     // One more thread working for this filter.
     ++f->numWorkingThreads;
 
-    // There should be at least 1 job more than those in use.
-    // Better to do this check before changing pointers.
-    DASSERT(GetNumAllocJobsForFilter(s, f) > f->numWorkingThreads);
-
 
     // Next points back to the next to be served, as in you will be served
     // after me who is in front of you, and prev points toward the front
@@ -361,14 +356,13 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
 
     if(f->unused) {
         DASSERT(f->numWorkingThreads <
-                GetNumAllocJobsForFilter(f->stream, f) - 1);
+                GetNumAllocJobsForFilter(f->stream, f));
         j->next = f->unused;
     } 
 #ifdef DEBUG
     else
-        // one job in stage and the rest in working.
         DASSERT(f->numWorkingThreads ==
-                GetNumAllocJobsForFilter(f->stream, f) - 1);
+                GetNumAllocJobsForFilter(f->stream, f));
 #endif
 
     f->unused = j;

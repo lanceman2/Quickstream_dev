@@ -190,7 +190,7 @@ void MakeRingBuffer(struct QsOutput *output) {
     b->end = makeRingBuffer(&b->mapLength, &b->overhangLength);
     // makeRingBuffer() returns the start, we save this value in "end".
     b->end += b->mapLength;
-    DSPEW("make ring buffer %zu with %zu overhang",
+    DSPEW("Made ring buffer bulk %zu with %zu overhang",
             b->mapLength, b->overhangLength);
 }
 
