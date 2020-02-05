@@ -23,8 +23,11 @@
 //
 //    https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png
 //
-//
-//
+// In addition to the 3 job transfers shown in the above image, we
+// sometimes at the end of a quickstream flow cycle will need to move jobs
+// from the stream job queue back to the filter's unused stack, because
+// a filters stops receiving data.  So we have for job (struct QsJob)
+// transfer functions in this file.
 
 
 // Holding the stream mutex lock is required for all 4 of these job list
@@ -89,7 +92,6 @@ void StreamQToFilterUnused(struct QsStream *s, struct QsFilter *f,
         s->jobFirst = j->next;
     }
 
-
     /////////////////////////////////////////////////////////////////////
     //  2. Put the job into the filter unused job stack.
 
@@ -145,7 +147,7 @@ void FilterUnusedToStreamQ(struct QsStream *s, struct QsFilter *f) {
 
 
     /////////////////////////////////////////////////////////////////////
-    // 2. transfer that job to stream job queue,
+    // 2. Transfer that job to stream job queue.
 
     if(s->jobLast) {
         // There are jobs in the stream queue.
@@ -255,9 +257,10 @@ struct QsJob *StreamQToFilterWorker(struct QsStream *s) {
     // Better to do this check before changing pointers.
     DASSERT(GetNumAllocJobsForFilter(s, f) > f->numWorkingThreads);
 
+
     // Next points back to the next to be served, as in you will be served
     // after me who is in front of you, and prev points toward the front
-    // of the line (at the DMV).
+    // of the line (at the DMV (department of motor vehicles)).
 
     if(f->workingLast) {
         // We had jobs in the working queue
@@ -353,7 +356,6 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
     }
 
 
-
     /////////////////////////////////////////////////////////////////////
     //  2. Put the job into the filter unused stack.
 
@@ -365,27 +367,13 @@ void FilterWorkingToFilterUnused(struct QsJob *j) {
 #ifdef DEBUG
     else
         // one job in stage and the rest in working.
-        DASSERT(f->numWorkingThreads == GetNumAllocJobsForFilter(f->stream, f) - 1);
+        DASSERT(f->numWorkingThreads ==
+                GetNumAllocJobsForFilter(f->stream, f) - 1);
 #endif
 
     f->unused = j;
 
     --f->numWorkingThreads;
 
-
-    // The job args will be cleaned up later in FilterStageToStreamQAndSoOn().
-}
-
-
-static inline
-void CheckLockFilter(struct QsFilter *f) {
-    if(f->mutex)
-        CHECK(pthread_mutex_lock(f->mutex));
-}
-
-
-static inline
-void CheckUnlockFilter(struct QsFilter *f) {
-    if(f->mutex)
-        CHECK(pthread_mutex_unlock(f->mutex));
+    // The job args will be cleaned up later in FilterUnusedToStreamQ().
 }

@@ -815,3 +815,15 @@ void LaunchWorkerThread(struct QsStream *s) {
             s->numThreads, s->maxThreads);
 }
 
+static inline
+void CheckLockFilter(struct QsFilter *f) {
+    if(f->mutex)
+        CHECK(pthread_mutex_lock(f->mutex));
+}
+
+
+static inline
+void CheckUnlockFilter(struct QsFilter *f) {
+    if(f->mutex)
+        CHECK(pthread_mutex_unlock(f->mutex));
+}
