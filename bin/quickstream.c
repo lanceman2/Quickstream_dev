@@ -168,6 +168,7 @@ int main(int argc, const char * const *argv) {
             { "help", '?' },
             { "ready", 'R' },
             { "run", 'r' },
+            { "threads", 't' },
             { "version", 'V' },
             { "verbose", 'v' },
             { 0, 0 }
@@ -371,6 +372,9 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "Bad --threads option\n\n");
                     return usage(argv[0]);
                 }
+
+                ++i;
+                arg = 0;
 
                 break;
 

@@ -124,8 +124,8 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
                 // able to call input().  Otherwise we could overrun the
                 // read pointer with the write pointer.
 
-                DSPEW("\"%s\" is clogged len=%zu",
-                        rf->name, rf->readers[inPort]->readLength);
+                //DSPEW("\"%s\" is clogged len=%zu",
+                //        rf->name, rf->readers[inPort]->readLength);
                 
                 return false;
             }
