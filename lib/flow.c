@@ -118,14 +118,14 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
             struct QsFilter *rf = reader->filter;
             uint32_t inPort = reader->inputPortNum;
 
-            if(rf->stage->inputLens[inPort] >= output->maxLength) {
+            if(rf->readers[inPort]->readLength >= output->maxLength) {
                 // We have at least one clogged output reader.  It has a
                 // full amount that it can read.  And so we will not be
                 // able to call input().  Otherwise we could overrun the
                 // read pointer with the write pointer.
 
                 DSPEW("\"%s\" is clogged len=%zu",
-                        rf->name, rf->stage->inputLens[inPort]);
+                        rf->name, rf->readers[inPort]->readLength);
                 
                 return false;
             }
@@ -139,7 +139,7 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
     // when another feeding filter returns from an input() call and we do
     // this again.
     for(uint32_t i=f->numInputs-1; i!=-1; --i)
-        if(f->stage->inputLens[i] >= f->readers[i]->threshold)
+        if(f->readers[i]->readLength >= f->readers[i]->threshold)
             return true;
 
     if(f->numInputs == 0)
@@ -212,7 +212,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // output readers; because that's what this API promises the filter it
     // can do.
     //
-    // And grow the reader filters stage jobs.
+    // And grow the reader filters readLength.
     for(uint32_t i=f->numOutputs-1; i!=-1; --i) {
 
         struct QsOutput *output = f->outputs + i;
@@ -235,15 +235,13 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             struct QsFilter *rf = reader->filter;
             uint32_t inPort = reader->inputPortNum;
 
-            // Grow the reader filter's stage job.  We cannot write to the
-            // current working job, but the stage will be either added to
-            // the working job, or it will become a stream queued job
-            // later.
-            rf->stage->inputLens[inPort] += j->outputLens[i];
+            // Grow the reader filter's readLength.  We may not write to
+            // the current working job, but the readLength will be either
+            // added to the working job, or it will become a stream queued
+            // job later.
+            rf->readers[inPort]->readLength += j->outputLens[i];
 
-            // The stage inputLens[] needs to be all that is readable all
-            // the time.
-            if(rf->stage->inputLens[inPort] >= output->maxLength &&
+            if(rf->readers[inPort]->readLength >= output->maxLength &&
                     outputsHungry)
                 // We have at least one clogged output reader.  It has
                 // a full amount that it can read.  And so we will not
@@ -264,7 +262,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             inputAdvanced = true;
 
         DASSERT(j->advanceLens[i] <= j->inputLens[i]);
-        DASSERT(j->inputLens[i] <= f->stage->inputLens[i]);
+        DASSERT(j->inputLens[i] <= f->readers[i]->readLength);
 
         if(j->inputLens[i] >= r->maxRead)
             // This filter module is not written correctly.
@@ -276,7 +274,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         r->readPtr += j->advanceLens[i];
         // Record the length that we have left to read up to the write
         // pointer (at this pass-through level).
-        f->stage->inputLens[i] -= j->advanceLens[i];
+        f->readers[i]->readLength -= j->advanceLens[i];
 
         if(r->readPtr >= r->buffer->end)
             // Wrap the read pointer back in the circular buffer back
@@ -296,10 +294,10 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             for(uint32_t i=f->numInputs-1; i!=-1; --i) {
 
                 // TODO: Multi-threaded filter may not be able to extend
-                // the input in the reader from the filter stage job.
+                // the input in the reader from the reader readLength.
                 DASSERT(GetNumAllocJobsForFilter(s, f) == 2);
 
-                if(f->stage->inputLens[i] >= f->readers[i]->threshold) {
+                if(f->readers[i]->readLength >= f->readers[i]->threshold) {
                     // The amount of input data left meets the needed
                     // threshold in at least one input.  If the threshold
                     // condition if more complex than the filter
@@ -329,7 +327,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         //
         for(uint32_t i=f->numInputs-1; i!=-1; --i) {
 
-            j->inputLens[i] = f->stage->inputLens[i];
+            j->inputLens[i] = f->readers[i]->readLength;
             j->advanceLens[i] = 0;
             j->inputBuffers[i] = f->readers[i]->readPtr;
         }
@@ -350,7 +348,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         struct QsOutput *output = f->outputs + i;
         for(uint32_t k=output->numReaders-1; k!=-1; --k)
             if(CheckFilterInputCallable(output->readers[k].filter)) {
-                FilterStageToStreamQAndSoOn(s, output->readers[k].filter);
+                FilterUnusedToStreamQ(s, output->readers[k].filter);
                 ++numAddedWorkers;
             }
     }
@@ -361,7 +359,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     for(uint32_t i=f->numInputs-1; i!=-1; --i)
         if(CheckFilterInputCallable(f->readers[i]->feedFilter)) {
             //DSPEW("\"%s\" is callable", f->readers[i]->feedFilter->name);
-            FilterStageToStreamQAndSoOn(s, f->readers[i]->feedFilter);
+            FilterUnusedToStreamQ(s, f->readers[i]->feedFilter);
             ++numAddedWorkers;
         }
 
@@ -374,7 +372,7 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             /* We gain a thread if this function returns false*/)
         for(uint32_t i=s->numSources-1; i!=-1; --i) {
             if(CheckFilterInputCallable(s->sources[i])) {
-                FilterStageToStreamQAndSoOn(s, s->sources[i]);
+                FilterUnusedToStreamQ(s, s->sources[i]);
                 ++numAddedWorkers;
             }
         }
@@ -552,9 +550,6 @@ void *RunningWorkerThread(struct QsStream *s) {
 
         // This worker has a new job.
 
-        // STREAM UNLOCK
-        CHECK(pthread_mutex_unlock(&s->mutex));
- 
         struct QsFilter *f = j->filter;
         DASSERT(f);
 
@@ -570,12 +565,15 @@ void *RunningWorkerThread(struct QsStream *s) {
             // time this filter had input() called.
             //
             j->inputBuffers[i] = f->readers[i]->readPtr;
+            j->inputLens[i] = f->readers[i]->readLength;
         }
-
 
         // Ya, undo that lock.
         CheckUnlockFilter(f);
 
+        // STREAM UNLOCK
+        CHECK(pthread_mutex_unlock(&s->mutex));
+ 
 
         // This thread can now read and write to this job, j, without a
         // mutex.  No other thread will access this job while it is

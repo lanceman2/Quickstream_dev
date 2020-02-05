@@ -318,7 +318,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
         free(f->jobs);
 
         f->jobs = 0;
-        f->stage = 0;
         f->unused = 0;
         f->numWorkingThreads = 0;
         f->workingFirst = 0;

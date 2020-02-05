@@ -56,7 +56,7 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // threads.
     //
     for(uint32_t i=0; i<s->numSources; ++i)
-        FilterStageToStreamQAndSoOn(s, s->sources[i]);
+        FilterUnusedToStreamQ(s, s->sources[i]);
 
     // 2. Now launch as many threads as we can up to the number of source
     //    filters.  More threads may get added later, if there is demand;
@@ -162,19 +162,16 @@ void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
 
         AllocateJobArgs(f, f->jobs + i, numInputs, f->numOutputs);
         // Initialize the unused job stack:
-        if(i >= 2)
-            // Note: the top of f->jobs[] is used as the queue.  It's just
-            // how we choice to initialize this data.
+        // All the jobs start in the unused stack.
+        if(i >= 1)
             (f->jobs + i - 1)->next = f->jobs + i;
     }
  
-    // Initialize the job stage queue with one empty job.
-    f->stage = f->jobs;
     // Set the top of the unused job stack.
-    f->unused = f->jobs + 1;
+    f->unused = f->jobs;
 
     // Am I a stupid-head?
-    DASSERT(f->jobs->next == 0);
+    DASSERT(f->jobs->next);
     DASSERT((f->jobs+numJobs-1)->next == 0);
 
 

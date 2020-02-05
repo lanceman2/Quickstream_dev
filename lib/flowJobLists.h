@@ -95,22 +95,15 @@ void StreamQToFilterUnused(struct QsStream *s, struct QsFilter *f,
 
     j->next = f->unused;
     f->unused = j;
-
 }
 
 
 
-// 1. Transfer job from the filter->stage to the stream job queue, then
+// 1. Remove job from filter unused job stack.
 //
-// 2. transfer a job from filter unused to filter stage (to replace the
-//    one you just moved), and then
+// 2. transfer that job to stream job queue.
 //
-// 3. clean the filter stage job args.
-//
-//
-// Steps 2. and 3. are the "AndSoOn" part of the function name.
-//
-// The filter stage is a queue of one.
+// 3. clean the job args.
 //
 // This is first called by the master thread with all the source filters.
 // It is also called by worker threads to queue jobs in the order that
@@ -118,7 +111,7 @@ void StreamQToFilterUnused(struct QsStream *s, struct QsFilter *f,
 //
 // We must have a stream->mutex lock to call this.
 static inline
-void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
+void FilterUnusedToStreamQ(struct QsStream *s, struct QsFilter *f) {
 
     DASSERT(s);
     DASSERT(f);
@@ -132,11 +125,12 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
     }
 
 
-    struct QsJob *j = f->stage;
+    /////////////////////////////////////////////////////////////////////
+    // 1. Remove job from filter unused job stack.
+
+    struct QsJob *j = f->unused;
     DASSERT(j);
-    DASSERT(j->next == 0);
     DASSERT(j->prev == 0);
-    DASSERT(f->unused);
 
     // We do not queue up jobs for filters that have their fill of threads
     // already working.  Adding more jobs to the stream queue is not done
@@ -146,9 +140,12 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f->numWorkingThreads < f->maxThreads);
     DASSERT(f->numWorkingThreads < GetNumAllocJobsForFilter(s, f));
 
+    f->unused = j->next;
+    j->next = 0;
+
 
     /////////////////////////////////////////////////////////////////////
-    // 1. Transfer job from the filter->stage to the stream job queue.
+    // 2. transfer that job to stream job queue,
 
     if(s->jobLast) {
         // There are jobs in the stream queue.
@@ -163,22 +160,9 @@ void FilterStageToStreamQAndSoOn(struct QsStream *s, struct QsFilter *f) {
 
     s->jobLast = j;
 
-    // We are done with this j.  It's queued.  We can reuse variable j.
-
+ 
     /////////////////////////////////////////////////////////////////////
-    // 2. Now transfer a job from filter unused to filter stage.
-
-    j = f->unused;
-    f->stage = j;
-    f->unused = j->next;
-    if(j->next)
-        j->next = 0;
-
-    DASSERT(j->prev == 0);
-
-
-    /////////////////////////////////////////////////////////////////////
-    // 3. Now clean/reset the filter new stage job args.
+    // 3. Now clean/reset the job args.
 
     if(f->numInputs) {
         // This is not a source filter.

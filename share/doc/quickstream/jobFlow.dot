@@ -3,12 +3,11 @@ digraph {
     label="quickstream job control";
 
     subgraph cluster_7 {
-         label="job flow";
+         label="normal job flow";
 
         subgraph cluster_0 {
             label="filter_1";
             color=red;
-            filter_1_stage [label="stage", color=red];
             filter_1_unused [label="unused stack", color=red];
             filter_1_working [label="working queue", color=red];
         }
@@ -16,7 +15,6 @@ digraph {
         subgraph cluster_1 {
             label="filter_2";
             color=green;
-            filter_2_stage [label="stage", color=green];
             filter_2_unused [label="unused stack", color=green];
             filter_2_working [label="working queue", color=green];
         }
@@ -24,25 +22,21 @@ digraph {
         subgraph cluster_2 {
             label="filter_3";
             color=blue;
-            filter_3_stage [label="stage", color=blue];
             filter_3_unused [label="unused stack", color=blue];
             filter_3_working [label="working queue", color=blue];
         }
 
         stream_queue [label="stream queue"];
 
-        filter_1_unused  -> filter_1_stage [color=red];
-        filter_1_stage   -> stream_queue [color=red];
+        filter_1_unused  -> stream_queue [color=red];
         stream_queue     -> filter_1_working [color=red];
         filter_1_working -> filter_1_unused [color=red];
 
-        filter_2_unused  -> filter_2_stage [color=green];
-        filter_2_stage   -> stream_queue [color=green];
+        filter_2_unused  -> stream_queue [color=green];
         stream_queue     -> filter_2_working [color=green];
         filter_2_working -> filter_2_unused [color=green];
 
-        filter_3_unused  -> filter_3_stage [color=blue];
-        filter_3_stage   -> stream_queue [color=blue];
+        filter_3_unused  -> stream_queue [color=blue];
         stream_queue     -> filter_3_working [color=blue];
         filter_3_working -> filter_3_unused [color=blue];
     }
@@ -77,12 +71,6 @@ digraph {
         } 
 
         subgraph cluster_5 {
-            label="stage";
-            stage [shape=polygon, sides=6];
-            stage -> job;
-        }
-
-        subgraph cluster_6 {
             label="stream queue";
             sFirst [label=First, shape=polygon, sides=6];
             sLast  [label=Last, shape=polygon, sides=6];

@@ -459,20 +459,16 @@ struct QsFilter {
         // readPtr points to a location in the mapped memory, "ring
         // buffer".
         //
-        // After initialization, readPtr and readLength is only read and
+        // After initialization, readPtr is only read and
         // written by the reading filter.  We use a reading filter mutex
         // for multi-thread filters input()s, but otherwise
         // reading/writing the buffer is lock-less.
         //
         uint8_t *readPtr;
-        //
-        // The amount of data that is available to be read from readPtr.
-        // readLength is read and written to by only the reading filter.
-        //
-        // The feeding filter is not allowed to access this variable.  We
-        // add this to the input lengths that the feeding filters put in
-        // jobs (QsJob) just before we call the filter's input() with the
-        // job.
+
+        // readLength is the kept as the amount of data to the write
+        // pointer at this pass-through level.  Accessing readLength
+        // requires a stream mutex lock.
         size_t readLength;
 
         // The filter that is reading.
@@ -532,37 +528,17 @@ struct QsFilter {
     // All jobs in this filter are in one of these three job lists, or are
     // running with threads in the stream.
     //
-    // 1. stage - the one that is accumulating input() arguments.
+    // 1. stream job queue - waiting for a worker thread
     //
     // 2. working queue - 0 to maxThreads that can be working on the jobs
     //
     // 3. unused - a stack of job memory, for when the memory is not used
-    //             in stage or working queue.
+    //             in the working queue or stream job queue.
     //
     //  maxThreads = number in working queue + number in unused queue.
     //
-    // When a working thread finishes a job it is this now the "finished
-    // worker" thread that will put the job into the filters unused stack.
-    // This guarantees that the worker thread can access the job in the
-    // filter input() call without a mutex lock and without concern for
-    // memory corruption.  The "job" is a thread specific attribute while
-    // the job is being accessed by a worker thread.
-    //
-    // stage always points to one job.  The job may have no input buffer
-    // data or it may have input buffer data.  There can only be
-    // maxThreads threads with jobs; so we have maxThreads jobs and that
-    // leaves at least one in the stage pointer, and if there are less
-    // than maxThreads with jobs, then there will be left over jobs in
-    // "unused" if we are not at our working thread limit of maxThreads.
-    //
-    struct QsJob *stage;  // queue of one job that is being built.
+    //struct QsJob *stage;  // queue of one job that is being built.
     struct QsJob *unused; // stack of 0 or more unused jobs.
-    //
-    // There can be maxThreads calling input() using maxThreads jobs for
-    // this filter and one job that is "queued" that is not calling
-    // input(); therefore the length of jobs is maxThreads + 1.  If not
-    // thread-safe maxThreads is 1.  maxThreads will be fixed at flow/run
-    // time.
     //
     // If stream->maxThread == 0 then jobs will not be used and buffers,
     // lens, and isFlushing will be allocated on the stack that is running
@@ -814,10 +790,10 @@ GetNumAllocJobsForFilter(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f);
     DASSERT(s == f->stream);
 
-    uint32_t numJobs = f->maxThreads + 1;
-    if(s->maxThreads && numJobs > f->stream->maxThreads + 1)
+    uint32_t numJobs = f->maxThreads;
+    if(s->maxThreads && numJobs > f->stream->maxThreads)
         // We do not need to have more jobs than this:
-        numJobs = f->stream->maxThreads + 1;
+        numJobs = f->stream->maxThreads;
 
     return numJobs;
 }
