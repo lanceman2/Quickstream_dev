@@ -27,26 +27,18 @@ int input(void *buffers[], const size_t lens[],
     ASSERT(numInputs == 0);
     ASSERT(numOutputs == 1);
 
-
-    // For output buffering.
+    // For output buffering from this filter.
     void *buffer = qsGetOutputBuffer(0, OutLen, 0);
-
-    int ret = 0;
 
     // Put data in the output buffer.
     size_t rd = fread(buffer, 1, OutLen, stdin);
-
-    // handle the stream closing.
-    if(feof(stdin)) { 
-        DSPEW("    -------------------------- filter \"stdin\" finished");
-        ret = 1;
-    }
-
-DSPEW("    -------------------------- filter \"stdin\" fread=%zu", rd);
-
-
     if(rd)
         qsOutput(0, rd);
 
-    return ret;
+    // handle the stream closing and end of file.
+    if(feof(stdin))
+        // This filter is done reading stdin.
+        return 1; // filter done.
+
+    return 0; // continue.
 }

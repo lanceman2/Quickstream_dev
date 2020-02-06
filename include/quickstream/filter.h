@@ -459,6 +459,10 @@ int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
         uint32_t defaultVal);
 
 
+extern
+void qsRemoveDefaultFilterOptions(int argc, const char **argv);
+
+
 #ifdef __cplusplus
 }
 #endif

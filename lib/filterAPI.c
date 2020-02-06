@@ -366,3 +366,14 @@ qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
     return 0; // success
 }
 #endif
+
+
+void qsRemoveDefaultFilterOptions(int argc, const char **argv) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_CONSTRUCT, "Not in filter construct()");
+
+    ASSERT(0, "Write this function");
+}
