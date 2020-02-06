@@ -462,7 +462,7 @@ int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
 /** Remove the default command-line options for the filter.
  *
  * This function called in the filter module construct() function
- * allows the filter to opted out of having the default filter command
+ * allows the filter to opt out of having the default filter command
  * line options.
  *
  * \todo document qsRemoveDefaultFilterOptions()
