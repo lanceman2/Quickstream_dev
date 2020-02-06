@@ -459,8 +459,24 @@ int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
         uint32_t defaultVal);
 
 
+/** Remove the default command-line options for the filter.
+ *
+ * This function called in the filter module construct() function
+ * allows the filter to opted out of having the default filter command
+ * line options.
+ *
+ * \todo document qsRemoveDefaultFilterOptions()
+ *
+ * The default options are: --maxWrite, --maxRead, --config FILE, --name,
+ * and ...
+ *
+ * qsRemoveDefaultFilterOptions() must be called in the filter's
+ * construct() function.
+ *
+ * The option --name is not removed.
+ */
 extern
-void qsRemoveDefaultFilterOptions(int argc, const char **argv);
+void qsRemoveDefaultFilterOptions(void);
 
 
 #ifdef __cplusplus

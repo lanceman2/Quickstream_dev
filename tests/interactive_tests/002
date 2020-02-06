@@ -12,3 +12,5 @@ dd if=/dev/urandom count=10 of=$in
 ../../bin/quickstream -f stdin -f stdout -c -R -d -r < $in > $out
 
 diff $in $out
+
+echo "SUCCESS"

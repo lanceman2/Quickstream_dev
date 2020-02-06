@@ -368,7 +368,7 @@ qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
 #endif
 
 
-void qsRemoveDefaultFilterOptions(int argc, const char **argv) {
+void qsRemoveDefaultFilterOptions(void) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     struct QsFilter *f = pthread_getspecific(_qsKey);
