@@ -1,22 +1,42 @@
 #include "../../../../include/quickstream/filter.h"
 #include "../../../../lib/debug.h"
 
+
+
 void help(FILE *f) {
 
     fprintf(f,
-        "This filter is usually a source.\n"
-        "This filter will ignore all inputs.\n"
-        "This filter will read stdin and write it to all outputs.\n"
-        "\n"
-// TODO:
-        "TODO: add a stdin fread() buffer size option.  Without it when there\n"
-        "is relatively slow input data this may block on the fread() call to\n"
-        "to make the stream function properly.\n"
-        "\n");
+
+"  Usage: stdin [--maxWrite LEN]\n"
+"\n"
+"This filter is a source.\n"
+"This filter must have 0 inputs.\n"
+"This filter will read stdin and write it to 1 output.\n"
+"\n"
+        );
 }
 
 
-static const size_t OutLen = QS_DEFAULTMAXWRITE;
+static size_t maxWrite;
+
+
+int construct(int argc, const char **argv) {
+
+    maxWrite = qsOptsGetSizeT(argc, argv, "maxWrite", QS_DEFAULTMAXWRITE);
+
+    return 0; // success
+}
+
+
+int start(uint32_t numInPorts, uint32_t numOutPorts) {
+
+    ASSERT(numInPorts == 0);
+    ASSERT(numOutPorts == 1);
+
+    qsCreateOutputBuffer(0, maxWrite);
+
+    return 0; // success
+}
 
 
 int input(void *buffers[], const size_t lens[],
@@ -24,16 +44,16 @@ int input(void *buffers[], const size_t lens[],
         uint32_t numInputs, uint32_t numOutputs) {
 
     // We'll assume there is no input data.
-    ASSERT(numInputs == 0);
-    ASSERT(numOutputs == 1);
+    DASSERT(numInputs == 0);
+    DASSERT(numOutputs == 1);
 
     // For output buffering from this filter.
-    void *buffer = qsGetOutputBuffer(0, OutLen, 0);
+    void *buffer = qsGetOutputBuffer(0, maxWrite, 0);
 
     // Put data in the output buffer.
-    size_t rd = fread(buffer, 1, OutLen, stdin);
-    if(rd)
-        qsOutput(0, rd);
+    size_t rd = fread(buffer, 1, maxWrite, stdin);
+
+    qsOutput(0, rd);
 
     // handle the stream closing and end of file.
     if(feof(stdin))

@@ -294,8 +294,6 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
 
 
 
-
-
 /** Create an output buffer that is associated with the listed ports
  *
  * qsOutputBufferCreate() can only be called in the filter's start()
@@ -308,7 +306,7 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
  * accessing this buffer down stream.
  *
  * \param outputPortNum the output port number that the filter will use to
- * write to this buffer via qsGetBuffer() and qsOutput().
+ * write to this buffer via qsGetOutputBuffer() and qsOutput().
  *
  * \param maxWriteLen this filter promises to write at most maxWriteLen
  * bytes to this output port.  If the filter writes more than that memory

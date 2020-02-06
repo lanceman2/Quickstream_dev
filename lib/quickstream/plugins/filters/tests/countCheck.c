@@ -15,14 +15,14 @@ void help(FILE *f) {
         "\n"
         "                       OPTIONS\n"
         "\n"
-        "      --maxRead BYTES      default value %zu\n"
+        "      --maxWrite BYTES      default value %zu\n"
         "\n"
         "\n",
         QS_DEFAULTMAXWRITE);
 }
 
 
-static size_t maxRead;
+static size_t maxWrite;
 static uint64_t count;
 
 
@@ -30,10 +30,10 @@ int construct(int argc, const char **argv) {
 
     DSPEW();
 
-    maxRead = qsOptsGetSizeT(argc, argv,
-            "maxRead", QS_DEFAULTMAXWRITE);
+    maxWrite = qsOptsGetSizeT(argc, argv,
+            "maxWrite", QS_DEFAULTMAXWRITE);
 
-    maxRead += maxRead%8;
+    maxWrite += maxWrite%8;
   
     return 0; // success
 }
@@ -41,14 +41,12 @@ int construct(int argc, const char **argv) {
 
 int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
-    ASSERT(numInPorts == 1, "");
+    ASSERT(numInPorts == 1);
     DSPEW("%" PRIu32 " inputs and  %" PRIu32 " outputs",
             numInPorts, numOutPorts);
 
-    qsSetInputReadPromise(0, maxRead);
-
     for(uint32_t i=0; i<numOutPorts; ++i)
-        qsCreateOutputBuffer(i, maxRead);
+        qsCreateOutputBuffer(i, maxWrite);
 
     count = 0;
 
@@ -64,11 +62,9 @@ int input(void *buffers[], const size_t lens[],
     DASSERT(numInPorts == 1, "");
     DASSERT(lens[0], "");
 
-//DSPEW(" ++++++++++++++++++++++++++++ inputLen=%zu", lens[0]);
-
     size_t len = lens[0];
-    if(len > maxRead)
-        len = maxRead;
+    if(len > maxWrite)
+        len = maxWrite;
 
     len -= len%8;
 

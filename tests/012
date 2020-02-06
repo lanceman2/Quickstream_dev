@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+in=$0.IN.tmp
+out=$0.OUT.tmp
+
+# dd count blocks  1 block = 512bytes
+
+dd if=/dev/urandom count=300 | hexdump > $in
+
+
+
+../bin/quickstream -t 1 -f stdin [ --maxWrite=6 ]\
+ -f tests/copy [ --maxWrite=1024 --name foobar ]\
+ -f tests/copy [ --maxWrite=5209 ]\
+ -f tests/copy [ --maxWrite=12 ]\
+ -f stdout -c\
+ -r  < $in > $out
+
+du -sb $in $out
+diff -q $in $out
+
+
+echo "$0 SUCCESS"

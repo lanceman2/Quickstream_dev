@@ -93,8 +93,12 @@ int usage(const char *argv0) {
         "               they have been loaded.\n"
         "\n"
         "\n"
+        "  -C|--             \n"
+        "               \n"
+        "\n"
+        "\n"
         "  -d|--display  display a dot graph of the stream.  If display is\n"
-        "               called after the stream is readied (via --ready) this\n"
+        "                called after the stream is readied (via --ready) this\n"
         "               will show stream channel and buffering details.\n"
         "\n"
         "\n"
@@ -115,19 +119,19 @@ int usage(const char *argv0) {
         "   -h|--help   print this help to stderr and exit.\n"
         "\n"
         "\n" 
-        "   -R|--ready   ready the stream.  This calls all the filter start()\n"
-        "                functions that exist and get the stream ready to flow,\n"
-        "                except for spawning worker flow threads.\n"
+        "   -R|--ready  ready the stream.  This calls all the filter start()\n"
+        "               functions that exist and gets the stream ready to flow,\n"
+        "               except for spawning worker flow threads.\n"
         "\n"
         "\n" 
-        "   -r|--run     run the stream.  This readies the stream and runs it.\n"
+        "   -r|--run    run the stream.  This readies the stream and runs it.\n"
         "\n"
         "\n"
         "   -t|--threads NUM  when and if the stream is launched, run at most\n"
-        "                     NUM threads.  The default is %" PRIu32 ".\n"
-        "                     If this option is not given before a --run option\n"
-        "                     this option will not effect that --run option.\n"
-        "                     The largest NUM may be is %" PRIu32 ".\n"
+        "                     NUM threads.  The default is %" PRIu32 ". If this\n"
+        "               option is not given before a --run option this option\n"
+        "               will not effect that --run option.  The largest NUM may\n"
+        "               be is %" PRIu32 ".\n"
         "\n"
         "\n"
         "   -V|--version  print %s version information to stdout an than exit.\n"
@@ -202,7 +206,7 @@ int main(int argc, const char * const *argv) {
 
                 // Example:
                 //
-                //   --connection "0 1 1 2"
+                //   --connect "0 1 1 2"
                 //
                 //           filter connections ==> (0) -> (1) -> (2)
                 //
@@ -218,7 +222,8 @@ int main(int argc, const char * const *argv) {
                     break;
                 }
                 char *endptr = 0;
-                for(const char *str = arg; *str && endptr != str;) {
+                for(const char *str = arg; *str && endptr != str; endptr = 0) {
+
                     long from = strtol(str, &endptr, 10);
                     if(endptr == str) {
                         fprintf(stderr, "Bad --connect \"%s\" values "
@@ -226,6 +231,7 @@ int main(int argc, const char * const *argv) {
                         return usage(argv[0]);
                     }
                     str = endptr;
+
                     long to = strtol(str, &endptr, 10);
                     if(endptr == str) {
                         fprintf(stderr, "Bad --connect \"%s\" values "
@@ -233,6 +239,7 @@ int main(int argc, const char * const *argv) {
                         return usage(argv[0]);
                     }
                     str = endptr;
+
                     // Check values read.
                     if(from < 0 || to < 0 || from >= numFilters
                             || to >= numFilters) {
@@ -244,7 +251,7 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "connecting: %ld -> %ld\n", from, to);
 
                     qsStreamConnectFilters(stream, filters[from],
-                                filters[to], QS_NEXTPORT, QS_NEXTPORT);
+                                filters[to], 0, QS_NEXTPORT);
                 }
 
                 DSPEW("option %c = %s", c, arg);

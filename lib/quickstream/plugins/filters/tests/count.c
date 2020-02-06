@@ -19,10 +19,11 @@ void help(FILE *f) {
         "                       This is the number of bytes read and written\n"
         "                       for each input() call./n"
         "\n"
-         "    --length LEN      Write LEN bytes total and than finish.\n"
-         "                      LEN will be rounded up to the nearest\n"
-         "                      8 bytes chunck.  The default LEN is %zu.\n"
-        "\n", QS_DEFAULTMAXWRITE, DEFAULT_LEN);
+        "    --length LEN      Write LEN bytes total and than finish.\n"
+        "                      LEN will be rounded up to the nearest\n"
+        "                      8 bytes chunck.  The default LEN is %zu.\n"
+        "\n",
+        QS_DEFAULTMAXWRITE, DEFAULT_LEN);
 }
 
 

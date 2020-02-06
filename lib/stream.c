@@ -592,11 +592,18 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         // (outputPortNum):
         uint32_t numReaders = 0;
         for(i=0; i<s->numConnections; ++i)
-            if(s->connections[i].from == f && (
-                    s->connections[i].fromPortNum == outputPortNum ||
-                    s->connections[i].fromPortNum == QS_NEXTPORT)
-              )
-                ++numReaders;
+            if(s->connections[i].from == f) {
+                if(s->connections[i].fromPortNum == outputPortNum)
+                    ++numReaders;
+                else if(s->connections[i].fromPortNum == QS_NEXTPORT) {
+                    if(numReaders)
+                        s->connections[i].fromPortNum = outputPortNum+1;
+                    else {
+                        ++numReaders;
+                        s->connections[i].fromPortNum = outputPortNum;
+                    }
+                }
+            }
 
         DASSERT(numReaders);
         DASSERT(_QS_MAX_CHANNELS >= numReaders);
@@ -611,10 +618,8 @@ AllocateFilterOutputsFrom(struct QsStream *s, struct QsFilter *f,
         // Now set the values in reader:
         uint32_t readerIndex = 0;
         for(i=0; i<s->numConnections; ++i)
-            if(s->connections[i].from == f && (
-                    s->connections[i].fromPortNum == outputPortNum ||
-                    s->connections[i].fromPortNum == QS_NEXTPORT)
-                    ) {
+            if(s->connections[i].from == f &&
+                    s->connections[i].fromPortNum == outputPortNum) {
                 struct QsReader *reader = readers + readerIndex;
                 reader->filter = s->connections[i].to;
                 reader->feedFilter = f;
@@ -670,7 +675,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
         DASSERT(outFilter);
         // Every output
         for(uint32_t j=0; j<outFilter->numOutputs; ++j) {
-            struct QsOutput *output = &outFilter->outputs[j];
+            struct QsOutput *output = outFilter->outputs + j;
             DASSERT(output);
             DASSERT(output->numReaders);
             DASSERT(output->readers);
@@ -678,6 +683,7 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
                 // Every reader
                 struct QsReader *reader = output->readers + k;
                 if(reader->filter == f && reader->readPtr == 0) {
+
                     ++f->numInputs;
                     // We borrow this readPtr variable to mark this reader
                     // as counted.

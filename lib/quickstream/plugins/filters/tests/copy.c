@@ -6,15 +6,11 @@
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
-#ifdef SPEW_LEVEL_DEBUG
-static int count = 0;
-#endif
-
 
 
 void help(FILE *f) {
     fprintf(f,
-        "test filter module that copies all input to each output\n"
+        "test filter module that copies 1 input to each output\n"
         "\n"
         "                       OPTIONS\n"
         "\n"
@@ -41,10 +37,11 @@ int construct(int argc, const char **argv) {
 
 int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
-    ASSERT(numInPorts == 1, "");
-    ASSERT(numOutPorts, "");
-    DSPEW("count=%d   %" PRIu32 " inputs and  %" PRIu32 " outputs",
-            count++, numInPorts, numOutPorts);
+    DSPEW("%" PRIu32 " inputs and %" PRIu32 " outputs",
+            numInPorts, numOutPorts);
+
+    ASSERT(numInPorts == 1);
+    ASSERT(numOutPorts);
 
     for(uint32_t i=0; i<numOutPorts; ++i)
         qsCreateOutputBuffer(i, maxWrite);
@@ -57,12 +54,10 @@ int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {
 
-    DASSERT(lens, "");
-    DASSERT(numInPorts == 1, "");
-    DASSERT(numOutPorts, "");
-    DASSERT(lens[0], "");
-
-DSPEW(" ++++++++++++++++++++++++++++ inputLen=%zu", lens[0]);
+    DASSERT(lens);
+    DASSERT(numInPorts == 1);
+    DASSERT(numOutPorts);
+    DASSERT(lens[0]);
 
     size_t len = lens[0];
     if(len > maxWrite)

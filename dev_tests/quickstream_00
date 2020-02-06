@@ -7,50 +7,25 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-dd if=/dev/urandom count=300 | hexdump > $in
+#dd if=/dev/urandom count=3000 | hexdump > $in
 
 
-# This will call the tests/copy input() function lots more than all other
-# input() functions, checking the buffer advancement for the extreme case
-# with a single byte input() at a time.
-#
-
-set -x
-../bin/quickstream -f stdin\
- -f tests/copy [ --maxRead=7 ]\
- -f tests/copy [ --maxRead=700 ]\
- -f tests/copy [ --maxRead=701 ]\
- -f stdout -c -R -r < $in > $out
-
-du -sb $in $out
-diff -q $in $out
+../bin/quickstream -t 20\
+ -f tests/count [ --maxWrite 113 ]\
+ -f tests/countCheck [ --maxWrite 10 ]\
+ -f tests/countCheck [ --maxWrite 28000 ]\
+ -f tests/countCheck [ --maxWrite 1024 ]\
+ -c -R -r
 
 
 echo "SUCCESS"
-
-
-exit
-
-../bin/quickstream -t 1 -f tests/count\
- -f tests/countCheck [ --maxRead 10 ]\
- -f tests/countCheck [ --maxRead 28000 ]\
- -f tests/countCheck [ --maxRead 1024 ]\
- -c -R -r > /dev/null
-
-
-
-#diff -q $in $out
-
-
-echo "SUCCESS"
-
 
 exit
 
 ../bin/quickstream -f stdin -f stdout -c -R -d -r < $in > $out
 
 ../bin/quickstream -f tests/count\
- -f tests/countCheck [ --maxRead 24 ]\
+ -f tests/countCheck [ --maxWrite 24 ]\
  -c -R -r > /dev/null
 
 ../bin/quickstream -f tests/count\
@@ -58,5 +33,5 @@ exit
  -f stdout -c -R -r > /dev/null
 
 ../bin/quickstream -f stdin\
- -f tests/copy [ --maxRead=7 ]\
+ -f tests/copy [ --maxWrite=7 ]\
  -f stdout -c -R -d -r < $in > $out
