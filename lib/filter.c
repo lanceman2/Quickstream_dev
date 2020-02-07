@@ -255,31 +255,27 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
 
     if(construct) {
 
-        struct QsApp *oldApp = pthread_getspecific(_qsKey);
+        struct QsFilter *oldFilter = pthread_getspecific(_qsKey);
         // Check if the user is using more than one QsApp in a single
         // thread and calling qsApp or qsStream functions from within
         // other qsApp or qsStream functions.
         //
         // You may be able to create more than one QsApp but:
         //
-        ASSERT(!oldApp || oldApp == f->app,
+        ASSERT(!oldFilter || f->app == oldFilter->app,
                 "You cannot mix QsApp objects in "
                 "other QsApp function calls");
 
         DASSERT(f->mark == 0);
 
-        if(!oldApp)
-            // If thread specific data was set already than we do not
-            // set it again here:
-            CHECK(pthread_setspecific(_qsKey, f->app));
+        CHECK(pthread_setspecific(_qsKey, f));
 
         // This code is only run in one thread, so this is not necessarily
         // required to be thread safe, but it is and MUST BE re-entrant.
         // There's a big difference between re-entrant and thread safe.
         //
-        struct QsFilter *old_qsCurrentFilter = app->currentFilter;
         // A filter cannot load itself.
-        DASSERT(old_qsCurrentFilter != f);
+        DASSERT(oldFilter != f);
         // We use this otherwise 0 flag as a marker that we are in the
         // construct() phase.
         f->mark = _QS_IN_CONSTRUCT;
@@ -296,12 +292,8 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         // Filter f is not in construct() phase anymore.
         f->mark = 0;
 
-        f->app->currentFilter = old_qsCurrentFilter;
+        CHECK(pthread_setspecific(_qsKey, oldFilter));
 
-
-        if(old_qsCurrentFilter == 0)
-            // We are the last in this filter unload call stack.
-            CHECK(pthread_setspecific(_qsKey, 0));
 
         if(ret) {
             // Failure.
@@ -326,28 +318,6 @@ cleanup:
     DestroyFilter(app, f);
     free(path);
     return 0; // failure
-}
-
-
-// maxThread that may run in the current filter.
-void qsSetThreadSafe(uint32_t maxThreads) {
-
-    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    struct QsApp *app = pthread_getspecific(_qsKey);
-    ASSERT(app, "qsSetThreadSafe() not called in filter construct()");
-    struct QsFilter *f = app->currentFilter;
-    DASSERT(f);
-    DASSERT(f->app == app);
-    ASSERT(f->mark == _QS_IN_CONSTRUCT,
-            "qsSetThreadSafe() not called in filter construct()");
-
-    // We just mark collect the maxThreads and allocate other things
-    // later.
-    //
-    // We'll use maxThreads=1 to mean not multi-threaded and exclude the
-    // use of maxThreads=0, so that there is at least one thread.
-    if(maxThreads == 0) f->maxThreads = 1;
-    else f->maxThreads = maxThreads;
 }
 
 

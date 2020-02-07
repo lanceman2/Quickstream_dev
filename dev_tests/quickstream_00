@@ -7,8 +7,21 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-#dd if=/dev/urandom count=3000 | hexdump > $in
+dd if=/dev/urandom count=3 | hexdump > $in
 
+
+
+../bin/quickstream -f stdin\
+ -f tests/copy [ --maxWrite=7000 --sleep 1 --name "KG sleeps" ]\
+ -f stdout -c -R -d -r < $in > $out
+
+du -sb $in $out
+
+diff -q $in $out
+
+echo "SUCCESS"
+
+exit
 
 ../bin/quickstream -t 20\
  -f tests/count [ --maxWrite 113 ]\
@@ -16,11 +29,6 @@ out=$0.OUT.tmp
  -f tests/countCheck [ --maxWrite 28000 ]\
  -f tests/countCheck [ --maxWrite 1024 ]\
  -c -R -r
-
-
-echo "SUCCESS"
-
-exit
 
 ../bin/quickstream -f stdin -f stdout -c -R -d -r < $in > $out
 

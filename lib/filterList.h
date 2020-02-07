@@ -42,23 +42,20 @@ void FreeFilter(struct QsFilter *f) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
         if(destroy) {
 
-            struct QsApp *oldApp = pthread_getspecific(_qsKey);
+            struct QsFilter *oldFilter = pthread_getspecific(_qsKey);
             // Check if the user is using more than one QsApp in a single
             // thread and calling qsApp or qsStream functions from within
             // other qsApp or qsStream functions.
             //
             // You may be able to create more than one QsApp but:
             //
-            ASSERT(!oldApp || oldApp == f->app,
+            ASSERT(!oldFilter || oldFilter->app == f->app,
                     "You cannot mix QsApp objects in "
                     "other QsApp function calls");
 
             DASSERT(f->mark == 0);
 
-            if(!oldApp)
-                // If thread specific data was set already than we do not
-                // set it again here:
-                CHECK(pthread_setspecific(_qsKey, f->app));
+            CHECK(pthread_setspecific(_qsKey, f));
 
             // This FreeFilter() function must be re-entrant.  It may be
             // called from a qsFilterUnload() call in a filter->destroy()
@@ -67,12 +64,8 @@ void FreeFilter(struct QsFilter *f) {
             //
             // However, filters cannot unload themselves.
             //
-            // So ya, this code block looks like stupid variable tossing
-            // shit, but it's not.
-            //
-            struct QsFilter *old_qsCurrentFilter = f->app->currentFilter;
             // A filter cannot unload itself.
-            DASSERT(old_qsCurrentFilter != f);
+            DASSERT(oldFilter != f);
             // Use the mark variable at a state marker.
             f->mark = _QS_IN_DESTROY;
 
@@ -80,11 +73,8 @@ void FreeFilter(struct QsFilter *f) {
 
             // Filter f is not in destroy() phase anymore.
             f->mark = 0;
-            f->app->currentFilter = old_qsCurrentFilter;
 
-            if(old_qsCurrentFilter == 0)
-                // We are the last in this filter unload call stack.
-                CHECK(pthread_setspecific(_qsKey, 0));
+            CHECK(pthread_setspecific(_qsKey, oldFilter));
 
 
             if(ret) {

@@ -385,8 +385,28 @@ const char* qsGetFilterName(void) {
     struct QsFilter *f = pthread_getspecific(_qsKey);
     DASSERT(f);
     ASSERT(f->mark == _QS_IN_CONSTRUCT || f->mark == _QS_IN_DESTROY ||
-            f->mark == _QS_IN_START || f->mark == _QS_IN_STOP);
+            f->mark == _QS_IN_START || f->mark == _QS_IN_STOP,
+            "f->mark=%" PRIx32, f->mark);
     DASSERT(f->name);
 
     return f->name;
+}
+
+
+// maxThread that may run in the current filter.
+void qsSetThreadSafe(uint32_t maxThreads) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    ASSERT(f, "qsSetThreadSafe() not called in filter construct()");
+    ASSERT(f->mark == _QS_IN_CONSTRUCT,
+            "qsSetThreadSafe() not called in filter construct()");
+
+    // We just mark collect the maxThreads and allocate other things
+    // later.
+    //
+    // We'll use maxThreads=1 to mean not multi-threaded and exclude the
+    // use of maxThreads=0, so that there is at least one thread.
+    if(maxThreads == 0) f->maxThreads = 1;
+    else f->maxThreads = maxThreads;
 }

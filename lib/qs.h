@@ -159,19 +159,6 @@ struct QsApp {
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
-
-    // The current filter that we are calling construct(), or destroy()
-    // for.
-    //
-    // Stream start and stop "like" actions can't be called from a
-    // filter's construct(), or destroy(); that is you can't call
-    // qsStreamReady(),  qsStreamLaunch(), qsStreamWait(), and
-    // qsStreamStop() from filter's construct(), or destroy().
-    //
-    // We put a pointer to the app in the threads per thread specific
-    // data with pthread_setSpecific().
-    //
-    struct QsFilter *currentFilter;
 };
 
 
