@@ -28,7 +28,7 @@ int main(void) {
     char str[LEN];
 
     while(running) {
-        printf("%10.10s\n", randomString_get(&r, LEN, str));
+        printf("%10.10s", randomString_get(&r, LEN, str));
     }
 
     fprintf(stderr, "done\n");
