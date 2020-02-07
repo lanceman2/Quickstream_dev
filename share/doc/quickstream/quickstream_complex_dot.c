@@ -24,7 +24,7 @@ int main(void) {
         return 1;
 
 
-    const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
+    const char *fn[] = { "stdin.so", "tests/copy.so", "stdout.so", 0 };
     struct QsFilter *f[10];
     struct QsFilter *prevF = 0;
     struct QsStream *s = qsAppStreamCreate(app);
@@ -42,15 +42,15 @@ int main(void) {
         ++i;
     }
 
-    f[i] = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
+    f[i] = qsAppFilterLoad(app, "tests/copy", 0, 0, 0);
     qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
-    qsStreamConnectFilters(s, f[0], f[i], 1, QS_NEXTPORT);
+    qsStreamConnectFilters(s, f[1], f[i], 1, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
 
     i++;
 
-    f[i] = qsAppFilterLoad(app, "tests/sleep.so", "foodog", 0, 0);
+    f[i] = qsAppFilterLoad(app, "tests/copy.so", "foodog", 0, 0);
     qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
     qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);

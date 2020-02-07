@@ -35,7 +35,7 @@ int main(void) {
     struct QsStream *s = qsAppStreamCreate(app);
 
     struct QsFilter *f0 = qsAppFilterLoad(app, "stdin", 0, 0, 0);
-    struct QsFilter *f1 = qsAppFilterLoad(app, "tests/sleep", "transmogifer", 0, 0);
+    struct QsFilter *f1 = qsAppFilterLoad(app, "tests/copy", "transmogifer", 0, 0);
     struct QsFilter *f2 = qsAppFilterLoad(app, "stdout", 0, 0, 0);
 
     if(!f0 || !f1 || !f2) goto fail;

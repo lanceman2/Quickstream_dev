@@ -377,3 +377,16 @@ void qsRemoveDefaultFilterOptions(void) {
 
     ASSERT(0, "Write this function");
 }
+
+
+const char* qsGetFilterName(void) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsFilter *f = pthread_getspecific(_qsKey);
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_CONSTRUCT || f->mark == _QS_IN_DESTROY ||
+            f->mark == _QS_IN_START || f->mark == _QS_IN_STOP);
+    DASSERT(f->name);
+
+    return f->name;
+}

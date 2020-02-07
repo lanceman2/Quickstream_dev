@@ -326,6 +326,7 @@ int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
 // qsCreatePassThroughBufferDownstream() below.
 struct QsFilter;
 
+
 /** Make a downstream filter read from a pass through buffer.
  *
  * \return 0 on success, or -1 if there is already another downstream
@@ -334,6 +335,26 @@ struct QsFilter;
 extern
 int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
         struct QsFilter *toFilter, uint32_t toInputPort);
+
+
+
+/** Get the name of the filter
+ *
+ * The name of a filter is set by the person running the quickstream
+ * program.  The name is unique for that loaded filter running in a given
+ * program.  The name is generated automatically of can be set using the
+ * qsAppFilterLoad() function in a quickstream runner program.
+ *
+ * qsGetFilterName() can only be called in a filter module in it's
+ * construct(), start(), stop(), or destroy() functions.
+ *
+ * If you need the filter name in input() get it in start() or
+ * construct().  The filters name will never change after it's loaded.
+ *
+ * \return a string that you should only read.
+ */
+extern
+const char* qsGetFilterName(void);
 
 
 

@@ -1,8 +1,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
-#define QS_FILTER_NAME_CODE
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
@@ -10,11 +10,19 @@
 
 void help(FILE *f) {
     fprintf(f,
-        "test filter module that copies 1 input to each output\n"
+        "  Usage: test/copy [ --maxWrite BYTES --sleep SECS ]\n"
+        "\n"
+        "A test filter module that copies each input to each output in order.\n"
+        "If they are more inputs than outputs than the last output gets the\n"
+        "reminder of the inputs copied to it.  If there are more outputs than\n"
+        "inputs than the reminder outputs get no data written to them.\n"
         "\n"
         "                       OPTIONS\n"
         "\n"
-        "      --maxWrite BYTES      default value %zu\n"
+        "      --maxWrite BYTES   default value %zu\n"
+        "\n"
+        "      --sleep SECS       sleep SECS seconds in each input() call.\n"
+        "                         By default it does not sleep.\n"   
         "\n"
         "\n",
         QS_DEFAULTMAXWRITE);
@@ -23,6 +31,9 @@ void help(FILE *f) {
 
 static size_t maxWrite;
 
+static struct timespec t = { 0, 0 };
+static bool doSleep = false;
+
 
 int construct(int argc, const char **argv) {
 
@@ -30,6 +41,20 @@ int construct(int argc, const char **argv) {
 
     maxWrite = qsOptsGetSizeT(argc, argv,
             "maxWrite", QS_DEFAULTMAXWRITE);
+
+    double sleepT = qsOptsGetDouble(argc, argv,
+            "sleep", 0);
+
+    if(sleepT) {
+
+        t.tv_sec = sleepT;
+        t.tv_nsec = (sleepT - t.tv_sec) * 1000000000;
+        doSleep = true;
+
+        DSPEW("Filter \"%s\" will sleep %lg "
+                "seconds in every input() call.",
+                qsGetFilterName(), sleepT);
+    }
   
     return 0; // success
 }
@@ -40,7 +65,7 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
     DSPEW("%" PRIu32 " inputs and %" PRIu32 " outputs",
             numInPorts, numOutPorts);
 
-    ASSERT(numInPorts == 1);
+    ASSERT(numInPorts);
     ASSERT(numOutPorts);
 
     for(uint32_t i=0; i<numOutPorts; ++i)
@@ -54,21 +79,22 @@ int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {
 
-    DASSERT(lens);
-    DASSERT(numInPorts == 1);
-    DASSERT(numOutPorts);
-    DASSERT(lens[0]);
+    uint32_t outPortNum = 0;
 
-    size_t len = lens[0];
-    if(len > maxWrite)
-        len = maxWrite;
+    for(uint32_t i=0; i<numInPorts; ++i) {
+        size_t len = lens[i];
+        if(len > maxWrite)
+            len = maxWrite;
+        memcpy(qsGetOutputBuffer(outPortNum, len, len), buffers[i], len);
+        qsOutput(outPortNum, len);
+        if(outPortNum + 1 < numOutPorts)
+            ++outPortNum;
 
-    for(uint32_t i=0; i<numOutPorts; ++i) {
-        memcpy(qsGetOutputBuffer(i, len, len), buffers[0], len);
-        qsOutput(i, len);
+        qsAdvanceInput(i, len);
     }
 
-    qsAdvanceInput(0, len);
-    
+    if(doSleep)
+        nanosleep(&t, 0);
+
     return 0; // success
 }
