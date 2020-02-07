@@ -1,15 +1,19 @@
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
+#include "NSequence.h"
 
-#define DEFAULT_LEN   ((size_t) 800000)
+// This is the default total output length to all output channels
+// for a given stream run.
+#define DEFAULT_TOTAL_LENGTH   ((size_t) 800000)
 
 void help(FILE *f) {
 
     fprintf(f,
-        "This filter is usually a source.\n"
-        "This filter will ignore all inputs.\n"
-        "This filter write a 64 bit count to all output\n"
+        "This filter is a source.  This filter writes a sequence of 64 bit\n"
+        "numbers to all outputs.  The sequence is explained in:\n"
+        "\n"
+        "       https://en.wikipedia.org/wiki/Maximum_length_sequence\n"
         "\n"
         "                  OPTIONS\n"
         "\n"
@@ -22,13 +26,24 @@ void help(FILE *f) {
          "    --length LEN      Write LEN bytes total and than finish.\n"
          "                      LEN will be rounded up to the nearest\n"
          "                      8 bytes chunck.  The default LEN is %zu.\n"
-        "\n", QS_DEFAULTMAXWRITE, DEFAULT_LEN);
+        "\n", QS_DEFAULTMAXWRITE, DEFAULT_TOTAL_LENGTH);
 }
 
 
 static size_t maxWrite;
-static size_t length, num, total;
+static size_t totalLength, num, total;
 static uint64_t count;
+
+
+#if 0
+static inline
+uint64_t GetNext(uint64_t num) {
+
+    uint64_t ret = num << 1;
+    return 0;
+
+}
+#endif
 
 
 
@@ -38,15 +53,15 @@ int construct(int argc, const char **argv) {
 
     maxWrite = qsOptsGetSizeT(argc, argv,
             "maxWrite", QS_DEFAULTMAXWRITE);
-    length = qsOptsGetSizeT(argc, argv,
-            "length", DEFAULT_LEN);
+    totalLength = qsOptsGetSizeT(argc, argv,
+            "length", DEFAULT_TOTAL_LENGTH);
 
 
-    length += length%8;
+    totalLength += totalLength%8;
     maxWrite += maxWrite%8;
 
     ASSERT(maxWrite);
-    ASSERT(length);
+    ASSERT(totalLength);
 
     // Number per output.
     num = maxWrite/8;
@@ -82,9 +97,9 @@ int input(void *buffers[], const size_t lens[],
 
     size_t n = num;
     total += n*8;
-    if(total > length) {
-        n -= (total - length)/8;
-        total = length;
+    if(total > totalLength) {
+        n -= (total - totalLength)/8;
+        total = totalLength;
     }
 
     for(uint32_t i=0; i<numOutputs; ++i) {
@@ -97,7 +112,7 @@ int input(void *buffers[], const size_t lens[],
 
 //DSPEW("next count=%" PRIu64, count);
 
-    if(total == length)
+    if(total == totalLength)
         return 1; // we are finished
 
     return 0;
