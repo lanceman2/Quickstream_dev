@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define QS_FILTER_NAME_CODE
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 

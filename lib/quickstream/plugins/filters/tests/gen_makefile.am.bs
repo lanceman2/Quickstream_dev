@@ -79,6 +79,8 @@ echo -e "\n"
 
 for f in ${bnfiles[@]} ; do
     echo "${f%%.c}_SOURCES = ${f}"
+    echo "${f%%.c}_LDADD = \$(top_builddir)/lib/libquickstream.la"
+    echo
 done
 
 echo

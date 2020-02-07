@@ -1,7 +1,7 @@
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
-#include "NSequence.h"
+#include "Sequence.h"
 
 // This is the default total output length to all output channels
 // for a given stream run.
