@@ -1,7 +1,7 @@
 # 1.  build all [a-z]*.c as a filter module
 # 2.  build all [A-Z]*.c as a uninstalled test
 
-roor := ../../../../..
+root := ../../../../..
 
 INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters/tests
 
@@ -11,8 +11,9 @@ define makeSOURCES
 $(1)$(2)_SOURCES := $(1).c
 endef
 
+
 define ADDlib
-$(1)_LDFLAGS := -L$(root)/lib -lquickstream -Wl,-rpath=\$$ORIGIN/$(root)/lib
+$(1)_LDFLAGS := -L$(root)/lib -lquickstream -Wl,-rpath=\$$$$ORIGIN/$(root)/lib
 endef
 
 BUILD_NO_INSTALL := $(patsubst %.c, %, $(wildcard [A-Z]*.c))
