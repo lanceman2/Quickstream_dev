@@ -9,7 +9,7 @@
 int main(void) {
 
     struct RandomString r;
-    memset(&r, 0, sizeof(r));
+    randomString_init(&r, 1);
 
     const size_t LEN = 1000;
     char str[LEN];

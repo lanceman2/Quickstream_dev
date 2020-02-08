@@ -22,7 +22,7 @@ int main(void) {
     signal(SIGINT, catch);
 
     struct RandomString r;
-    memset(&r, 0, sizeof(r));
+    randomString_init(&r, 0);
 
     const size_t LEN = 10;
     char str[LEN];

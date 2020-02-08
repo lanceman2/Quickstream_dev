@@ -12,17 +12,21 @@
 // 3. Generated on the fly and not from a file.
 // 4. Does not have to be high quality.
 // 5. Works with the program diff so adding '\n' is nice.
+// 6. It's not the most efficient, but much faster than using files.
 //
 
 //////////////////////////////////////////////////////////////////////
 //                 CONFIGURATION
 //////////////////////////////////////////////////////////////////////
-#define NEWLINE_LEN (50)
+#define NEWLINE_LEN (100) // Add a newline at this length
 
 // Got seeds from running: sha512sum ANYFILE.
 #define SEED_0 (0x5421aa1773593c60)
 #define SEED_1 (0x3e13d82d9622b0c3)
 #define SEED_2 (0xf0e05727881623bd)
+
+static const char *charSet = "0123456789abcdef";
+
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 
@@ -37,16 +41,20 @@ struct RandomString {
     int remainderIndex;
     int newlineLen;
     int newlineIndex;
-    bool init;
+    bool init; // flag: is this struct initialized.
 };
 
 
+// Writes to string at *val_in.
+//
 // Returns the remaining length.
-static inline 
+//
+// I wish C had pass by reference, like C++ has.  All the arguments would
+// be passed by reference, and this would be more truly inline code.
+static inline
 size_t GetNextStrings(struct RandomString *r,
         int *index, long int field, char **val_in, size_t len) {
 
-    const char *charSet = "0123456789abcdef";
     int i = *index;
     char *val = *val_in;
 
@@ -64,6 +72,7 @@ size_t GetNextStrings(struct RandomString *r,
         // Get the next 4 bits as a number, 2^4 = 16
         int n = (field & (15 << i*4)) >> i*4;
         *val++ = charSet[n]; // one byte at a time.
+
         --len;
         --i;
     }
@@ -74,33 +83,50 @@ size_t GetNextStrings(struct RandomString *r,
 }
 
 
+// seed can be like 0, 1, 2, ... which can be the channel/port number.
+//
+static void randomString_init(struct RandomString *r, uint32_t seed) {
+
+    // We use the same initialization for all, so the sequence is always
+    // the same.
+    r->init = true;
+
+    // This is the seed for the random number generator.  Change this
+    // to change the sequence.  Got random data from the program
+    // sha512sum.  I have no idea what these numbers do, but random
+    // initial values seemed reasonable.
+    uint64_t x[3] = {
+        0x5421aa1773593c60,
+        0x3e13d82d9622b0c3,
+        0xf0e05727881623bd
+    };
+
+    // Note: We do not want to have seed effect the other two x[] numbers
+    // because than they'd be related and we may see patterns in the
+    // generated data because of that; as I did.
+    x[0] += seed;
+
+
+    ASSERT(NEWLINE_LEN >= 2, "NEWLINE_LEN must be greater than 1");
+
+    r->remainderIndex = -1;
+
+    ASSERT(sizeof(r->buffer) == sizeof(x));
+    memcpy(&r->buffer, &x, sizeof(r->buffer));
+    r->newlineLen = NEWLINE_LEN;
+    r->newlineIndex = 0;
+}
+
+
 // len  -- is the length in bytes requested
 //
-// The sequence generated is not dependent on len.
+// The sequence generated is not dependent on each len value, just the
+// total count requested from the first call.
 //
 static inline
 char *randomString_get(struct RandomString *r, size_t len, char *retVal) {
 
-    if(!r->init) {
-        // We use the same initialization for all.
-        // So the sequence is always the same.
-        r->init = true;
-
-        // This is the seed for the random number generator.  Change this
-        // to change the sequence.  Got it from the program sha512sum.
-        const uint64_t x[3] = {
-            0x5421aa1773593c60,
-            0x3e13d82d9622b0c3,
-            0xf0e05727881623bd
-        };
-
-        r->remainderIndex = -1;
-
-        ASSERT(sizeof(r->buffer) == sizeof(x));
-        memcpy(&r->buffer, &x, sizeof(r->buffer));
-        r->newlineLen = NEWLINE_LEN;
-        r->newlineIndex = 0;
-    }
+    ASSERT(r->init);
 
     char *val = retVal;
 
