@@ -11,8 +11,10 @@ void help(FILE *f) {
 
     fprintf(f,
         "This filter is a source.  This filter writes a fixed pseudo-random\n"
-        "sequence of one byte ascii characters to all outputs.  Each output\n"
-        "has a different sequence.\n"
+        "sequence of one byte ascii characters in hex to all outputs.  Each\n"
+        "output has a different sequence which comes from seeding the\n"
+        "randomString_init() function with the output port numbers, 0, 1, 2,\n"
+        "and etc at each start().\n"
         "\n"
         "                  OPTIONS\n"
         "\n"
@@ -48,18 +50,18 @@ int construct(int argc, const char **argv) {
 }
 
 
-int start(uint32_t numInPorts, uint32_t numOutPorts) {
+int start(uint32_t numInputs, uint32_t numOutputs) {
 
-    ASSERT(numInPorts == 0);
-    ASSERT(numOutPorts);
+    ASSERT(numInputs == 0);
+    ASSERT(numOutputs);
 
-    DSPEW("%" PRIu32 " outputs", numOutPorts);
+    DSPEW("%" PRIu32 " outputs", numOutputs);
 
-    rs = calloc(numOutPorts, sizeof(*rs));
+    rs = calloc(numOutputs, sizeof(*rs));
     ASSERT(rs, "calloc(%" PRIu32 ",%zu) failed",
-            numOutPorts, sizeof(*rs));
+            numOutputs, sizeof(*rs));
 
-    for(uint32_t i=0; i<numOutPorts; ++i) {
+    for(uint32_t i=0; i<numOutputs; ++i) {
         qsCreateOutputBuffer(i, maxWrite);
         // Initialize the random string generator.
         randomString_init(rs + i, i/*seed*/);
@@ -97,4 +99,17 @@ int input(void *buffers[], const size_t lens[],
     }
 
     return ret;
+}
+
+
+int stop(uint32_t numInputs, uint32_t numOutputs) {
+
+    DASSERT(numInputs == 0);
+    DASSERT(numOutputs);
+    DASSERT(rs);
+
+    free(rs);
+    rs = 0;
+
+    return 0;
 }

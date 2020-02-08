@@ -1,55 +1,76 @@
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
+#include "Sequence.h"
 
 
 void help(FILE *f) {
+
     fprintf(f,
-        "test filter module that copies 1 input to each output\n"
-        "There may be no outputs.  There must be 1 input.\n"
+        "The filter reads and checks input that came from sequenceGen.\n"
+        "The filter reads and number of inputs and writes out what is reads\n"
+        "in.\n"
         "\n"
-        "                       OPTIONS\n"
         "\n"
-        "      --maxRead BYTES      default value %zu\n"
+        "                  OPTIONS\n"
         "\n"
+        "\n"
+        "    --maxWrite BYTES  default value %zu.  This is the number of\n"
+        "                      bytes read and written for each input() call.\n"
         "\n",
         QS_DEFAULTMAXWRITE);
 }
 
 
-static size_t maxRead;
-static uint64_t count;
+static size_t maxWrite;
+static char **compare;
+static struct RandomString *rs;
+static const char *filterName;
 
 
 int construct(int argc, const char **argv) {
 
     DSPEW();
 
-    maxRead = qsOptsGetSizeT(argc, argv,
-            "maxRead", QS_DEFAULTMAXWRITE);
+    maxWrite = qsOptsGetSizeT(argc, argv,
+            "maxWrite", QS_DEFAULTMAXWRITE);
 
-    maxRead += maxRead%8;
-  
+    ASSERT(maxWrite);
+
+    filterName = qsGetFilterName();
+
     return 0; // success
 }
 
 
-int start(uint32_t numInPorts, uint32_t numOutPorts) {
+int start(uint32_t numInputs, uint32_t numOutputs) {
 
-    ASSERT(numInPorts == 1, "");
-    DSPEW("%" PRIu32 " inputs and  %" PRIu32 " outputs",
-            numInPorts, numOutPorts);
+    ASSERT(numInputs);
 
-    qsSetInputReadPromise(0, maxRead);
+    DSPEW("%" PRIu32 " inputs  %" PRIu32 " outputs",
+            numInputs, numOutputs);
 
-    for(uint32_t i=0; i<numOutPorts; ++i)
-        qsCreateOutputBuffer(i, maxRead);
+    if(numInputs > numOutputs) {
+        compare = calloc(numInputs - numOutputs, sizeof(*compare));
+        ASSERT(compare, "calloc(%" PRIu32 ",%zu) failed",
+                numInputs - numOutputs, sizeof(*compare));
+    }
 
-    count = 0;
+    for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
+        compare[i] = malloc(maxWrite + 1);
+        ASSERT(compare[i], "malloc(%zu) failed", maxWrite + 1);
+        qsCreateOutputBuffer(i, maxWrite);
+    }
+
+
+    rs = calloc(numInputs, sizeof(*rs));
+    ASSERT(rs, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*rs));
+
+    for(uint32_t i=0; i<numInputs; ++i) {
+        // Initialize the random string generator.
+        randomString_init(rs + i, i/*seed*/);
+    }
 
     return 0; // success
 }
@@ -57,38 +78,59 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
 
 int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
-        uint32_t numInPorts, uint32_t numOutPorts) {
+        uint32_t numInputs, uint32_t numOutputs) {
 
-    DASSERT(lens, "");
-    DASSERT(numInPorts == 1, "");
-    DASSERT(lens[0], "");
+    for(uint32_t i=0; i<numInputs; ++i) {
 
-//DSPEW(" ++++++++++++++++++++++++++++ inputLen=%zu", lens[0]);
+        size_t len = lens[i];
+        if(len > maxWrite)
+            len = maxWrite;
+        else if(len == 0)
+            continue;
 
-    size_t len = lens[0];
-    if(len > maxRead)
-        len = maxRead;
+        char *in = buffers[i];
 
-    len -= len%8;
+        if(i < numOutputs) {
 
-    if(len == 0) return 0;
+            char *out = qsGetOutputBuffer(i, len, len);
+            randomString_get(rs + i, len, out);
+            for(size_t j=0; j<len; ++j)
+                ASSERT(out[j] == in[j],
+                        "%s Miss-match on input channel %" PRIu32,
+                        filterName, i);
+            qsOutput(i, len);
 
-    size_t num = len/8;
+        } else {
 
-    uint64_t *in = buffers[0];
+            // This is no corresponding output for this input port.
+            char *out = compare[i - numOutputs];
+            DSPEW("SHIT I GOT TO GO out=%s", out);
 
-    for(size_t i=0; i<num; ++i) {
-        ASSERT(count == in[i], "(%zu/%zu) count %" PRIu64 " != %"
-                PRIu64 " failed ", i, num, count, in[i]);
-        ++count;
+        }
     }
 
-    qsAdvanceInput(0, len);
 
-    for(uint32_t i=0; i<numOutPorts; ++i) {
-        memcpy(qsGetOutputBuffer(i, len, len), in, len);
-        qsOutput(i, len);
+    return 0;
+}
+
+
+int stop(uint32_t numInputs, uint32_t numOutputs) {
+
+    DASSERT(rs);
+    free(rs);
+    rs = 0;
+
+    for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
+        DASSERT(compare[i]);
+        free(compare[i]);
+        compare[i] = 0;
     }
 
-    return 0; // success
+    if(numInputs > numOutputs) {
+        DASSERT(compare);
+        free(compare);
+        compare = 0;
+    }
+
+    return 0;
 }
