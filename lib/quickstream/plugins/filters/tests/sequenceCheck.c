@@ -56,14 +56,15 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
         compare = calloc(numInputs - numOutputs, sizeof(*compare));
         ASSERT(compare, "calloc(%" PRIu32 ",%zu) failed",
                 numInputs - numOutputs, sizeof(*compare));
+
+        for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
+            compare[i] = calloc(1, maxWrite + 1);
+            ASSERT(compare[i], "calloc(1,%zu) failed", maxWrite + 1);
+        }
     }
 
-    for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
-        compare[i] = malloc(maxWrite + 1);
-        ASSERT(compare[i], "malloc(%zu) failed", maxWrite + 1);
+    for(uint32_t i=0; i<numOutputs; ++i)
         qsCreateOutputBuffer(i, maxWrite);
-    }
-
 
     rs = calloc(numInputs, sizeof(*rs));
     ASSERT(rs, "calloc(%" PRIu32 ",%zu) failed",
@@ -71,7 +72,7 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
 
     for(uint32_t i=0; i<numInputs; ++i) {
         // Initialize the random string generator.
-        randomString_init(rs + i, i/*seed*/);
+        randomString_init(rs + i, i/*seed is the input port*/);
     }
 
     return 0; // success
@@ -90,13 +91,16 @@ int input(void *buffers[], const size_t lens[],
         else if(len == 0)
             continue;
 
+        qsAdvanceInput(i, len);
+
         char *in = buffers[i];
         char *out;
 
         if(i < numOutputs)
             out = qsGetOutputBuffer(i, len, len);
         else
-            // This has no corresponding output for this input port.
+            // This has no corresponding output for this input port
+            // so we use a buffer that we allocated in start().
             out = compare[i - numOutputs];
 
         randomString_get(rs + i, len, out);
@@ -137,13 +141,13 @@ int stop(uint32_t numInputs, uint32_t numOutputs) {
     free(rs);
     rs = 0;
 
-    for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
-        DASSERT(compare[i]);
-        free(compare[i]);
-        compare[i] = 0;
-    }
-
     if(numInputs > numOutputs) {
+        for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
+            DASSERT(compare[i]);
+            free(compare[i]);
+            compare[i] = 0;
+        }
+
         DASSERT(compare);
         free(compare);
         compare = 0;

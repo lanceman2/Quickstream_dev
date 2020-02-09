@@ -269,8 +269,9 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         if(j->inputLens[i] >= r->maxRead)
             // This filter module is not written correctly.
             ASSERT(j->advanceLens[i],
-                    "The filter \"%s\" did not keep it's read promise",
-                    f->name);
+                    "The filter \"%s\" did not keep it's read promise"
+                    " for input port %" PRIu32,
+                    f->name, i);
 
         // Advance read pointer 
         r->readPtr += j->advanceLens[i];
