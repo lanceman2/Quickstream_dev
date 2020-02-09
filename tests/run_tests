@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Runs all files that glob pattern match NNN*
+# for example: 452_helloWorld
+#          or: 456
+
+
 set -euo pipefail
 shopt -s nullglob
 
@@ -18,7 +23,8 @@ done
 i=1
 pass=0
 fail=0
-
+passPrograms=
+failPrograms=
 echo "  ================================================"
 echo "                RUNNING $num TESTS"
 echo "  ================================================"
@@ -27,19 +33,26 @@ for run in "${tests[@]}" ; do
     if ./$run ; then
         let pass=$pass+1
         echo "$run === PASSED"
+        passPrograms="$passPrograms ./$run"
     else
         let fail=$fail+1
         echo "$run === FAILED"
+        failPrograms="$failPrograms ./$run"
     fi
 
     let i=$i+1
 done
-echo
-echo "  ================================================"
-echo "                TOTAL TEST RESULTS"
-echo "  ================================================"
-echo -e "   [ $pass / $num ] PASSED"
-echo -e "   [ $fail / $num ] FAILED"
+cat << EOF
+
+  ===============================================================
+                     TOTAL TEST RESULTS
+  ===============================================================
+   [ $pass / $num ] PASSED: $passPrograms
+   [ $fail / $num ] FAILED: $failPrograms
+
+
+  Run: "make clean" to remove generated files from this test.
+
+EOF
 
 [ $fail = 0 ] || exit 1
-

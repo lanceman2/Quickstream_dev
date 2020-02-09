@@ -242,9 +242,6 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
     ASSERT(maxThreads!=0, "Write the code for the maxThread=0 case");
-    ASSERT(maxThreads <= QS_STREAM_MAXMAXTHREADS,
-            "maxThread=%" PRIu32 " is too large (> %" PRIu32 ")",
-            maxThreads, QS_STREAM_MAXMAXTHREADS);
 
     DASSERT(s);
     DASSERT(s->app);
