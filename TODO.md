@@ -1,6 +1,15 @@
-
 This file just used for quickstream design discussion in a free format,
 given that quickstream is not in an alpha (usable) state yet.
+
+
+# Next
+
+- passthrough buffers
+- passthrough buffer tests
+- C++ filter modules
+- docs
+- bash completion for the quickstream program
+- GNU radio tests
 
 
 ## References
