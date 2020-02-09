@@ -3,6 +3,7 @@
 
 #include "Sequence.h"
 
+#define DEFAULT_SEEDOFFSET ((uint32_t) 0)
 
 void help(FILE *f) {
 
@@ -19,8 +20,15 @@ void help(FILE *f) {
         "\n"
         "    --maxWrite BYTES  default value %zu.  This is the number of\n"
         "                      bytes read and written for each input() call.\n"
+        "\n"
+        "    --seedStart NUM  Starting seed number is NUM and increases by\n"
+        "                     by one for each input port.  The default NUM\n"
+        "                     is %" PRIu32 ".\n"
+        "\n"
+        "   --seeds \"N0 N1 N2 ...\"  The seed number for each input port.\n"
+        "\n"
         "\n",
-        QS_DEFAULTMAXWRITE);
+        QS_DEFAULTMAXWRITE, DEFAULT_SEEDOFFSET);
 }
 
 
@@ -28,6 +36,8 @@ static size_t maxWrite;
 static char **compare;
 static struct RandomString *rs;
 static const char *filterName;
+static uint32_t seedOffset = DEFAULT_SEEDOFFSET;
+static const char *seedsString = 0;
 
 
 int construct(int argc, const char **argv) {
@@ -36,6 +46,12 @@ int construct(int argc, const char **argv) {
 
     maxWrite = qsOptsGetSizeT(argc, argv,
             "maxWrite", QS_DEFAULTMAXWRITE);
+
+    seedOffset = qsOptsGetUint32(argc, argv,
+            "seedStart", seedOffset);
+
+    seedsString = qsOptsGetString(argc, argv,
+            "seeds", 0);
 
     ASSERT(maxWrite);
 
@@ -70,9 +86,27 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
     ASSERT(rs, "calloc(%" PRIu32 ",%zu) failed",
             numInputs, sizeof(*rs));
 
+    uint32_t seeds[numInputs];
+    for(uint32_t i=0; i<numInputs; ++i)
+        seeds[i] = i + seedOffset;
+
+    if(seedsString) {
+        unsigned int val;
+        const char *str = seedsString;
+        uint32_t i = 0;
+        while(i < numInputs && *str && sscanf(str, "%u", &val) == 1) {
+            seeds[i++] = val;
+            // Go to the next number in the string str.
+            while(*str && (*str >= '0' && *str <= '9')) ++str;
+            while(*str && (*str < '0' || *str > '9')) ++str;
+        }
+    }
+
     for(uint32_t i=0; i<numInputs; ++i) {
+        DSPEW("Filter \"%s\" Input port %" PRIu32 " seed=%" PRIu32,
+                qsGetFilterName(), i, seeds[i]);
         // Initialize the random string generator.
-        randomString_init(rs + i, i/*seed is the input port*/);
+        randomString_init(rs + i, seeds[i]);
     }
 
     return 0; // success

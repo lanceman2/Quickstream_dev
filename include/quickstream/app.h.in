@@ -57,6 +57,7 @@
  * version numbers.
  */
 // Change this QS_VERSION macro string to make a new version.
+// Currently generated from the script file RELEASE.bash.
 #define QS_VERSION "@PACKAGE_VERSION@"
 
 

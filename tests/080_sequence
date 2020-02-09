@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+
+../bin/quickstream\
+ -f tests/sequenceGen [ --length 10000 --maxWrite=3888 ]\
+ -f tests/sequenceCheck [ --maxWrite=1001 ]\
+ -f tests/sequenceCheck [ --maxWrite=13 ]\
+ -f tests/sequenceCheck [ --maxWrite=30 ]\
+ -f tests/sequenceCheck [ --maxWrite=13 ]\
+ -f tests/sequenceCheck\
+ -t 4\
+ -c\
+ -R -r
+
+echo "$0 SUCCESS"

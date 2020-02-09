@@ -341,7 +341,7 @@ int main(int argc, const char * const *argv) {
                 }
 
                 fprintf(stderr, "connecting: %ld:%ld -> %ld:%ld\n",
-                        fromF, toF, fromPort, toPort);
+                        fromF, fromPort, toF, toPort);
 
                 qsStreamConnectFilters(stream, filters[fromF],
                             filters[toF], fromPort, toPort);

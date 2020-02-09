@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+
+../bin/quickstream\
+ -f tests/sequenceGen\
+ -f tests/sequenceCheck\
+ -t 1\
+ -c\
+ -r
+
+echo "$0 SUCCESS"

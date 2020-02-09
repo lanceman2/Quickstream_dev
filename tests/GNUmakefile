@@ -1,9 +1,12 @@
 #! This is a "GNU make" make file.
 
-build:
-install:
-debug:
-help:
+# If this directory is not recursed into from the directory above this we
+# recurse up a directory if make was run in this directory.
+ifeq ($(strip $(MAKELEVEL)),0)
+SUBDIRS := ..
+endif
 
-clean cleaner:
-	rm -f *.tmp
+
+CLEANFILES := $(wildcard *.tmp)
+
+include ../quickbuild.make

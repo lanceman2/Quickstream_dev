@@ -19,11 +19,12 @@ void help(FILE *f) {
         "                  OPTIONS\n"
         "\n"
         "\n"
-        "    --maxWrite BYTES  default value %zu.  This is the number of\n"
-        "                      bytes read and written for each input() call.\n"
+        "    --maxWrite BYTES    default value %zu.  This is the number of\n"
+        "                        bytes read and written for each input() call.\n"
         "\n"
-        "    --length LEN      Write LEN bytes total and than finish.\n"
-        "                      The default LEN is %zu.\n"
+        "    --length LEN        Write LEN bytes total and than finish.\n"
+        "                        The default LEN is %zu.\n"
+        "\n"
         "\n",
         QS_DEFAULTMAXWRITE, DEFAULT_TOTAL_LENGTH);
 }
@@ -66,6 +67,7 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
         // Initialize the random string generator.
         randomString_init(rs + i, i/*seed*/);
     }
+
 
     count = 0;
 

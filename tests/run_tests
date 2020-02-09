@@ -44,14 +44,18 @@ for run in "${tests[@]}" ; do
 done
 cat << EOF
 
-  ===============================================================
-                     TOTAL TEST RESULTS
-  ===============================================================
    [ $pass / $num ] PASSED: $passPrograms
    [ $fail / $num ] FAILED: $failPrograms
 
 
-  Run: "make clean" to remove generated files from this test.
+  ===============================================================
+                     TOTAL TEST RESULTS
+  ===============================================================
+             [ $pass / $num ] PASSED
+             [ $fail / $num ] FAILED
+
+
+  Run: "rm -f *.tmp" to remove generated files from this test.
 
 EOF
 
