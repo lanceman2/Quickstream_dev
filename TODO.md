@@ -10,6 +10,8 @@ given that quickstream is not in an alpha (usable) state yet.
 - docs
 - bash completion for the quickstream program
 - GNU radio tests
+- 
+- controls
 
 
 ## References
@@ -26,6 +28,23 @@ https://www.bastibl.net/blog/
 
 Best one:
 https://gnss-sdr.org/docs/fundamentals/
+
+
+## Threads and buffer interaction
+
+Can we reduce the thread waits by increase buffer sizes by adding an
+additional buffer length that can act as thread recoil that keeps threads
+from waiting at the cost of added latency.  The read pointers would not
+"hit" the corresponding write pointers so often.  Think of the read
+pointers being pulled behind the write pointer at an equilibrium distance
+from it, with some damped oscillation about that distance.
+
+The distances between the read pointers and the corresponding write
+pointer needs to be measured as a function time, or some kind of counter
+that acts like time; given time is too expensive to measure.
+
+For the single thread run case this would not help.
+
 
 
 ## Not a Kahn’s process network

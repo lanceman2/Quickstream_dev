@@ -7,17 +7,17 @@ out=$0.OUT.tmp
 
 # dd count blocks  1 block = 512bytes
 
-dd if=/dev/urandom count=3 | hexdump > $in
+#dd if=/dev/urandom count=3 | hexdump > $in
 
 
 
-../bin/quickstream -f stdin\
- -f tests/copy [ --maxWrite=7000 --sleep 1 --name "KG sleeps" ]\
- -f stdout -c -R -d -r < $in > $out
+../bin/quickstream -f tests/sequenceGen [ --length 100 ]\
+ -f tests/sequenceCheck [ --maxWrite 10 ]\
+ -f stdout -c -t 1 -r -t 2 -r -t 3 -r
 
-du -sb $in $out
+#du -sb $in $out
 
-diff -q $in $out
+#diff -q $in $out
 
 echo "SUCCESS"
 
