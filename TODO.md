@@ -10,7 +10,7 @@ given that quickstream is not in an alpha (usable) state yet.
 - docs
 - bash completion for the quickstream program
 - GNU radio tests
-- 
+- run tests with DEBUG off 
 - controls
 
 
@@ -42,6 +42,13 @@ from it, with some damped oscillation about that distance.
 The distances between the read pointers and the corresponding write
 pointer needs to be measured as a function time, or some kind of counter
 that acts like time; given time is too expensive to measure.
+
+There may be a good analogy between rail car and couplers, and the running
+threads and buffers.  If coupling between two cars have to hard stops for
+the two positions, one when we push the cars together and the other when
+we pull the two cars apart.  In between these to hard stops we have
+buffering space.  If we added a spring and damping in the coupler the two
+hard stops become softened.
 
 For the single thread run case this would not help.
 

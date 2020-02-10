@@ -29,6 +29,11 @@ void help(FILE *f) {
 "                             This will override the seed value from\n"
 "                             a --seedStart option.\n"
 "\n"
+"\n"
+"   --passThrough \"IN_PORT0 OUT_PORT0 IN_PORT1 OUT_PORT1 ...\"\n"
+"                    Make a pass-through buffer that shares the listed\n"
+"                    pairs of IN_PORT and OUT_PORT.\n"
+"\n"
 "\n",
         QS_DEFAULTMAXWRITE, DEFAULT_SEEDOFFSET);
 }
@@ -40,6 +45,7 @@ static struct RandomString *rs;
 static const char *filterName;
 static uint32_t seedOffset = DEFAULT_SEEDOFFSET;
 static const char *seedsString = 0;
+static const char *passThroughList = 0;
 
 
 int construct(int argc, const char **argv) {
@@ -54,6 +60,9 @@ int construct(int argc, const char **argv) {
 
     seedsString = qsOptsGetString(argc, argv,
             "seeds", 0);
+
+    passThroughList = qsOptsGetString(argc, argv,
+            "passThrough", 0);
 
     ASSERT(maxWrite);
 
@@ -70,19 +79,44 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
     DSPEW("%" PRIu32 " inputs  %" PRIu32 " outputs",
             numInputs, numOutputs);
 
-    if(numInputs > numOutputs) {
-        compare = calloc(numInputs - numOutputs, sizeof(*compare));
-        ASSERT(compare, "calloc(%" PRIu32 ",%zu) failed",
-                numInputs - numOutputs, sizeof(*compare));
+    compare = calloc(numInputs, sizeof(*compare));
+    ASSERT(compare, "calloc(%" PRIu32 ",%zu) failed",
+            numInputs, sizeof(*compare));
 
-        for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
-            compare[i] = calloc(1, maxWrite + 1);
-            ASSERT(compare[i], "calloc(1,%zu) failed", maxWrite + 1);
+
+    uint32_t passThrough[numInputs];
+    for(uint32_t i=0; i<numInputs; ++i)
+        passThrough[i] = -1;
+
+    if(passThroughList) {
+        unsigned int inPort, outPort;
+        const char *str = passThroughList;
+        while(*str && sscanf(str, "%u", &inPort) == 1) {
+            // Go to the next number in the string str.
+            while(*str && (*str >= '0' && *str <= '9')) ++str;
+            while(*str && (*str < '0' || *str > '9')) ++str;
+            if(*str && sscanf(str, "%u", &outPort) == 1) {
+                if(inPort < numInputs && outPort < numOutputs)
+                    passThrough[inPort] = outPort;
+                // Go to the next number in the string str.
+                while(*str && (*str >= '0' && *str <= '9')) ++str;
+                while(*str && (*str < '0' || *str > '9')) ++str;
+            }
         }
     }
 
-    for(uint32_t i=0; i<numOutputs; ++i)
-        qsCreateOutputBuffer(i, maxWrite);
+    for(uint32_t i=0; i<numInputs; ++i)
+        if(passThrough[i] != -1 || i >= numOutputs) {
+            compare[i] = calloc(1, maxWrite + 1);
+            ASSERT(compare[i], "calloc(1,%zu) failed", maxWrite + 1);
+        }
+
+    for(uint32_t i=0; i<numOutputs; ++i) {
+        if(passThrough[i] == -1)
+            qsCreateOutputBuffer(i, maxWrite);
+        else
+            qsCreatePassThroughBuffer(i, passThrough[i], maxWrite);
+    }
 
     rs = calloc(numInputs, sizeof(*rs));
     ASSERT(rs, "calloc(%" PRIu32 ",%zu) failed",
@@ -131,19 +165,21 @@ int input(void *buffers[], const size_t lens[],
 
         char *in = buffers[i];
         char *out;
+        char *comp;
 
         if(i < numOutputs)
-            out = qsGetOutputBuffer(i, len, len);
-        else
+            comp = out = qsGetOutputBuffer(i, len, len);
+
+        if(compare[i])
             // This has no corresponding output for this input port
             // so we use a buffer that we allocated in start().
-            out = compare[i - numOutputs];
+            comp = compare[i];
 
-        randomString_get(rs + i, len, out);
+        randomString_get(rs + i, len, comp);
 
         for(size_t j=0; j<len; ++j)
             // Check each character.  We like to know where it fails.
-            ASSERT(out[j] == in[j],
+            ASSERT(comp[j] == in[j],
                     "%s Miss-match on input channel %" PRIu32,
                     filterName, i);
 
@@ -177,17 +213,16 @@ int stop(uint32_t numInputs, uint32_t numOutputs) {
     free(rs);
     rs = 0;
 
-    if(numInputs > numOutputs) {
-        for(uint32_t i=0; i<numInputs - numOutputs; ++i) {
-            DASSERT(compare[i]);
+    DASSERT(compare);
+ 
+    for(uint32_t i=0; i<numInputs; ++i)
+        if(compare[i]) {
             free(compare[i]);
             compare[i] = 0;
         }
 
-        DASSERT(compare);
-        free(compare);
-        compare = 0;
-    }
+    free(compare);
+    compare = 0;
 
     return 0;
 }

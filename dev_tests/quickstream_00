@@ -11,9 +11,12 @@ out=$0.OUT.tmp
 
 
 
-../bin/quickstream -f tests/sequenceGen [ --length 100 ]\
+../bin/quickstream\
+ -f tests/sequenceGen [ --length 100 ]\
  -f tests/sequenceCheck [ --maxWrite 10 ]\
- -f stdout -c -t 1 -r -t 2 -r -t 3 -r
+ -f tests/sequenceCheck [ --maxWrite 10 ]\
+ -f stdout\
+ -c -r
 
 #du -sb $in $out
 
