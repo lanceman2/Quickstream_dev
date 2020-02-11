@@ -14,11 +14,14 @@ out=$0.OUT.tmp
 ../bin/quickstream\
  -f tests/sequenceGen [ --length 102001 ]\
  -f tests/passThrough\
+ -f tests/passThrough\
+ -f tests/copy\
+ -f tests/passThrough [ --maxWrite 10 ]\
+ -f tests/passThrough\
+ -f tests/passThrough\
  -f tests/sequenceCheck [ --maxWrite 10 ]\
- -p "0 1 0 0"\
- -p "0 1 1 1"\
- -p "1 2 0 0"\
- -p "1 2 1 1"\
+ -c\
+ -t 200\
  -R -d -r
 
 
