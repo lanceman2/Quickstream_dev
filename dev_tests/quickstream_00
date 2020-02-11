@@ -12,11 +12,15 @@ out=$0.OUT.tmp
 
 
 ../bin/quickstream\
- -f tests/sequenceGen [ --length 100 ]\
+ -f tests/sequenceGen [ --length 102001 ]\
+ -f tests/passThrough\
  -f tests/sequenceCheck [ --maxWrite 10 ]\
- -f tests/sequenceCheck [ --maxWrite 10 ]\
- -f stdout\
- -c -r
+ -p "0 1 0 0"\
+ -p "0 1 1 1"\
+ -p "1 2 0 0"\
+ -p "1 2 1 1"\
+ -R -d -r
+
 
 #du -sb $in $out
 

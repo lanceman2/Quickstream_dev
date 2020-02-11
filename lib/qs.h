@@ -611,7 +611,7 @@ struct QsOutput {  // points to reader filters
     // feeds this output.  If the filter that owns this output can run
     // input() in multiple threads a filter mutex lock is required to read
     // or write to this writePtr, but otherwise this is a lock-less
-    // buffer.
+    // buffer when in the input() call.
     //
     uint8_t *writePtr;
 

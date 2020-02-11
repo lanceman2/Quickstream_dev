@@ -101,6 +101,8 @@ void StopRunningInput(struct QsStream *s, struct QsFilter *f,
 // Returns true if the filter, f, has conditions needed for it's input()
 // function to be called.
 //
+// This function passive, it does not change any state.
+//
 // There must be a stream job mutex lock to call this.
 static inline
 bool CheckFilterInputCallable(struct QsFilter *f) {
@@ -158,11 +160,11 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 //
 // Spawn jobs to other filters.
 //
-// Returns true to signal call me again, and returns without a stream
-// mutex lock.
+// Returns true to signal call me again, and returns without holding a
+// stream mutex lock.
 //
-// Returns false if we do not want to call it again and also returns with
-// a stream mutex lock.
+// Returns false if we do not want to call it again and also returns while
+// holding a stream mutex lock.
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
@@ -173,11 +175,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     inputRet = f->input(j->inputBuffers, j->inputLens,
             j->isFlushing, f->numInputs, f->numOutputs);
 
-
-    // STREAM LOCK
-    CHECK(pthread_mutex_lock(&s->mutex));
-
-    CheckLockFilter(f);
 
     // Note: all these for loop iteration is through just the number of
     // inputs and outputs to and from the filter.  Usually there'll be
@@ -205,6 +202,11 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     // 3. outputsHungry will be changed to false if one output is full.
     bool outputsHungry = true;
 
+
+    // STREAM LOCK
+    CHECK(pthread_mutex_lock(&s->mutex));
+
+    CheckLockFilter(f);
 
     // Advance the output write pointers and see if we can write more.
     //

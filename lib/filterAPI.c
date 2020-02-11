@@ -105,11 +105,6 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     struct QsJob *j = GetJob();
     struct QsFilter *f = j->filter;
 
-    // TODO:
-    ASSERT(f->maxThreads == 1,
-            "Filter \"%s\", multi-threaded filter"
-            " case is not written yet", f->name);
-
     // These two ASSERT()s are filter API user errors.
     ASSERT(maxLen);
     ASSERT(maxLen >= minLen);
@@ -122,7 +117,6 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
     ASSERT(f->maxThreads == 1,
             "Filter \"%s\", multi-threaded filter"
             " case is not written yet", f->name);
-
 
     struct QsOutput *output = f->outputs + outputPortNum;
     DASSERT(output->readers);
@@ -273,9 +267,9 @@ qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
     DASSERT(f->numInputs, "Filter \"%s\" has no inputs", f->name);
     DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
     // This would be a user error.
-    ASSERT(inPortNum >= f->numInputs);
+    ASSERT(inPortNum < f->numInputs);
     // This would be a user error.
-    ASSERT(outPortNum >= f->numOutputs);
+    ASSERT(outPortNum < f->numOutputs);
 
     DASSERT(f->readers);
     DASSERT(f->outputs);
@@ -289,29 +283,31 @@ qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outPortNum,
             f->name, outPortNum);
 
     // We need to find the output that is feeding the reader at inPortNum.
-    // At flow-time we don't need it, so we did not put it in the reader
+    // At flow-time we don't need it, so we do not put it in the reader
     // (QsReader).
     //
-    // We search the searched the whole stream to find the feeder filter's
-    // output (QsOutput).
+    // We search the whole stream to find the feeder filter's output
+    // (QsOutput).
     //
     struct QsOutput *feedOutput = 0;
     struct QsFilter *feedFilter = 0;
 
     // Searching all filters in the stream
     for(uint32_t i=s->numSources-1; i!=-1; --i)
+        // First sources:
         if((feedOutput = FindFeedOutput(feedFilter = s->sources[i],
                         f, inPortNum)))
             break;
 
     if(feedOutput == 0)
         for(uint32_t i=s->numConnections-1; i!=-1; --i)
+            // Then feeding filters:
             if((feedOutput = FindFeedOutput(
                     feedFilter = s->connections[i].to,
                     f, inPortNum)))
                 break;
 
-
+    // We better have found it.
     DASSERT(feedOutput);
 
     // If this feed output already has a "pass-through" buffer pointing to
@@ -402,8 +398,8 @@ void qsSetThreadSafe(uint32_t maxThreads) {
     ASSERT(f->mark == _QS_IN_CONSTRUCT,
             "qsSetThreadSafe() not called in filter construct()");
 
-    // We just mark collect the maxThreads and allocate other things
-    // later.
+    // We just mark collect the maxThreads and allocate other things, like
+    // jobs, later.
     //
     // We'll use maxThreads=1 to mean not multi-threaded and exclude the
     // use of maxThreads=0, so that there is at least one thread.

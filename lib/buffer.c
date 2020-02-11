@@ -47,13 +47,13 @@ void AllocateBuffer(struct QsFilter *f) {
             //
             DASSERT(output->buffer == 0);
 
-            struct QsOutput *o = output;
+            struct QsOutput *feedOutput = output;
             // Find the top feeding output.
-            while(o->next) o = o->next;
+            while(feedOutput->prev) feedOutput = feedOutput->prev;
             // now o is points to the owner or top feed output.
             // This "pass through" buffer will use the feed buffer.
-            DASSERT(o->buffer);
-            output->buffer = o->buffer;
+            DASSERT(feedOutput->buffer);
+            output->buffer = feedOutput->buffer;
             continue;
         } // else
 

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+../bin/quickstream\
+ -f tests/sequenceGen [ --length 109332 ]\
+ -f tests/passThrough\
+ -f tests/passThrough\
+ -f tests/passThrough\
+ -f tests/passThrough\
+ -f tests/passThrough\
+ -f tests/sequenceCheck [ --maxWrite 10 ]\
+ -c\
+ -r -r -r -r -r -r
+

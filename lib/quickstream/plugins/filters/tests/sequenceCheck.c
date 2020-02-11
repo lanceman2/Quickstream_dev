@@ -107,6 +107,8 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
 
     for(uint32_t i=0; i<numInputs; ++i)
         if(passThrough[i] != -1 || i >= numOutputs) {
+            // Pass through buffers need another buffer to compare the
+            // sequence to, and so do inputs that have no output.
             compare[i] = calloc(1, maxWrite + 1);
             ASSERT(compare[i], "calloc(1,%zu) failed", maxWrite + 1);
         }
@@ -115,7 +117,13 @@ int start(uint32_t numInputs, uint32_t numOutputs) {
         if(passThrough[i] == -1)
             qsCreateOutputBuffer(i, maxWrite);
         else
-            qsCreatePassThroughBuffer(i, passThrough[i], maxWrite);
+            if(qsCreatePassThroughBuffer(i, passThrough[i], maxWrite)) {
+                // TODO: We could return an error and fail the whole run.
+                //
+                // We fall back to making it a regular output.
+                passThrough[i] = -1;
+                qsCreateOutputBuffer(i, maxWrite);
+            }
     }
 
     rs = calloc(numInputs, sizeof(*rs));
