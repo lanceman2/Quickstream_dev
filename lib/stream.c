@@ -414,9 +414,7 @@ void FreeRunResources(struct QsStream *s) {
         memset(s->sources, 0, sizeof(*s->sources)*s->numSources);
 #endif
         free(s->sources);
-#ifdef DEBUG
         s->sources = 0;
-#endif
         s->numSources = 0;
     }
 }

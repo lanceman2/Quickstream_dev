@@ -2,7 +2,8 @@
 
 set -e
 
-../bin/quickstream -f tests/sequenceGen [ --length 1000000 ]\
+../bin/quickstream\
+ -f tests/sequenceGen [ --length 1000000 ]\
  -f tests/sequenceCheck\
  -c -r -r -r
 

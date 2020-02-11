@@ -32,11 +32,13 @@ test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)
 
-CLEANERFILES :=\
- $(wildcard scc-snapshots-*.tgz)\
- $(wildcard valgrind-*.tar.bz2)\
+CLEANERDIRS :=\
  $(wildcard scc-snapshots-*_src)\
  $(wildcard valgrind-*try-*)
+
+CLEANERFILES :=\
+ $(wildcard scc-snapshots-*.tgz)\
+ $(wildcard valgrind-*.tar.bz2)
 
 
 include ../quickbuild.make

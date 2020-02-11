@@ -6,6 +6,8 @@ ifeq ($(strip $(MAKELEVEL)),0)
 SUBDIRS := ..
 endif
 
+SUBDIRS += filters
+
 
 CLEANFILES := $(wildcard *.tmp)
 

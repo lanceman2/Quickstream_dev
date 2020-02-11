@@ -18,11 +18,6 @@ run the loaded filters in a flow stream
 #include <stdbool.h>
 
 #include "../include/quickstream/app.h"
-
-// Turn on spew macros for this file.
-#ifndef SPEW_LEVEL_DEBUG
-#  define SPEW_LEVEL_DEBUG
-#endif
 #include "../lib/debug.h"
 #include "getOpt.h"
 
