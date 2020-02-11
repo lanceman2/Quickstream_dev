@@ -16,7 +16,9 @@ define ADDlib
 $(1)_LDFLAGS := -L$(root)/lib -lquickstream -Wl,-rpath=\$$$$ORIGIN/$(root)/lib
 endef
 
-BUILD_NO_INSTALL := $(patsubst %.c, %, $(wildcard [A-Z]*.c))
+BUILD_NO_INSTALL :=\
+ $(patsubst %.c, %, $(wildcard [A-Z]*.c))\
+ $(patsubst %.c, %, $(wildcard [A-Z]*.cpp))
 
 
 # We make a DSO (dynamic shared object) plugin for each C file
@@ -24,8 +26,6 @@ BUILD_NO_INSTALL := $(patsubst %.c, %, $(wildcard [A-Z]*.c))
 $(foreach targ,$(plugins),$(eval $(call makeSOURCES,$(targ),.so)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call makeSOURCES,$(targ),)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call ADDlib,$(targ),)))
-
-
 
 
 include ../../../../../quickbuild.make

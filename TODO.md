@@ -4,8 +4,6 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- passthrough buffers
-- passthrough buffer tests
 - C++ filter modules
 - docs
 - bash completion for the quickstream program
@@ -29,7 +27,7 @@ https://www.bastibl.net/blog/
 Best one:
 https://gnss-sdr.org/docs/fundamentals/
 
-
+QS_MODULE_PATH
 ## Threads and buffer interaction
 
 Can we reduce the thread waits by increase buffer sizes by adding an
