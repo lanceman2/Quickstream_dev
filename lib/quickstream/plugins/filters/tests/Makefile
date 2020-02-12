@@ -1,14 +1,19 @@
 # 1.  build all [a-z]*.c as a filter module
-# 2.  build all [A-Z]*.c as a uninstalled test
+# 2.  build all [a-z]*.cpp as a filter module
+# 3.  build all [A-Z]*.c as a uninstalled test
 
 root := ../../../../..
 
 INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters/tests
 
-plugins := $(patsubst %.c, %, $(wildcard [a-z]*.c))
+c_plugins := $(patsubst %.c, %, $(wildcard [a-z]*.c))
+
+cpp_plugins := $(patsubst %.cpp, %, $(wildcard [a-z]*.cpp))
+
+
 
 define makeSOURCES
-$(1)$(2)_SOURCES := $(1).c
+$(1)$(2)_SOURCES := $(1)$(3)
 endef
 
 
@@ -16,16 +21,13 @@ define ADDlib
 $(1)_LDFLAGS := -L$(root)/lib -lquickstream -Wl,-rpath=\$$$$ORIGIN/$(root)/lib
 endef
 
-BUILD_NO_INSTALL :=\
- $(patsubst %.c, %, $(wildcard [A-Z]*.c))\
- $(patsubst %.c, %, $(wildcard [A-Z]*.cpp))
+BUILD_NO_INSTALL := $(patsubst %.c, %, $(wildcard [A-Z]*.c))
 
 
-# We make a DSO (dynamic shared object) plugin for each C file
-# that is in the glob pattern [a-z]*.c
-$(foreach targ,$(plugins),$(eval $(call makeSOURCES,$(targ),.so)))
+$(foreach targ,$(c_plugins),$(eval $(call makeSOURCES,$(targ),.so,.c)))
+$(foreach targ,$(cpp_plugins),$(eval $(call makeSOURCES,$(targ),.so,.cpp)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call makeSOURCES,$(targ),)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call ADDlib,$(targ),)))
 
 
-include ../../../../../quickbuild.make
+include $(root)/quickbuild.make
