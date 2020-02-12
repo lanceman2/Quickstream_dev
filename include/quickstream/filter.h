@@ -1,7 +1,6 @@
 #ifndef __qsfilter_h__
 #define __qsfilter_h__
 
-
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -52,7 +51,7 @@
 
 
 
-/** \file quickstream 
+/** \file
  *
  * \brief filter module writers application programming interface (API)
  *

@@ -26,7 +26,7 @@ BUILD_NO_INSTALL := $(patsubst %.c, %, $(wildcard [A-Z]*.c))
 
 $(foreach targ,$(c_plugins),$(eval $(call makeSOURCES,$(targ),.so,.c)))
 $(foreach targ,$(cpp_plugins),$(eval $(call makeSOURCES,$(targ),.so,.cpp)))
-$(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call makeSOURCES,$(targ),)))
+$(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call makeSOURCES,$(targ),,.c)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call ADDlib,$(targ),)))
 
 

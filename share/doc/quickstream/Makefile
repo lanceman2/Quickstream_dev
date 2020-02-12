@@ -59,6 +59,7 @@ DOX_TARGET := html/index.html
 DOX_INFILES =\
  $(topdir)/include/quickstream/app.h\
  $(topdir)/include/quickstream/filter.h\
+ $(topdir)/include/quickstream/filter.hpp\
  $(topdir)/bin/quickstream.c\
  mainpage.dox
 

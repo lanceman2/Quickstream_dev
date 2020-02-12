@@ -14,6 +14,7 @@ The **quickstream** homepage is at https://github.com/lanceman2/quickstream
 
 \section programming_filters programming filter modules
 \ref filter.h
+\ref filter.hpp
 
 \section programming_streams programming stream running programs
 \ref app.h
