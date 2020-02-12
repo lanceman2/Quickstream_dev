@@ -4,7 +4,7 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- C++ filter modules
+- Get pass-through line in graph drawings
 - docs
 - bash completion for the quickstream program
 - GNU radio tests

@@ -158,6 +158,8 @@ PrintStreamFilter1(struct QsFilter *filter, uint32_t clusterNum,
 // This prints the connections from the outputs through the buffer to the
 // inputs.  At this point the outputs have a location in the filters in
 // the graph.
+//
+// This function calls itself.
 static inline uint32_t
 PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
         FILE *file) {
@@ -172,18 +174,27 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
         // Define a dot shape for the buffer.
         //
         fprintf(file, "\n    node [shape=\"parallelogram\","
-                "color=\"red\", label=\"buffer %" PRIu32 "\"];"
-                " \"%s_writer_%" PRIu32 "\";\n",
-                numBuffers,
-                filter->name, numBuffers);
+                "color=\"red\", label=\"buffer %"
+                PRIu32 "\"];"
+                " output_%p;\n",
+                numBuffers, output);
 
-        // Draw output -> buffer;
-        fprintf(file,"    "
-                "\"%s_output_%" PRIu32 "\" -> "
-                "\"%s_writer_%" PRIu32 "\""
+        // Draw line output -> buffer with label of output port
+        fprintf(file, "    "
+                "\"%s_output_%" PRIu32 "\" -> output_%p"
                 " [label=\"%" PRIu32 "\"];\n",
-                filter->name, i,
-                filter->name, numBuffers, i);
+                filter->name, i, output, i);
+
+        if(output->prev)
+            // Draw line from pass-through to origin output
+            fprintf(file, "    "
+                "output_%p -> output_%p "
+                // This constraint=false makes it so that this line/edge
+                // does not have a string that pulls the graph
+                // constellation.
+                "[color=red, constraint=false, "
+                "label=\"pass through\", fontsize=10.0];\n",
+                output->prev, output);
 
         DASSERT(output->numReaders, "");
         DASSERT(output->readers, "");
@@ -192,11 +203,11 @@ PrintStreamFilterBuffer(struct QsFilter *filter, uint32_t numBuffers,
             struct QsReader *reader = &output->readers[j];
             DASSERT(reader, "");
             //
-            // Draw buffer -> input;
-            fprintf(file,"    "
-                    "\"%s_writer_%" PRIu32 "\" -> "
+            // Draw line buffer -> input;
+            fprintf(file, "    "
+                    "output_%p -> "
                     "\"%s\" [label=\"%" PRIu32 "\"];\n",
-                    filter->name, numBuffers,
+                    output,
                     reader->filter->name,
                     reader->inputPortNum);
         }

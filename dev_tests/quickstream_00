@@ -16,8 +16,6 @@ out=$0.OUT.tmp
  -f tests/passThrough\
  -f tests/passThrough\
  -f tests/copy\
- -f tests/passThrough [ --maxWrite 10 ]\
- -f tests/passThrough\
  -f tests/passThrough\
  -f tests/sequenceCheck [ --maxWrite 10 ]\
  -c\
