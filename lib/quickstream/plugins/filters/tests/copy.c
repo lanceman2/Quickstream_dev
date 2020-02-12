@@ -10,21 +10,21 @@
 
 void help(FILE *f) {
     fprintf(f,
-        "  Usage: test/copy [ --maxWrite BYTES --sleep SECS ]\n"
-        "\n"
-        "A test filter module that copies each input to each output in order.\n"
-        "If they are more inputs than outputs than the last output gets the\n"
-        "reminder of the inputs copied to it.  If there are more outputs than\n"
-        "inputs than the reminder outputs get no data written to them.\n"
-        "\n"
-        "                       OPTIONS\n"
-        "\n"
-        "      --maxWrite BYTES   default value %zu\n"
-        "\n"
-        "      --sleep SECS       sleep SECS seconds in each input() call.\n"
-        "                         By default it does not sleep.\n"   
-        "\n"
-        "\n",
+"  Usage: tests/copy [ --maxWrite BYTES --sleep SECS ]\n"
+"\n"
+"A test filter module that copies each input to each output in order.\n"
+"If they are more inputs than outputs than the last output gets the\n"
+"reminder of the inputs copied to it.  If there are more outputs than\n"
+"inputs than the reminder outputs get no data written to them.\n"
+"\n"
+"                       OPTIONS\n"
+"\n"
+"      --maxWrite BYTES   default value %zu\n"
+"\n"
+"      --sleep SECS       sleep SECS seconds in each input() call.\n"
+"                         By default it does not sleep.\n"   
+"\n"
+"\n",
         QS_DEFAULTMAXWRITE);
 }
 
