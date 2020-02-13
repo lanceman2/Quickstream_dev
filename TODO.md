@@ -4,7 +4,6 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- Get pass-through line in graph drawings
 - docs
 - bash completion for the quickstream program
 - GNU radio tests
@@ -27,7 +26,7 @@ https://www.bastibl.net/blog/
 Best one:
 https://gnss-sdr.org/docs/fundamentals/
 
-QS_MODULE_PATH
+
 ## Threads and buffer interaction
 
 Can we reduce the thread waits by increase buffer sizes by adding an

@@ -89,7 +89,6 @@ extern "C" {
  * output file that describes all quickstream filters.
  *
  * \param file output file to fprintf() to.
- *
  */
 void help(FILE *file);
 

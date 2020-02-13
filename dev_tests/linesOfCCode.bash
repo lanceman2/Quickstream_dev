@@ -75,11 +75,11 @@ fi
 
 cd ..
 
-echo -e "\n\nTotal lines of C code *.c and *.h files in $PWD"
+echo -e "\n\nTotal lines of C/C++ code *.c *.cpp and *.h *.hpp files in $PWD"
 
 function spewCode() {
 
-    for i in $(find . -regextype sed -regex ".*/.*\.[c|h]$" | grep -v scc-snapshots-) ; do
+    for i in $(find . -regextype egrep -regex ".*/.*\.[c|h](pp|)$" | grep -v scc-snapshots-) ; do
         cat $i
     done
 }
