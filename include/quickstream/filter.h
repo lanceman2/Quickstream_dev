@@ -54,15 +54,17 @@
 /** \file
  *
  * \brief filter module writers application programming interface (API)
+ * for C.
  *
- * The required quickstream filter interfaces that the filter module
- * plugins may provide are: input() and help().
+ * The one required quickstream filter interface that a filter module
+ * plugin must provide is input().
  *
- * The optional quickstream filter interfaces that the filter module
- * plugins may provide are: construct(), destroy(), start(), and stop().
+ * The optional quickstream filter interfaces that a filter module
+ * plugins may provide are: construct(), destroy(), start(), stop(),
+ * and help().
  *
  * The libquickstream library provides utility functions that the filter
- * module plugins may use are declared in this header file.
+ * module plugins may use are declared in this header file \ref filter.h
  *
  * Lock-less shared ring buffers are used to pass data between filter
  * input() (or work) functions.  The size of the ring buffers depends on
@@ -76,26 +78,28 @@
 extern "C" {
 #endif
 
+/**
+ * \class CFilterAPI C filter API
+ */
 
 
-/** Required: print filter module help and command line argument options
+/** print filter module help and command line argument options
  *
- * This function provides a brief description of what the filter
- * does, a URL to get more information about the filter, and
- * a list of command line argument options.  The kind of thing produced
- * from the --help command line option.
+ * This function provides a brief description of what the filter does, and
+ * maybe a URL to get more information about the filter, and a list of
+ * command line argument options.  The output calling this function should
+ * be the kind of thing produced from typical --help command line option.
  *
  * When help() is called additional generic text will be added to the
  * output file that describes all quickstream filters.
  *
- * \param file output file to fprintf() to.
+ * \param file output FILE stream that may be called with the standard C
+ * libraries fprintf() function.
  */
 void help(FILE *file);
 
 
-
-
-/** Required: filter input work function
+/** required filter input work function
  *
  * input() is how the filters receive input from upstream filters.
  *
@@ -109,25 +113,34 @@ void help(FILE *file);
  * inBuffers array in bytes.  inLens is 0 if this is a source feed that
  * has no inputs.
  *
- * \param sFlushing is a 
+ * \param isFlushing is a array of bools that show which input ports are
+ * being flushed from up stream.  When a input port is being flushed than
+ * the input data in the buffer for that port will not be added to until
+ * the next stream flow cycle.
  *
- * \return The values returned from input() give the filters some control
+ * \param numInPorts is the number of input buffers in the inBuffers input
+ * array.  numInPorts will be the same value for the duration of the
+ * current flow cycle.
+ *
+ * \param numOutPorts is the number of output buffers that this filter is
+ * writing to.  numOutPorts will be the same value for the duration of the
+ * current flow cycle.
+ *
+ * \return the values returned from input() give the filters some control
  * over how the stream and it's flow behaves.  The return value 0 is the
  * most common return value telling the stream to continue flowing
- * normally.  Returning a any non-zero value stops that calling of
- * input() and sets up the final flushing of the down stream filters.  A
- * return value that is negative is an considered an "error like" case and
- * will cause a warning to be printed to stderr.  A positive return will
- * not do that.
- *
- * \todo figure out more return codes and what they mean
+ * normally.  Returning a any non-zero value stops the calling of
+ * input() for the current filter and sets up the final flushing of the
+ * down stream filters this the current filter is feeding.  A return value
+ * that is negative is considered an "error like" case and will cause a
+ * warning to be printed to stderr.  A positive return will not do that.
  */
 int input(void *inBuffers[], const size_t inLens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts);
 
 
-/** Optional constructor function
+/** optional constructor function
  *
  * This function, if present, is called only once just after the filter
  * is loaded.
@@ -137,40 +150,48 @@ int input(void *inBuffers[], const size_t inLens[],
  * \param argv an array of pointers to the string arguments.  The user
  * should not write to this memory.
  *
- * \return 0 on success
- *
- * \todo figure out more return codes and what they mean
+ * \return 0 on success, and non-zero on failure.
  */
 int construct(int argc, const char **argv);
 
 
-/** Optional destructor function
+/** optional destructor function
  *
  * This function, if present, is called only once just before the filter
  * is unloaded.
  *
- * \return 0 on success
- *
- * \todo figure out more return codes and what they mean
+ * \return 0 on success, and non-zero on failure.
  */
 int destroy(void);
 
 
-/** Optional filter start function
+/** optional filter start function
  *
  * This function, if present, is called each time the stream starts
  * running, just before any filter in the stream has it's \ref input()
- * function called.  After this is called \ref input() will be called
- * in a regular fashion.
+ * function called.  We call this time the start of a flow cycle.  After
+ * this is called \ref input() will be called in a regular fashion for
+ * the duration of the flow cycle.
  *
  * This function lets that filter determine what the number of inputs and
- * outputs will be before it has it's \ref input() function called.  For
- * "smarter" filters this can spawn a series of initialization interactions
- * between the "smarter" filters in the stream.
+ * outputs before it has it's \ref input() function called.  For "smarter"
+ * filters this can spawn a series of initialization interactions between
+ * the "smarter" filters in the stream.
  *
- * \return 0 on success
+ * The following functions may only be called in the filters start()
+ * function: qsCreateOutputBuffer(), qsCreatePassThroughBuffer(),
+ * qsSetInputThreshold(), qsSetInputReadPromise(), and
+ * qsGetFilterName().
  *
- * \todo figure out more return codes and what they mean
+ * \param numInPorts is the number of input buffers in the inBuffers input
+ * array.  numInPorts will be the same value for the duration of the
+ * current flow cycle.
+ *
+ * \param numOutPorts is the number of output buffers that this filter is
+ * writing to.  numOutPorts will be the same value for the duration of the
+ * current flow cycle.
+ *
+ * \return 0 on success, or non-zero on failure.
  */
 int start(uint32_t numInPorts, uint32_t numOutPorts);
 
@@ -181,9 +202,15 @@ int start(uint32_t numInPorts, uint32_t numOutPorts);
  * running, just after any filter in the stream has it's \ref input()
  * function called for the last time in a flow/run cycle.
  *
- * \return 0 on success
+ * \param numInPorts is the number of input buffers was in inBuffers input
+ * array.  numInPorts will be the same value as 173it was when the
+ * corresponding start() and input() was called.
  *
- * \todo figure out more return codes and what they mean
+ * \param numOutPorts is the number of output buffers that this filter is
+ * writing to.  numOutPorts will be the same value as it was when the
+ * corresponding start() and input() was called.
+ *
+ * \return 0 on success, or non-zero on failure.
  */
 int stop(uint32_t numInPorts, uint32_t numOutPorts);
 
@@ -191,7 +218,7 @@ int stop(uint32_t numInPorts, uint32_t numOutPorts);
 /** get a output buffer pointer
  *
  * qsGetBuffer() may only be called in the filters input() function.  If a
- * given filter at a given \ref input() call will generate output than
+ * given filter at a given input() call will generate output than
  * qsGetBuffer() must be called and later followed by a call to
  * qsOutput().
  *
@@ -217,7 +244,7 @@ int stop(uint32_t numInPorts, uint32_t numOutPorts);
  * buffer may be accessed by another thread calling qsGetBuffer(),
  * otherwise if maxLen and minLen are not equal than another thread may
  * not access the ring buffer until qsOutput() is called in the
- * corresponding thread.
+ * corresponding thread.  See qsSetThreadSafe().
  *
  * \return a pointer to the first writable byte in the buffer.  The filter
  * may write at most \e maxLen bytes to this returned pointer.
@@ -230,9 +257,9 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
 
 /** advance data to the output buffers
  *
- * This stores the current buffer write offset by length len bytes.
+ * This set the current buffer write offset by advancing it \p len bytes.
  *
- * qsGetBuffer() must be called before qsOutput().
+ * qsGetOutputBuffer() must be called before qsOutput().
  *
  * qsOutput() must be called in a filter module input() function in order
  * to have output to another filter module.
@@ -244,32 +271,53 @@ void qsOutput(uint32_t outputPortNum, size_t len);
 
 
 
-/** Advance the current buffer input len bytes
+/** advance the current input buffer
  *
  * qsAdvanceInput() can only be called in a filter input() function.
  *
  * In order to advance the input buffer a length that is not the length
  * that was passed into the input() call, this qsAdvanceInput() function
  * must be called in the input() function.  If qsAdvanceInput() is not
- * called in input() than the input buffer will automatically be advanced
- * the length that was passed to input().
+ * called in input() than the input buffer will not be automatically be
+ * advanced, and an under-run error can occur is the read promise for that
+ * port is not fulfilled.  See qsSetInputReadPromise().
  *
  * This has no effect on output from the current filter.  This only
  * effects the current input port number that passed to input();
  *
- * \param lens advance the current input buffer lens bytes.  len can be
- * less than or equal to the corresponding length in bytes that was passed
- * to the input() call.  len greater than the input length will be
- * clipped.
+ * \param inputPortNum the input port number that corresponds with the
+ * input buffer pointer that you wish to mark as read.
+ *
+ * \param len advance the current input buffer length in bytes.  \p len
+ * can be less than or equal to the corresponding length in bytes that was
+ * passed to the input() call.  len greater than the input length will be
+ * clipped to the length that was passed to input().
  */
 extern
 void qsAdvanceInput(uint32_t inputPortNum, size_t len);
 
 
 
+/** set the current filters input threshold
+ *
+ * Set the minimum input needed in order for current filters input()
+ * function to be called.  This threshold, if reached for the
+ * corresponding input port number, will cause input() to be called.  If
+ * this simple threshold condition is not adequate the filters input()
+ * function may quickly just return 0, and effectively wait for more a
+ * complex threshold condition to be reached by continuing to just quickly
+ * return 0 until the filter sees the level of inputs that it likes.
+ *
+ * qsSetInputThreshold() may only be called in the filters start()
+ * function.
+ *
+ * \param inputPortNum the input port number that corresponds with the
+ * input buffer pointer that you wish to set a simple threshold for.
+ *
+ * \param len the length in bytes of this simple threshold.
+ */
 extern
 void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
-
 
 
 // Sets maxRead
@@ -282,14 +330,13 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
  *
  * \param inputPortNum the input port number that the promise is made for.
  *
- * \param len length in bytes.
+ * \param len length in bytes that the current filter promises to read.
  *
  * The default len value is QS_DEFAULTMAXREADPROMISE.  If this default
  * value is not large enough than you must call this.
  */
 extern
 void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
-
 
 
 /** Create an output buffer that is associated with the listed ports
@@ -314,7 +361,6 @@ extern
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
 
 
-
 extern
 int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
         size_t maxWriteLen);
@@ -325,17 +371,6 @@ int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
 struct QsFilter;
 
 
-/** Make a downstream filter read from a pass through buffer.
- *
- * \return 0 on success, or -1 if there is already another downstream
- * filter that is using this output port as a pass through buffer. 
- */
-extern
-int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
-        struct QsFilter *toFilter, uint32_t toInputPort);
-
-
-
 /** Get the name of the filter
  *
  * The name of a filter is set by the person running the quickstream
@@ -344,7 +379,11 @@ int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
  * qsAppFilterLoad() function in a quickstream runner program.
  *
  * qsGetFilterName() can only be called in a filter module in it's
- * construct(), start(), stop(), or destroy() functions.
+ * construct(), start(), stop(), and destroy() functions.
+ * qsGetFilterName() is not available in the filter's help() function.
+ * Calling qsGetFilterName() in the filter's help() makes no sense given
+ * that help() is not called in a stream flow time scenario when the
+ * filter's name is known.
  *
  * If you need the filter name in input() get it in start() or
  * construct().  The filters name will never change after it's loaded.
@@ -353,7 +392,6 @@ int qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
  */
 extern
 const char* qsGetFilterName(void);
-
 
 
 /** Tell quickstream that the filters input() function is thread safe.
@@ -494,6 +532,7 @@ int32_t qsOptsGetUint32(int argc, const char **argv, const char *optName,
  */
 extern
 void qsRemoveDefaultFilterOptions(void);
+
 
 
 #ifdef __cplusplus

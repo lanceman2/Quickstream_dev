@@ -41,6 +41,7 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 
 DOT := $(sort\
  $(wildcard *.dot)\
+ simpleFlowGraph.dot\
  quickstream_complex.dot\
  quickstream_simple.dot)
 
@@ -48,8 +49,7 @@ DOT := $(sort\
 
 IMAGES :=\
  $(sort\
- quickstream_complex.dot\
- quickstream_simple.dot\
+ $(DOT)\
  $(patsubst %.dot, images/%.png, $(DOT))\
  $(patsubst %.dot, images/%.svg, $(DOT)))
 
@@ -145,6 +145,11 @@ endif
 
 $(BUILD_NO_INSTALL): %:%.o
 	$(CC) $(CFLAGS) -o $@ $< $($@_LDADD)
+
+
+
+simpleFlowGraph.dot: makeSimpleFlowGraph.bash
+	./$< > $@
 
 quickstream_complex.dot: quickstream_complex_dot
 	./$< > $@

@@ -107,7 +107,10 @@ int usage(const char *argv0) {
 "               the module construct() function.\n"
 "\n"
 "\n"
-"   -h|--help   print this help to stderr and exit.\n"
+"  -g|--dot     print a graphviz dot file of the current graph to stdout.\n"
+"\n"
+"\n"
+"  -h|--help   print this help to stderr and exit.\n"
 "\n"
 "\n"
 "  -p|--plug \"FROM_F TO_F FROM_PORT TO_PORT\"  connects two filters with\n"
@@ -177,6 +180,7 @@ int main(int argc, const char * const *argv) {
             { "display", 'd' },
             { "display-wait", 'D' },
             { "filter", 'f' },
+            { "dot", 'g' },
             { "help", 'h' },
             { "help", '?' },
             { "plug", 'p' },
@@ -358,6 +362,16 @@ int main(int argc, const char * const *argv) {
                 }
                 qsAppDisplayFlowImage(app, QSPrintDebug,
                         false/*waitForDisplay*/);
+                break;
+
+            case 'g':
+                // display a dot graph and no wait
+                if(!app) {
+                    fprintf(stderr, "--dot no filters loaded"
+                            " to display\n");
+                    break; // nothing to display yet.
+                }
+                qsAppPrintDotToFile(app, QSPrintDebug, stdout);
                 break;
 
              case 'D':
