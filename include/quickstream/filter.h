@@ -76,6 +76,11 @@
 
 #ifndef __cplusplus
 
+// For C++ code we define different versions of construct(), input(),
+// start(), stop(), destroy, and help(); that wrap the C++ filter module
+// base QsFilter that is declared in filter.hpp.
+
+
 /**
  * \headerfile filter.h "quickstream/filter.h"
  */
