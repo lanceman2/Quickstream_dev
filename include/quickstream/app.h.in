@@ -102,6 +102,16 @@ extern
 struct QsApp *qsAppCreate(void);
 
 
+/** destroy a quickstream app object
+ *
+ * Cleanup the resources like memory and unload loaded filter modules.
+ *
+ * This should not be called if there are streams flowing.
+ *
+ * \param app returned from qsAppCreate().
+ *
+ * \return 0 on success, and non-zero otherwise.
+ */
 extern
 int qsAppDestroy(struct QsApp *app);
 
@@ -139,10 +149,17 @@ extern
 int qsFilterPrintHelp(const char *filterName, FILE *f);
 
 
-/** Print viscosity
-*/
+/** print viscosity levels for qsAppPrintDotToFile() and
+ * qsAppDisplayFlowImage().
+ */
 enum QsAppPrintLevel {
+    /** print with less detail */
     QSPrintOutline = 0,
+    /** print with more detail
+     *
+     * To print more detail the streams must be in a ready
+     * state.  See qsStreamReady().
+     */
     QSPrintDebug = 3
 };
 
@@ -172,8 +189,8 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
  *
  * \param app an app object that was returned from qsAppCreate().
  *
- * \param l the level of detail to print.  \ref QsPrintOutline to print
- * just an outline and \ref QsPrintDebug to print more inner details.
+ * \param l the level of detail to print.  \ref QSPrintOutline to print
+ * just an outline and \ref QSPrintDebug to print more inner details.
  *
  * \param waitForDisplay if set this will not return until the
  * display program exits.
@@ -200,7 +217,6 @@ int qsFilterUnload(struct QsFilter *filter);
  *
  * \param app the app that was returned from qsAppCreate().
  *
- * \param maxThreads is the maximum number of threads to run the stream.
  *
  * \return a pointer to a stream.
  */

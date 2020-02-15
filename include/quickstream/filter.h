@@ -74,12 +74,13 @@
  */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef __cplusplus
 
 /**
- * \class CFilterAPI C filter API
+ * \headerfile filter.h "quickstream/filter.h"
+ */
+
+/** \class CFilterAPI filter.h "quickstream/filter.h"
  */
 
 
@@ -215,6 +216,15 @@ int start(uint32_t numInPorts, uint32_t numOutPorts);
 int stop(uint32_t numInPorts, uint32_t numOutPorts);
 
 
+#endif // ifndef __cplusplus
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+
 /** get a output buffer pointer
  *
  * qsGetBuffer() may only be called in the filters input() function.  If a
@@ -254,21 +264,21 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
         size_t maxLen, size_t minLen);
 
 
-
 /** advance data to the output buffers
  *
  * This set the current buffer write offset by advancing it \p len bytes.
  *
- * qsGetOutputBuffer() must be called before qsOutput().
+ * qsGetOutputBuffer() should be called before qsOutput().
  *
  * qsOutput() must be called in a filter module input() function in order
- * to have output to another filter module.
+ * to have output sent to another filter module.
+ *
+ * \param outputPortNum the output port number.
  *
  * \param len length in bytes to advance the output buffer.
  */
 extern
 void qsOutput(uint32_t outputPortNum, size_t len);
-
 
 
 /** advance the current input buffer
@@ -295,7 +305,6 @@ void qsOutput(uint32_t outputPortNum, size_t len);
  */
 extern
 void qsAdvanceInput(uint32_t inputPortNum, size_t len);
-
 
 
 /** set the current filters input threshold
@@ -360,9 +369,32 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
 extern
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
 
-
+/** create a "pass-through" buffer
+ *
+ * A pass-through buffer shared the memory mapping between the input port
+ * to an output port.  The filter reading the input can write it's output
+ * to the same virtual address as the input.  The input is overwritten by
+ * the output.  The size of the input data must be the same as the output
+ * data, given they are the same memory.  We are just changing the value
+ * in the input memory and passing it through to the output; whereby
+ * saving the need for transferring data between two separate memory
+ * buffers.
+ *
+ * \param inputPortNum the input port number that will share memory with
+ * the output.
+ *
+ * \param outputPortNum the output port number that will share memory with
+ * the input.
+ *
+ * \param maxWriteLen is the maximum length in bytes that the calling
+ * filter promises not to exceed calling qsOutput().
+ *
+ * \return 0 on success.  If the buffer that corresponds with the output port
+ * is already passed through to this or another input to any filter this
+ * with fail and return non-zero.
+ */
 extern
-int qsCreatePassThroughBuffer(uint32_t inPortNum, uint32_t outputPortNum,
+int qsCreatePassThroughBuffer(uint32_t inputPortNum, uint32_t outputPortNum,
         size_t maxWriteLen);
 
 

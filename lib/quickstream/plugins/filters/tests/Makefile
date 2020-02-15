@@ -10,6 +10,7 @@ c_plugins := $(patsubst %.c, %, $(wildcard [a-z]*.c))
 
 cpp_plugins := $(patsubst %.cpp, %, $(wildcard [a-z]*.cpp))
 
+stdoutCPP.so_CPPFLAGS := -I$(root)/include
 
 
 define makeSOURCES

@@ -17,11 +17,14 @@
 /** filter module base class that is inherited by C++ filter
  * module classes
  *
- * \headerfile filter.hpp
+ * \headerfile filter.hpp "quickstream/filter.hpp"
  *
  * This is the base class that you can inherit to make a C++ filter
  * module.   You can use the CPP macro QS_LOAD_FILTER_MODULE()
  * to load your C++ object.
+ *
+ * Below is an example C++ quickstream filter module:
+ * \include stdoutCPP.cpp
  */
 class QsFilter {
 
@@ -30,43 +33,34 @@ class QsFilter {
         // We don't need a constructor.
         //QsFilter(void) { };
 
-        /** filter's C++ input() function
-         *
-         * See the C \ref CFilterAPI::input() "input()" documentation for
-         * details.
-         * */
-        virtual int input(void *buffers[], const size_t lens[],
+        /**
+         * \details \copydetails CFilterAPI::input()
+         */
+        virtual int input(void *inBuffers[], const size_t inLens[],
             const bool isFlushing[], uint32_t numInPorts,
             uint32_t numOutPorts) = 0;
 
-        /** filter's C++ help() function
-         *
-         * See the C \ref CFilterAPI::help() "help()" documentation for
-         * details.
+        /**
+         * \details \copydetails CFilterAPI::help()
          */
-        virtual void help(FILE *f) { };
+        virtual void help(FILE *file) { };
 
-        /** filter's C++ start() function
-         *
-         * See the C \ref CFilterAPI::start() "start()" documentation for
-         * details.
+        /**
+         * \details \copydetails CFilterAPI::start()
          */
         virtual int start(uint32_t numInPorts, uint32_t numOutPorts) {
             return 0;
         };
 
-        /** filter's C++ stop() function
-         *
-         * See the C \ref CFilterAPI::stop() "stop()" documentation for
-         * details.
-         *
-         * */
+        /**
+         * \details \copydetails CFilterAPI::stop()
+         */
         virtual int stop(uint32_t numInPorts, uint32_t numOutPorts) {
             return 0;
         };
 
-        /** filter's C++ base ~QsFilter() destructor function
-         *
+        /**
+         * \details \copydetails CFilterAPI::destroy()
          */
         virtual ~QsFilter(void) { };
 };
@@ -118,7 +112,6 @@ void help(FILE *file) {
 
 int destroy(void) {
 
-    DASSERT(f);
     delete f;
     f = 0;
 }

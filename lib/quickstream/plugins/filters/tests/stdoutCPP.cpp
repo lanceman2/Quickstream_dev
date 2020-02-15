@@ -1,6 +1,8 @@
-#include "../../../../../lib/debug.h"
-#include "../../../../../include/quickstream/filter.h"
-#include "../../../../../include/quickstream/filter.hpp"
+#include <iostream>
+#include <bitset>
+
+#include "quickstream/filter.h"
+#include "quickstream/filter.hpp"
 
 
 class Stdout: public QsFilter {
@@ -8,40 +10,49 @@ class Stdout: public QsFilter {
     public:
 
     Stdout(int argc, const char **argv) {
-    
-        DSPEW();
+        // Parse args if you like ...
     };
 
-    int input(void *buffers[], const size_t lens[],
+
+    int start(uint32_t numInPorts, uint32_t numOutPorts) {
+
+        if(numInPorts < 1) {
+            std::cerr << "No inputs" << std::endl;
+            return -1; // error fail
+        }
+        if(numOutPorts != 0) {
+            std::cerr << "There should be no outputs "
+                << numOutPorts  << " found" << std::endl;
+            return -1; // error fail
+        }
+        return 0; // success
+    }
+
+
+    int input(void *inBuffers[], const size_t inLens[],
         const bool isFlushing[],
         uint32_t numInPorts, uint32_t numOutPorts) {
 
-        DASSERT(lens);    // quickstream code error
-        DASSERT(lens[0]); // quickstream code error
+        size_t len = (size_t) inLens[0];
+        if(len > QS_DEFAULTMAXWRITE)
+            len = QS_DEFAULTMAXWRITE;
 
-        ASSERT(numInPorts == 1);  // user error
-        ASSERT(numOutPorts == 0); // user error
+        std::cout.write((const char*) inBuffers[0], len);
 
-        size_t ret = fwrite(buffers[0], 1, lens[0], stdout);
+        qsAdvanceInput(0, len);
 
-        qsAdvanceInput(0, ret);
-
-        //fflush(stdout);
-
-        if(ret != lens[0]) {
-            ERROR("fwrite(%p,1,%zu,stdout) failed",
-                buffers[0], lens[0]);
-            return -1; // fail
+        if(std::cout.eof()) {
+            return 1; // done
         }
 
-        return 0; // success
+        return 0; // success continue
     };
 
 
-    void help(FILE *f) {
+    void help(FILE *file) {
 
-        fprintf(f,
-"  Usage: stdout\n"
+        fprintf(file,
+"  Usage: stdoutCPP\n"
 "\n"
 "  Reads 1 input and writes that to stdout.  This filter can have no\n"
 "  outputs.\n"
@@ -51,5 +62,9 @@ class Stdout: public QsFilter {
 };
 
 
+// QS_LOAD_FILTER_MODULE will add the needed code to make this a loadable
+// quickstream module.
+//
 // We do not want a semicolon after this CPP macro
 QS_LOAD_FILTER_MODULE(Stdout)
+

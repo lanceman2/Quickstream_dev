@@ -1,4 +1,4 @@
-/** \page quickstream_program The stream runner program
+/** \page quickstream_program quickstream
  
 \tableofcontents
 quickstream is a command-line program that can load, connect filters, and
