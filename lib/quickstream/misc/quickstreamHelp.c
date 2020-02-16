@@ -34,8 +34,9 @@
 
 
 #define DEFAULT_MAXTHREADS      7
-#define STRING(a) _STR(a)
-#define _STR(a) #a
+
+#define STRING(a)   _STR(a)
+#define _STR(a)     #a
 
 
 #define PROG   "quickstream"
@@ -178,9 +179,18 @@ static struct QsOption
         "when and if the stream is launched, run at most"
         " NUM threads.  The default is " STRING(DEFAULT_MAXTHREADS)
         ". If this option is not given before a --run option this option"
-        " will not effect that --run option.  On the Linux system"
-        " the maximum number of threads a process may have can be"
-        " gotten from running: cat /proc/sys/kernel/threads-max"
+        " will not effect that --run option.  On the Linux operating"
+        " system the maximum number of threads a process may have can be"
+        " gotten from running: cat /proc/sys/kernel/threads-max\n"
+        "\n"
+        "In quickstream worker threads are shared between filters."
+        " The number of threads that will run is dependent on the stream"
+        " flow graph that is constructed.  Threads will only be launched"
+        " if when there a filter that is not starved or clogged and all"
+        " the existing worker threads are busy on another filter.  Think"
+        " of threads as flowing in the stream graph to where they are"
+        " needed."
+
     },
 /*----------------------------------------------------------------------*/
     { "--version", 'V', 0,                  false/*arg_optional*/,
