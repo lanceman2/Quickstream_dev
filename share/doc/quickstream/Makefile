@@ -41,6 +41,7 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 
 DOT := $(sort\
  $(wildcard *.dot)\
+ stdinStdout.dot\
  simpleFlowGraph.dot\
  quickstream_complex.dot\
  quickstream_simple.dot)
@@ -55,6 +56,10 @@ IMAGES :=\
 
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET := html/index.html
+
+HTM_FILES := quickstreamIntro.htm quickstreamOptions.htm
+
+QS_DOC_GEN := $(topdir)/lib/quickstream/misc/quickstreamHelp
 
 DOX_INFILES =\
  $(topdir)/include/quickstream/app.h\
@@ -72,6 +77,18 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 
 
 build: $(IMAGES) $(DOX_TARGET)
+
+
+$(DOX_TARGET): $(HTM_FILES)
+
+quickstreamIntro.htm: $(QS_DOC_GEN)
+	$< -i > $@
+
+quickstreamOptions.htm: $(QS_DOC_GEN)
+	$< -o > $@
+
+stdinStdout.dot: stdinStdout.dot.bl
+	./$<
 
 
 # WEB_DOCS_TARGET_DIR directory may be a git clone of
@@ -202,6 +219,7 @@ show display: $(DOT)
 
 clean:
 	rm -f $(IMAGES) Doxyfile Doxyfile.tmp $(BUILD_NO_INSTALL) *.o
+	rm -f quickstreamIntro.htm quickstreamOptions.htm
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search

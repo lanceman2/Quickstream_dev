@@ -35,8 +35,6 @@
  * - **filter** a filter module plugin from a dynamic shared object
  *              file
  *
- * - **process** an operating system process
- *
  * - **thread**  an operating system thread (pthread)
  *
  * - **source** \anchor source  filters are filters that do not

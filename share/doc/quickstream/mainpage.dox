@@ -15,7 +15,11 @@ The **quickstream** github homepage is at
 https://github.com/lanceman2/quickstream
 
 
-\section program The quickstream runner program
+
+\section manuals quickstream reference manuals
+
+
+\subsection program The quickstream runner program
 
   <DL>
     <DT>\ref quickstream_program</DT>
@@ -24,7 +28,7 @@ https://github.com/lanceman2/quickstream
   </DL>
 
 
-\section programming_filters Programming filter modules
+\subsection programming_filters Programming filter modules
 
  <DL>
     <DT>\ref filter.h</DT>
@@ -36,7 +40,7 @@ https://github.com/lanceman2/quickstream
     <DD>The C++ filter module API for writing filter plugins in C++.</DD>
  </DL>
 
-\section programming_streams Programming stream running programs
+\subsection programming_streams Programming stream running programs
 
 <DL>
     <DT>\ref app.h</DT>

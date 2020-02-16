@@ -59,25 +59,24 @@ static const char *usage =
 " command line options with no arguments may be given in any of two"
 " forms.  The two argument option forms below are equivalent:\n"
 "\n"
-"     -d\n"
-"     --display\n"
+"**"
+"     ##-d\n"
+"     ##--display\n"
+"&&"
 "\n"
 "     -display is not a valid option.\n"
 "\n"
 "  All command line options with arguments may be given in any of three"
-" forms.  The three option forms below are equivalent:\n"
+" forms.  The three option examples below are equivalent:\n"
 "\n"
-"     -f stdin\n"
-"     --filter stdin\n"
-"     --filter=stdin\n"
+"**"
+"     ##-f stdin\n"
+"     ##--filter stdin\n"
+"     ##--filter=stdin\n"
+"&&"
 "\n"
 "\n"
-"     -filter stdin\n"
-" and\n"
-"     -filter=stding\n"
-" or not valid options.\n"
-"\n"
-"\n";
+"     -filter stdin  and  -filter=stdin  are not valid option arguments.";
 
 
 
@@ -212,20 +211,43 @@ static inline int NSpaces(int n, int c) {
 static inline int GetNextWordLength(const char *str) {
 
     int n = 0;
+
+    if(*str == '\n')
+        return n;
+
     while(*str == ' ') {
         ++n;
         ++str;
     }
-    while(*str && *str != ' ') {
+    while(*str && *str != ' ' && *str != '\n') {
+
+        // skip special chars
+        if(*str == '*' && *(str+1) == '*') {
+            str += 2;
+            continue;
+        } else if(*str == '#' && *(str+1) == '#') {
+            str += 2;
+            continue;
+        } else if(*str == '&' && *(str+1) == '&') {
+            str += 2;
+            continue;
+        }
+
         ++n;
         ++str;
     }
     return n;
 }
 
-static inline int PutNextWord(const char *str) {
+// types of file output
+#define HTML  (0)
+#define TXT   (1)
+
+
+static inline int PutNextWord(const char **s, int type) {
 
     int n = 0;
+    const char *str = *s;
 
     while(*str == ' ') {
         putchar(*str);
@@ -233,13 +255,63 @@ static inline int PutNextWord(const char *str) {
         ++str;
     }
     while(*str && *str != ' ' && *str != '\n') {
+
+        // replace special chars
+        if(*str == '*' && *(str+1) == '*') {
+            str += 2;
+            if(type == HTML) {
+                printf("<ul>\n");
+            }
+            continue;
+        } else if(*str == '#' && *(str+1) == '#') {
+            str += 2;
+            if(type == HTML)
+                printf("  <li>");
+            continue;
+        } else if(*str == '&' && *(str+1) == '&') {
+            str += 2;
+            if(type == HTML)
+                printf("</ul>");
+            continue;
+        }
+
         putchar(*str);
         ++n;
         ++str;
     }
 
+    *s = str;
+
     return n;
 }
+
+
+static void
+printHtml(const char *s, int s1, int s2) {
+
+    while(*s) {
+    
+        int n = 0;
+        printf("<p>\n");
+
+        while(*s) {
+
+            // add desc up to length s2
+            while(*s && (n + GetNextWordLength(s)) <= s2) {
+                if(*s == '\n') { ++s; break; }
+                n += PutNextWord(&s, HTML);
+            }
+            printf("\n");
+            n = 0;
+            if(*s == '\n' || *s == '\0') {
+                printf("</p>\n");
+                if(*s) ++s;
+                break;
+            }
+        }
+    }
+}
+
 
 static void
 printParagraphs(const char *s, int s1, int s2, int count) {
@@ -251,10 +323,7 @@ printParagraphs(const char *s, int s1, int s2, int count) {
         // add desc up to length s2
         while(*s && (n + GetNextWordLength(s)) <= s2) {
             if(*s == '\n') { ++s; break; }
-            int l;
-            l = PutNextWord(s);
-            s += l;
-            n += l;
+            n += PutNextWord(&s, TXT);
         }
 
         printf("\n");
@@ -303,25 +372,31 @@ int main(int argc, char **argv) {
 
         if(argc < 2 || argc > 3 || n != 2 ||
                 argv[1][0] != '-' || 
-                (argv[1][1] != 't' && argv[1][1] != 'h' && argv[1][1] != 'c')
+                (argv[1][1] != 'c' && argv[1][1] != 'h' &&
+                 argv[1][1] != 'i' && argv[1][1] != 'o')
                 || argv[1][2] != '\0'
         ) {
             printf("   Usage: %s [ -c | -h | -t ]\n"
                 "\n"
-                "  Generate HTML and C code that is related\n"
-                "  to quickstream command line options.\n"
+                "  Generate HTML, text, and C code that is related\n"
+                "  to the program quickstream.\n"
+                "  This program helps us keep documention and code\n"
+                "  consistent, by putting the command-line options\n"
+                "  documentation and code in one file.\n"
                 "  Returns 0 on success and 1 on error.  This\n"
                 "  program always prints to stdout.\n"
                 "\n"
                 " -----------------------------------------\n"
-                "             OPTIONS\n"
+                "              OPTIONS\n"
                 " -----------------------------------------\n"
                 "\n"
                 "    -c  print the C code of the argument options\n"
                 "\n"
-                "    -h  print help text for quickstream\n"
+                "    -h  print --help text for quickstream\n"
                 "\n"
-                "    -t  print HTML options table\n"
+                "    -i  print intro in HTML\n"
+                "\n"
+                "    -o  print HTML options table\n"
                 "\n",
                 argv[0]);
             return 1;
@@ -339,7 +414,6 @@ int main(int argc, char **argv) {
     switch(argv[1][1]) {
 
         case 'c':
-
             printf("// This is a generated file\n\n");
             printf("#define DEFAULT_MAXTHREADS ((uint32_t) %d)\n\n",
                     DEFAULT_MAXTHREADS);
@@ -359,6 +433,7 @@ int main(int argc, char **argv) {
 
             printf("\n");
             printParagraphs(usage, s0, s2, 0);
+            printf("\n");
 
             putchar(' ');
             NSpaces(s2-1, '-');
@@ -376,10 +451,23 @@ int main(int argc, char **argv) {
             }
             return 0;
 
-        case 't':
-            printf("print HTML options table\n");
+        case 'i':
+            printHtml(usage, 4, 76);
             return 0;
-    }
+
+        case 'o':
+            printf("<pre>\n");
+            s2 = 76;
+            printf("\n");
+
+            while((*opt).description) {
+                printDescription(opt, s0, s1, s2);
+                printf("\n");
+                ++opt;
+            }
+            printf("</pre>\n");
+            return 0;
+     }
 
     // This should not happen.
     return 1;

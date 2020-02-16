@@ -1,11 +1,36 @@
 /** \page quickstream_program quickstream
  
 \tableofcontents
-quickstream is a command-line program that can load, connect filters, and
-run the loaded filters in a flow stream
-\section quickstream_args command-line arguements
-\section quickstream_examples
-\subsection quickstream_helloworld
+
+The quickstream comman line program.
+
+\section quickstream_intro Introduction
+
+\htmlinclude quickstreamIntro.htm
+
+\section quickstream_options Command Line Options
+
+\htmlinclude quickstreamOptions.htm
+
+
+\section quickstream_examples Examples
+
+\subsection quickstream_helloworld Hello World
+
+With quickstream installed and quickstream in your PATH you can run:
+
+\code{.sh}
+echo "Hello World!" | quickstream --filter stdin --filter stdout --connect --run
+\endcode
+
+You can view a graphviz dot image of the flow graph related to the above
+program that we ran above by running:
+\code{.sh}
+quickstream --filter stdin --filter stdout --connect --display
+\endcode
+
+\image html stdinStdout.png
+
 */
 
 
