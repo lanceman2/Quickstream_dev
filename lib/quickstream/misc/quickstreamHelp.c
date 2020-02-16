@@ -34,8 +34,8 @@
 
 
 #define DEFAULT_MAXTHREADS      7
-#define xstr(a) str(a)
-#define str(a) #a
+#define STRING(a) _STR(a)
+#define _STR(a) #a
 
 
 #define PROG   "quickstream"
@@ -176,7 +176,7 @@ static struct QsOption
     { "--threads", 'r', "NUM",          false,
 
         "when and if the stream is launched, run at most"
-        " NUM threads.  The default is " xstr(DEFAULT_MAXTHREADS)
+        " NUM threads.  The default is " STRING(DEFAULT_MAXTHREADS)
         ". If this option is not given before a --run option this option"
         " will not effect that --run option.  On the Linux system"
         " the maximum number of threads a process may have can be"
