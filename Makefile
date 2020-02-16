@@ -2,9 +2,11 @@
 SUBDIRS :=\
  include/quickstream\
  lib\
+ lib/quickstream/misc\
  bin\
  lib/quickstream/plugins/filters\
  share/doc/quickstream
+
 
 ifeq ($(strip $(subst cleaner, clean, $(MAKECMDGOALS))),clean)
 SUBDIRS +=\
