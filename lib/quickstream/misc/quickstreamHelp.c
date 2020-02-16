@@ -33,8 +33,9 @@
  */
 
 
-#define DEFAULT_MAXTHREADS  7
-#define STRING(x)     #x
+#define DEFAULT_MAXTHREADS      7
+#define xstr(a) str(a)
+#define str(a) #a
 
 
 #define PROG   "quickstream"
@@ -149,7 +150,15 @@ static struct QsOption
         " refers to the port number that we are connecting from"
         " as viewed from the \"from filter\".  TO_PORT refers to"
         " the port number that we are connecting to as viewed"
-        " from the \"to filter\"."
+        " from the \"to filter\".  For example:\n"
+        "\n"
+        "     --plug \"0 1 2 3\"\n"
+        "\n"
+        "will feed the second filter from the first filter loaded,"
+        " the feeding, first, filter will output from it's output"
+        " port number 2, and the second filter will read what is"
+        " fed on it's input port number 3."
+
     },
 /*----------------------------------------------------------------------*/
     { "--ready", 'R', 0,                false,
@@ -167,9 +176,8 @@ static struct QsOption
     { "--threads", 'r', "NUM",          false,
 
         "when and if the stream is launched, run at most"
-        " NUM threads.  The default is " STRING(DEFAULT_MAXTHREADS)
-        ". If this"
-        " option is not given before a --run option this option"
+        " NUM threads.  The default is " xstr(DEFAULT_MAXTHREADS)
+        ". If this option is not given before a --run option this option"
         " will not effect that --run option.  On the Linux system"
         " the maximum number of threads a process may have can be"
         " gotten from running: cat /proc/sys/kernel/threads-max"
@@ -457,7 +465,7 @@ int main(int argc, char **argv) {
 
         case 'o':
             printf("<pre>\n");
-            s2 = 76;
+            s2 = 80;
             printf("\n");
 
             while((*opt).description) {
