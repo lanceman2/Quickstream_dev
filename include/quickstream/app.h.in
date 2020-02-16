@@ -29,7 +29,6 @@
  *
  * - **stream** a directed graph of interconnected filters,
  *              a mapping of filters to threads,
- *              a mapping of threads to processes, and
  *              an interface to run the stream
  *
  * - **filter** a filter module plugin from a dynamic shared object
