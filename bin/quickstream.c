@@ -2,7 +2,7 @@
  
 \tableofcontents
 
-The quickstream comman line program.
+The quickstream command line program.
 
 \section quickstream_intro Introduction
 

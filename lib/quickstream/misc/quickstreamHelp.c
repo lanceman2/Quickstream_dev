@@ -176,9 +176,9 @@ static struct QsOption
 /*----------------------------------------------------------------------*/
     { "--threads", 'r', "NUM",          false,
 
-        "when and if the stream is launched, run at most"
-        " NUM threads.  The default is " STRING(DEFAULT_MAXTHREADS)
-        ". If this option is not given before a --run option this option"
+        "when and if the stream is launched, run at most NUM worker"
+        " threads.  The default is " STRING(DEFAULT_MAXTHREADS) "."
+        "  If this option is not given before a --run option this option"
         " will not effect that --run option.  On the Linux operating"
         " system the maximum number of threads a process may have can be"
         " gotten from running: cat /proc/sys/kernel/threads-max\n"
@@ -189,8 +189,9 @@ static struct QsOption
         " if when there a filter that is not starved or clogged and all"
         " the existing worker threads are busy on another filter.  Think"
         " of threads as flowing in the stream graph to where they are"
-        " needed."
-
+        " needed.\n"
+        "\n"
+        "quickstream can run with with one worker thread.\n"
     },
 /*----------------------------------------------------------------------*/
     { "--version", 'V', 0,                  false/*arg_optional*/,
