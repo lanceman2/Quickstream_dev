@@ -185,7 +185,7 @@ static struct QsOption
         "\n"
         "In quickstream worker threads are shared between filters."
         " The number of threads that will run is dependent on the stream"
-        " flow graph that is constructed.  Threads will only be launched"
+        " flow graph that is constructed.  Threads will only be created"
         " if when there a filter that is not starved or clogged and all"
         " the existing worker threads are busy on another filter.  Think"
         " of threads as flowing in the stream graph to where they are"
