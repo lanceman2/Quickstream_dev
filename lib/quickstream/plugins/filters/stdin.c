@@ -7,7 +7,7 @@ void help(FILE *f) {
 
     fprintf(f,
 
-"  Usage: stdin [--maxWrite LEN]\n"
+"  Usage: stdin { --maxWrite LEN }\n"
 "\n"
 "This filter is a source.\n"
 "This filter must have 0 inputs.\n"

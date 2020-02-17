@@ -39,7 +39,7 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
     if(!handle) {
         ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
         free(path);
-        return -1; // error
+        return 1; // error
     }
 
     dlerror(); // clear error
@@ -51,7 +51,7 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
                 " dlsym(\"help\") error: %s", path, err);
         free(path);
         dlclose(handle);
-        return -1; // error
+        return 1; // error
     }
 
     fprintf(f, "\nfilter path=%s\n\n", path);

@@ -12,12 +12,12 @@ out=$0.OUT.tmp
 
 
 ../bin/quickstream\
- -f tests/sequenceGen [ --length 10200 ]\
+ -f tests/sequenceGen { --length 10200 }\
  -f tests/passThrough\
- -f tests/passThrough [ --sleep 1 ]\
+ -f tests/passThrough { --sleep 1 }\
  -f tests/copy\
  -f tests/passThrough\
- -f tests/sequenceCheck [ --maxWrite 10 ]\
+ -f tests/sequenceCheck { --maxWrite 10 }\
  -c\
  -t 7\
  -R -r
@@ -31,23 +31,3 @@ echo "SUCCESS"
 
 exit
 
-../bin/quickstream -t 20\
- -f tests/count [ --maxWrite 113 ]\
- -f tests/countCheck [ --maxWrite 10 ]\
- -f tests/countCheck [ --maxWrite 28000 ]\
- -f tests/countCheck [ --maxWrite 1024 ]\
- -c -R -r
-
-../bin/quickstream -f stdin -f stdout -c -R -d -r < $in > $out
-
-../bin/quickstream -f tests/count\
- -f tests/countCheck [ --maxWrite 24 ]\
- -c -R -r > /dev/null
-
-../bin/quickstream -f tests/count\
- -f tests/countCheck\
- -f stdout -c -R -r > /dev/null
-
-../bin/quickstream -f stdin\
- -f tests/copy [ --maxWrite=7 ]\
- -f stdout -c -R -d -r < $in > $out

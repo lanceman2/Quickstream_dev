@@ -136,15 +136,22 @@ int main(int argc, const char * const *argv) {
             case -1:
             case '*':
                 fprintf(stderr, "Bad option: %s\n\n", arg);
-            case 'h':
+                return usage(STDERR_FILENO);
+
             case '?':
+            case 'h':
                 return usage(STDOUT_FILENO);
 
             case 'V':
                 printf("%s\n", QS_VERSION);
                 return 0;
+
             case 'v':
                 verbose = true;
+                break;
+
+            case 'n':
+                verbose = false;
                 break;
 
             case 'c':
@@ -339,13 +346,13 @@ int main(int argc, const char * const *argv) {
                 const char *name = 0;
 
                 // example:
-                //  --filter stdin [ --name stdinput --bufferSize 5012 ]
+                //  --filter stdin { --name stdinput --bufferSize 5012 }
                 //
                 int fargc = 0; // 4
                 const char * const *fargv = 0; // points to --name
                 ++i;
 
-                if(i < argc && argv[i][0] == '[') {
+                if(i < argc && argv[i][0] == '{') {
                     if(argv[i][1] == '\0')
                         // --filter stdin [ --name ...
                         fargv = &argv[++i];
@@ -353,11 +360,11 @@ int main(int argc, const char * const *argv) {
                         // --filter stdin [--name ...
                         fargv = &argv[i];
 
-                    while(i < argc && strcmp(argv[i], "]")) {
+                    while(i < argc && strcmp(argv[i], "}")) {
                         if(strcmp(argv[i],"--name") == 0) {
                             ++i;
                             ++fargc;
-                            if(i < argc && strcmp(argv[i], "]")) {
+                            if(i < argc && strcmp(argv[i], "}")) {
                                 name = argv[i];
                                 ++i;
                                 ++fargc;
@@ -367,15 +374,15 @@ int main(int argc, const char * const *argv) {
                             ++fargc;
                         }
                     }
-                    if(strcmp(argv[i], "]") == 0) ++i;
+                    if(strcmp(argv[i], "}") == 0) ++i;
                 }
                 if(verbose) {
-                    fprintf(stderr, "Got filter args[%d]= [", fargc);
+                    fprintf(stderr, "Got filter args[%d]= {", fargc);
                     for(int j=0; j<fargc; ++j)
                         fprintf(stderr, "%s ", fargv[j]);
-                    fprintf(stderr, "]\n");
+                    fprintf(stderr, "}\n");
                 }
-                
+
                 filters[numFilters-1] = qsAppFilterLoad(app,
                         arg, name, fargc, (const char **) fargv);
                 if(!filters[numFilters-1]) return 1; // error
@@ -384,6 +391,15 @@ int main(int argc, const char * const *argv) {
                 arg = 0;
 
                 break;
+
+
+            case 'F':
+                if(!arg) {
+                    fprintf(stderr, "Bad --filter-help option\n\n");
+                    return usage(STDERR_FILENO);
+                }
+                return qsFilterPrintHelp(arg, stdout);
+
 
             case 'R':
 

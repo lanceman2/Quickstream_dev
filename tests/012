@@ -11,10 +11,10 @@ dd if=/dev/urandom count=300 | hexdump > $in
 
 
 
-../bin/quickstream -t 1 -f stdin [ --maxWrite=6 ]\
- -f tests/copy [ --maxWrite=1024 --name foobar ]\
- -f tests/copy [ --maxWrite=5209 ]\
- -f tests/copy [ --maxWrite=12 ]\
+../bin/quickstream -t 1 -f stdin { --maxWrite=6 }\
+ -f tests/copy { --maxWrite=1024 --name foobar }\
+ -f tests/copy { --maxWrite=5209 }\
+ -f tests/copy { --maxWrite=12 }\
  -f stdout -c\
  -r  < $in > $out
 

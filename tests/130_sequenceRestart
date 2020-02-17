@@ -5,14 +5,14 @@ set -e
 
 # A complex flow graph
 ../bin/quickstream\
- -f tests/sequenceGen [ --length 10000 ]\
- -f tests/sequenceCheck [ --maxWrite=1001 ]\
- -f tests/sequenceCheck [ --seedStart 1 --maxWrite=13 ]\
- -f tests/sequenceCheck [ --maxWrite=30 ]\
- -f tests/sequenceCheck [ --seedStart 1 --maxWrite=30 ]\
- -f tests/sequenceCheck [ --seedStart 1 --maxWrite=300 --seeds "1" ]\
- -f tests/sequenceCheck [ --maxWrite=3034 ]\
- -f tests/sequenceCheck [ --maxWrite=302 --seeds "1 0 0 1" ]\
+ -f tests/sequenceGen { --length 10000 }\
+ -f tests/sequenceCheck { --maxWrite=1001 }\
+ -f tests/sequenceCheck { --seedStart 1 --maxWrite=13 }\
+ -f tests/sequenceCheck { --maxWrite=30 }\
+ -f tests/sequenceCheck { --seedStart 1 --maxWrite=30 }\
+ -f tests/sequenceCheck { --seedStart 1 --maxWrite=300 --seeds "1" }\
+ -f tests/sequenceCheck { --maxWrite=3034 }\
+ -f tests/sequenceCheck { --maxWrite=302 --seeds "1 0 0 1" }\
  -t 4\
  -p "0 1 0 0"\
  -p "0 2 1 0"\

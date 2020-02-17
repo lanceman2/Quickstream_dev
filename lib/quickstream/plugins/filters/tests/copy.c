@@ -10,7 +10,7 @@
 
 void help(FILE *f) {
     fprintf(f,
-"  Usage: tests/copy [ --maxWrite BYTES --sleep SECS ]\n"
+"  Usage: tests/copy { --maxWrite BYTES --sleep SECS }\n"
 "\n"
 "A test filter module that copies each input to each output in order.\n"
 "If they are more inputs than outputs than the last output gets the\n"

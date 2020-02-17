@@ -4,8 +4,8 @@ set -e
 
 
 ../bin/quickstream\
- -f tests/sequenceGen [ --maxWrite=300 ]\
- -f tests/sequenceCheck [ --maxWrite=1030 ]\
+ -f tests/sequenceGen { --maxWrite=300 }\
+ -f tests/sequenceCheck { --maxWrite=1030 }\
  -t 1\
  -c\
  -R -r

@@ -3,9 +3,9 @@
 set -e
 
 ../bin/quickstream\
- -f tests/sequenceGen [ --length 102001 ]\
+ -f tests/sequenceGen { --length 102001 }\
  -f tests/passThrough\
- -f tests/sequenceCheck [ --maxWrite 10 ]\
+ -f tests/sequenceCheck { --maxWrite 10 }\
  -c\
  -r
 

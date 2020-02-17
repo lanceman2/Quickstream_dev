@@ -4,11 +4,11 @@ set -e
 
 
 ../bin/quickstream\
- -f tests/sequenceGen [ --length 1000 ]\
- -f tests/sequenceCheck [ --maxWrite=1001 ]\
- -f tests/sequenceCheck [ --maxWrite=13 ]\
- -f tests/sequenceCheck [ --maxWrite=30 ]\
- -f tests/sequenceCheck [ --maxWrite=13 ]\
+ -f tests/sequenceGen { --length 1000 }\
+ -f tests/sequenceCheck { --maxWrite=1001 }\
+ -f tests/sequenceCheck { --maxWrite=13 }\
+ -f tests/sequenceCheck { --maxWrite=30 }\
+ -f tests/sequenceCheck { --maxWrite=13 }\
  -t 2\
  -p "0 1 0 0"\
  -p "0 2 0 0"\

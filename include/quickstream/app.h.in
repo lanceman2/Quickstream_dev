@@ -139,11 +139,18 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         int argc, const char **argv);
 
 
-/** Print the help for the filter module
+/** Print the help for a filter module
  *
+ * \param filename is the filename of the filter module file run
+ * help() for.
+ *
+ * \param file is a standard C libarary stream file to have the
+ * filter's help() print to.
+ *
+ * \return 0 on success, 1 on error.
  */
 extern
-int qsFilterPrintHelp(const char *filterName, FILE *f);
+int qsFilterPrintHelp(const char *filename, FILE *file);
 
 
 /** print viscosity levels for qsAppPrintDotToFile() and

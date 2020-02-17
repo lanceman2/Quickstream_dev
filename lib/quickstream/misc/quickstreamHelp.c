@@ -82,6 +82,15 @@ static const char *usage =
 
 
 
+// So by putting these options descriptions in this separate program we
+// can generate:
+//
+//   1. HTML documentation,
+//   2. the --help ASCII text from running 'quickstream --help', and
+//   3. man pages
+//
+// from this one source, and they all stay consistent.
+//
 static struct QsOption
 {
   char *long_op;
@@ -120,14 +129,25 @@ static struct QsOption
         "before going on to the next argument option."
     },
 /*----------------------------------------------------------------------*/
-    { "--filter", 'f', "FILENAME [ args ... ]", false,
+    { "--filter", 'f', "FILENAME { args ... }", false,
 
         "load filter module with filename FILENAME.  An independent"
         " instance of the filter will be created for each time a filter"
         " is loaded and the filters will not share virtual addresses"
-        " and variables.  Optional arguments passed in square"
+        " and variables.  Optional arguments passed in curly"
         " brackets (with spaces around the brackets) are passed to"
-        " the module construct() function."
+        " the module construct() function.  For example:\n"
+        "\n"
+        "      --filter stdin { --name input }\n"
+        "\n"
+        "will load the \"stdin\" filter module and pass the arguments"
+        " in the brackets, --name input, to the filter module loader,"
+        " whereby naming the filter \"input\"."
+    },
+/*----------------------------------------------------------------------*/
+    { "--filter-help", 'F',  "FILENAME",        false,
+
+        "print the filter module help to stdout and then exit."
     },
 /*----------------------------------------------------------------------*/
     { "--dot", 'g', 0,                      false,
@@ -138,6 +158,11 @@ static struct QsOption
     { "--help", 'h', 0,                     false/*arg_optional*/,
 
         "print this help to stdout and then exit."
+    },
+/*----------------------------------------------------------------------*/
+    { "--no-verbose", 'n', 0,                     false/*arg_optional*/,
+
+        "turn off verbose printing.  See --verbose."
     },
 /*----------------------------------------------------------------------*/
     { "--plug", 'p', "\"FROM_F TO_F FROM_PORT TO_PORT\"",  false,
@@ -174,7 +199,7 @@ static struct QsOption
         "run the stream.  This readies the stream and runs it."
     },
 /*----------------------------------------------------------------------*/
-    { "--threads", 'r', "NUM",          false,
+    { "--threads", 't', "NUM",          false,
 
         "when and if the stream is launched, run at most NUM worker"
         " threads.  The default is " STRING(DEFAULT_MAXTHREADS) "."
@@ -183,7 +208,7 @@ static struct QsOption
         " system the maximum number of threads a process may have can be"
         " gotten from running: cat /proc/sys/kernel/threads-max\n"
         "\n"
-        "In quickstream worker threads are shared between filters."
+        "In quickstream, worker threads are shared between filters."
         " The number of threads that will run is dependent on the stream"
         " flow graph that is constructed.  Threads will only be created"
         " if when there a filter that is not starved or clogged and all"
@@ -192,6 +217,11 @@ static struct QsOption
         " needed.\n"
         "\n"
         "quickstream can run with with one worker thread.\n"
+    },
+/*----------------------------------------------------------------------*/
+    { "--verbose", 'v', 0,                  false,
+
+        "print more information to stderr."
     },
 /*----------------------------------------------------------------------*/
     { "--version", 'V', 0,                  false/*arg_optional*/,
@@ -216,6 +246,7 @@ static int getCols(const int fd) {
         return 76; // default width
     return sz.ws_col;
 }
+
 
 static inline int NSpaces(int n, int c) {
     int ret = n;
