@@ -10,4 +10,4 @@ cd "$(dirname ${BASH_SOURCE[0]})"
  -f tests/copy { --name malulator }\
  -f stdout { --name output }\
  -c\
- -g
+ -g > simpleFlow.dot

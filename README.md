@@ -480,10 +480,10 @@ In the future benchmarking will tell.  TODO: Add links here...
 ## A Typical quickstream Flow Graph
 
 ![simple stream state](
-https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_simple.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/simpleFlow.png)
 
 ![complex stream state](
-https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/quickstream_complex.png)
+https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/complexFlow.png)
 
 
 ## Other graphviz dot images

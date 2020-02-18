@@ -9,7 +9,7 @@ quickstream is written in C and the libraries can link with C and C++
 code.  quickstream is for building flow stream graphs that process data in
 filter module stages.  quickstream is light-weight and fast.
 
-\image html ./simpleFlowGraph.png
+\image html simpleFlow.png
 
 The **quickstream** github homepage is at
 https://github.com/lanceman2/quickstream

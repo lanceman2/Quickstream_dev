@@ -39,18 +39,12 @@ quickstream_simple_dot_LDADD := $(QSLIBS)
 
 
 
-DOT := $(sort\
- $(wildcard *.dot)\
- stdinStdout.dot\
- simpleFlowGraph.dot\
- quickstream_complex.dot\
- quickstream_simple.dot)
+GEN_DOT := $(patsubst %.dot.bl, %.dot, $(wildcard *.dot.bl))
+DOT := $(sort $(wildcard *.dot) $(GEN_DOT))
 
-
-
-IMAGES :=\
+GEN_IMAGES :=\
  $(sort\
- $(DOT)\
+ $(GEN_DOT)\
  $(patsubst %.dot, images/%.png, $(DOT))\
  $(patsubst %.dot, images/%.svg, $(DOT)))
 
@@ -76,7 +70,7 @@ INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 -include ../../config.make
 
 
-build: $(IMAGES) $(DOX_TARGET)
+build: $(GEN_DOT) $(GEN_IMAGES) $(DOX_TARGET)
 
 
 $(DOX_TARGET): $(HTM_FILES)
@@ -87,7 +81,7 @@ quickstreamIntro.htm: $(QS_DOC_GEN)
 quickstreamOptions.htm: $(QS_DOC_GEN)
 	$< -o > $@
 
-stdinStdout.dot: stdinStdout.dot.bl
+%.dot: %.dot.bl
 	./$<
 
 
@@ -165,15 +159,6 @@ $(BUILD_NO_INSTALL): %:%.o
 
 
 
-simpleFlowGraph.dot: makeSimpleFlowGraph.bash
-	./$< > $@
-
-quickstream_complex.dot: quickstream_complex_dot
-	./$< > $@
-quickstream_simple.dot: quickstream_simple_dot
-	./$< > $@
-
-
 # app.h is a generated file
 $(topdir)/include/quickstream/app.h: $(topdir)/include/quickstream/app.h.in
 	cd $(topdir)/include/quickstream && $(MAKE) app.h
@@ -218,7 +203,7 @@ show display: $(DOT)
 
 
 clean:
-	rm -f $(IMAGES) Doxyfile Doxyfile.tmp $(BUILD_NO_INSTALL) *.o
+	rm -f $(GEN_IMAGES) Doxyfile Doxyfile.tmp $(BUILD_NO_INSTALL) *.o
 	rm -f quickstreamIntro.htm quickstreamOptions.htm
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map

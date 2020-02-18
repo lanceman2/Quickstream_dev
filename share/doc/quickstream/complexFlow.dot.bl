@@ -1,0 +1,20 @@
+#!/bin/bash
+
+../../../bin/quickstream\
+ -f stdin\
+ -f tests/copy\
+ -f tests/copy { --name foodog }\
+ -f tests/copy { --name cow_milker }\
+ -f stdout\
+ -p "0 1 0 0"\
+ -p "0 2 0 0"\
+ -p "0 2 0 1"\
+ -p "0 3 0 0"\
+ -p "1 4 0 0"\
+ -p "1 3 1 1"\
+ -p "2 4 0 3"\
+ -p "2 4 0 4"\
+ -p "3 4 0 1"\
+ -p "3 4 0 2"\
+ -R --dot\
+ > complexFlow.dot
