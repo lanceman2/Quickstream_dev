@@ -4,7 +4,7 @@
 
 The quickstream command line program.
 
-\section quickstream_intro Introduction
+\section quickstream_intro Usage
 
 \htmlinclude quickstreamIntro.htm
 

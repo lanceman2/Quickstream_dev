@@ -137,7 +137,7 @@ web_docs: web_docs_make $(DOX_TARGET)
 	rm -rf $(WEB_DOCS_TARGET_DIR)/html
 	cd $(WEB_DOCS_TARGET_DIR)/
 	cp -a html $(WEB_DOCS_TARGET_DIR)/
-	@echo "\n\n   push pages to the web by running: $(WEB_DOCS_TARGET_DIR)/push_webdocs.bash\n"
+	@echo "\n\n   push pages to the web by running: $(WEB_DOCS_TARGET_DIR)/push_webdocs.bash $(PWD)\n"
 
 
 $(WEB_DOCS_TARGET_DIR)/%.png: images/%.png
