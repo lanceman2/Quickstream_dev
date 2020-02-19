@@ -10,7 +10,7 @@
 #
 #  A tarball release has additional generated files when compared to the
 #  files checked into a git repository.  Some of those additional files
-#  are downloaded from the web in addition to local file generation.
+#  are downloaded from the web, in addition to, local file generation.
 #
 #  If we do it correctly the tarball that we generate from a given set of
 #  git repository checkouts will be unique.
@@ -22,7 +22,10 @@
 
 # There is a problem with this file.  Some of the strings that we define
 # here, in this file, are also in README.md, but README.md cannot be a
-# generated file.
+# generated file because it must be part of the git repository.  Ya, 'git
+# describe' is handy but we don't want building our software to dependent
+# on 'git' being installed.
+
 
 
 #
@@ -82,7 +85,7 @@ function ReplaceReleaseStrings() {
 
         [PACKAGE_URL]="https://github.com/lanceman2/quickstream"
 
-        [WEB_DOCS_URL]="https://github.com:lanceman2/quickstream.doc.git"
+        [WEB_DOCS_URL]="https://github.com:lanceman2/quickstream.doc"
 
 
 # The package name is used to make tarball filenames.  Not likely
@@ -98,7 +101,9 @@ function ReplaceReleaseStrings() {
 ##########################################################################
     )
 
-    # compose some release strings.  All standardized by GNU autotools:
+    # compose some release strings from the above strings.
+    # Most are standardized by GNU autotools:
+
     r+=([PACKAGE_VERSION]="${r[PACKAGE_MAJOR]}.${r[PACKAGE_MINOR]}.${r[PACKAGE_EDIT]}")
     r+=([PACKAGE]="${r[PACKAGE_NAME]}")
     r+=([PACKAGE_TARNAME]="${r[PACKAGE_NAME]}")
