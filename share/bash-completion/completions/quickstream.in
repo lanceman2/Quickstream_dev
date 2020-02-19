@@ -1,0 +1,41 @@
+# quickstream(1) completion
+@GEN_FILE@
+
+_quickstream()
+{
+    local cur prev opts
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    opts="@OPTS@"
+
+    if [[ ${cur} == -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+        return 0
+    fi
+
+    if [[ ${prev} != -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+        return 0
+    fi
+
+    case "${prev}" in
+        -f|--filter)
+            # We'll get a list of filters below
+            ;;
+        -t|--threads)
+            COMPREPLY=( "Enter the number of worker threads: 0 to N" "" )
+            return 0
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+
+    COMPREPLY=( This is a list of filters )
+
+    return 0
+}
+complete -F _quickstream quickstream
+
+# ex: filetype=sh

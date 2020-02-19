@@ -423,7 +423,8 @@ int main(int argc, char **argv) {
         if(argc < 2 || argc > 3 || n != 2 ||
                 argv[1][0] != '-' || 
                 (argv[1][1] != 'c' && argv[1][1] != 'h' &&
-                 argv[1][1] != 'i' && argv[1][1] != 'o')
+                 argv[1][1] != 'i' && argv[1][1] != 'o' &&
+                 argv[1][1] != 'O')
                 || argv[1][2] != '\0'
         ) {
             printf("   Usage: %s [ -c | -h | -t ]\n"
@@ -447,6 +448,8 @@ int main(int argc, char **argv) {
                 "    -i  print intro in HTML\n"
                 "\n"
                 "    -o  print HTML options table\n"
+                "\n"
+                "    -O  print all options with a space between\n"
                 "\n",
                 argv[0]);
             return 1;
@@ -460,6 +463,23 @@ int main(int argc, char **argv) {
 
 
     struct QsOption *opt = opts;
+
+    while(opt->description) {
+        struct QsOption *opt2 = opt+1;
+        while(opt2->description) {
+            if(opt2->short_op == opt->short_op) {
+                fprintf(stderr,
+                        "ERROR there are at least two options with "
+                        "short option -%c\n", opt2->short_op);
+                return 1;
+            }
+            ++opt2;
+        }
+        ++opt;
+    }
+
+    opt = opts;
+
 
     switch(argv[1][1]) {
 
@@ -516,6 +536,24 @@ int main(int argc, char **argv) {
                 ++opt;
             }
             printf("</pre>\n");
+            return 0;
+
+        case 'O':
+
+            // First long options
+            printf("%s", opt->long_op);
+            ++opt;
+            while(opt->description) {
+                printf(" %s", opt->long_op);
+                ++opt;
+            }
+            // Next short options
+            opt = opts;
+            while(opt->description) {
+                printf(" -%c", opt->short_op);
+                ++opt;
+            }
+            putchar('\n');
             return 0;
      }
 

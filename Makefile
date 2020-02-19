@@ -5,7 +5,8 @@ SUBDIRS :=\
  lib/quickstream/misc\
  bin\
  lib/quickstream/plugins/filters\
- share/doc/quickstream
+ share/doc/quickstream\
+ share/bash-completion/completions
 
 
 ifeq ($(strip $(subst cleaner, clean, $(MAKECMDGOALS))),clean)
