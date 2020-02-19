@@ -1,4 +1,5 @@
-PREFIX = /usr/local/encap/quickstream
+
+PREFIX = /usr/local/encap/quickstream-@PACKAGE_VERSION@
 
 # Set CPPFLAGS for debug build options:
 #

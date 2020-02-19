@@ -33,12 +33,6 @@ endif
 
 
 
-BUILD_NO_INSTALL := quickstream_complex_dot quickstream_simple_dot
-quickstream_complex_dot_LDADD := $(QSLIBS)
-quickstream_simple_dot_LDADD := $(QSLIBS)
-
-
-
 GEN_DOT := $(patsubst %.dot.bl, %.dot, $(wildcard *.dot.bl))
 DOT := $(sort $(wildcard *.dot) $(GEN_DOT))
 
@@ -85,20 +79,15 @@ quickstreamOptions.htm: $(QS_DOC_GEN)
 	./$<
 
 
-# WEB_DOCS_TARGET_DIR directory may be a git clone of
-# https://github.com:lanceman2/quickstream.doc.git or
-# git@github.com:lanceman2/quickstream.doc
-# we let git@github.com:lanceman2/quickstream.doc be a repository hell,
-# that has binaries and lots of generated file checked into it.  Kind-of
-# stupid how GitHub manages user web pages that way...
+# WEB_DOCS_TARGET_DIR directory may be a git clone of the WEB_DOCS_URL
+# ../../../RELEASE.bash | grep WEB_DOCS_URL
 #
 # It's just so that we can push binary image files to the github.com web
 # pages.  It's a different repo than
-# https://github.com/lanceman2/quickstream/ so that we don't put generated
+# the one this code is in so that we don't put generated
 # files into the quickstream source repository.
 #
-# Running 'make web_docs' may push changes to
-# git@github.com:lanceman2/quickstream.doc.
+# Running 'make web_docs' may push changes to the WEB_DOCS_URL
 #
 # If the directory WEB_DOCS_TARGET_DIR does not exist than we do not
 # make the make rules for it.  See ifneq below.
@@ -111,13 +100,15 @@ ifneq ($(wildcard $(WEB_DOCS_TARGET_DIR)/),)
 WEB_DOCS :=\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.png, $(DOT))\
  $(patsubst %.dot, $(WEB_DOCS_TARGET_DIR)/%.svg, $(DOT))
+
 # Extra make target that only developers need to know.  It makes binary
 # image files for the web that end up in a different repo then the
 # quickstream repo, quickstream.doc repo with branch.
 #
 # There needs to be a directory that is from something like:
 #
-#   git clone git@github.com:lanceman2/quickstream.doc quickstream_webpages
+#   git clone WEB_DOCS_URL quickstream_webpages
+#
 #   cd quickstream_webpages
 #   git checkout gh-pages
 #   cd -
@@ -151,15 +142,8 @@ endif
 
 
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_NO_INSTALL): %:%.o
-	$(CC) $(CFLAGS) -o $@ $< $($@_LDADD)
-
-
-
-# app.h is a generated file
+# app.h is a generated file because it has a release version number in it.
 $(topdir)/include/quickstream/app.h: $(topdir)/include/quickstream/app.h.in
 	cd $(topdir)/include/quickstream && $(MAKE) app.h
 
@@ -173,11 +157,14 @@ else
 endif
 
 
-Doxyfile: Doxyfile.in
+Doxyfile: %: %.in
 	@echo "# This is a generated file" > $@.tmp
 	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@.tmp
 	$(topdir)/RELEASE.bash $@.tmp > $@
 	rm $@.tmp
+
+mainpage.dox: %: %.in
+	$(topdir)/RELEASE.bash $< '//' > $@
 
 
 $(DOX_TARGET): Doxyfile $(DOX_INFILES)
@@ -185,7 +172,6 @@ $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	rm -rf html/search
 	rm -rf latex
 	doxygen
-
 
 
 
@@ -203,7 +189,7 @@ show display: $(DOT)
 
 
 clean:
-	rm -f $(GEN_IMAGES) Doxyfile Doxyfile.tmp $(BUILD_NO_INSTALL) *.o
+	rm -f $(GEN_IMAGES) Doxyfile mainpage.dox Doxyfile.tmp
 	rm -f quickstreamIntro.htm quickstreamOptions.htm
 	rm -rf latex
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map

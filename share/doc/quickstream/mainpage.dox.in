@@ -12,7 +12,11 @@ filter module stages.  quickstream is light-weight and fast.
 \image html simpleFlow.png
 
 The **quickstream** github homepage is at
-https://github.com/lanceman2/quickstream
+@PACKAGE_URL@
+
+This is documentation is from
+package version @PACKAGE_VERSION@
+
 
 
 

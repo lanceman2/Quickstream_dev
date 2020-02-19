@@ -19,9 +19,6 @@
 //
 //        display ../share/doc/quickstream/jobFlow.dot
 //
-//  or see it on the web at
-//
-//    https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png
 //
 // In addition to the 3 job transfers shown in the above image, we
 // sometimes at the end of a quickstream flow cycle will need to move jobs

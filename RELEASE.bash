@@ -5,20 +5,38 @@
 # We also keep in here a bash function that replaces things like
 # for example replace @PACKAGE_VERSION@ with 5.3.2
 
+##########################################################################
+#         Making a tarball release
+#
+#  A tarball release has additional generated files when compared to the
+#  files checked into a git repository.  Some of those additional files
+#  are downloaded from the web in addition to local file generation.
+#
+#  If we do it correctly the tarball that we generate from a given set of
+#  git repository checkouts will be unique.
+#
+#  We do not want to get caught in the trap where we require a specific
+#  kind of software repository to develop the release code.  So, for
+#  example, we can never add 'git' commands to scripts in this source
+#  code, especially for making release numbers.
+
+# There is a problem with this file.  Some of the strings that we define
+# here, in this file, are also in README.md, but README.md cannot be a
+# generated file.
 
 
 #
-# Usage: ReplaceReleaseStrings [INFILE]
+# Usage: ReplaceReleaseStrings [INFILE [COMMENT_PREFIX]]
 #
-# Writes to stdout INFILE with "release" strings like
-# @PACKAGE_VERSION@ replaced.  If INFILE is not present
-# it prints all the release strings to stdout.
+# Writes to stdout INFILE with "release" strings like @PACKAGE_VERSION@
+# replaced.  If no argument options are present this script prints all the
+# release strings to stdout.
 #
 function ReplaceReleaseStrings() {
 
 # declare bash associative array r
     declare -A r
-# keep it local so it's polluting the namespace
+# keep it local so it's not polluting the namespace
     local r=(
 ##########################################################################
 ##########################################################################
@@ -63,6 +81,8 @@ function ReplaceReleaseStrings() {
         [PACKAGE_BUGREPORT]="https://github.com/lanceman2/quickstream"
 
         [PACKAGE_URL]="https://github.com/lanceman2/quickstream"
+
+        [WEB_DOCS_URL]="https://github.com:lanceman2/quickstream.doc.git"
 
 
 # The package name is used to make tarball filenames.  Not likely
@@ -109,10 +129,9 @@ function ReplaceReleaseStrings() {
         replace="${replace} -e s/@${key}@/${rstr}/g"
     done
 
-    echo "# This file is generated for a given software release"
+    echo "${2}# This file is generated for a given software release"
     sed$replace "$1"
 }
 
 
-ReplaceReleaseStrings "$1"
-
+ReplaceReleaseStrings $*
