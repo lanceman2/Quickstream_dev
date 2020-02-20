@@ -452,7 +452,9 @@ int main(int argc, const char * const *argv) {
                     return 1;
                 }
 
-                if(qsStreamWait(stream))
+                // We do not wait if there where no worker threads, that
+                // is maxThreads == 0.
+                if(maxThreads && qsStreamWait(stream))
                     return 1;
 
                 if(qsStreamStop(stream))

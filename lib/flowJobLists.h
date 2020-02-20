@@ -134,7 +134,7 @@ void FilterUnusedToStreamQ(struct QsStream *s, struct QsFilter *f) {
     // already working.  Adding more jobs to the stream queue is not done
     // unless the filter that will receive the worker and job has the job
     // to give.
-    DASSERT(f->numWorkingThreads < s->maxThreads);
+    DASSERT(f->numWorkingThreads == 0 || f->numWorkingThreads < s->maxThreads);
     DASSERT(f->numWorkingThreads < f->maxThreads);
     DASSERT(f->numWorkingThreads < GetNumAllocJobsForFilter(s, f));
 

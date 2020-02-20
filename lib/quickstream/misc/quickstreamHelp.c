@@ -216,7 +216,10 @@ static struct QsOption
         " of threads as flowing in the stream graph to where they are"
         " needed.\n"
         "\n"
-        "quickstream can run with with one worker thread.\n"
+        "quickstream can run with with one worker thread.  You can"
+        " set the maximum number of worker threads to zero and then"
+        " the main thread will run the stream (putting management to"
+        " work)."
     },
 /*----------------------------------------------------------------------*/
     { "--verbose", 'v', 0,                  false,

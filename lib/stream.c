@@ -258,7 +258,6 @@ void FreeFilterRunResources(struct QsFilter *f) {
     if(f->jobs) {
 
         DASSERT(f->stream);
-        DASSERT(f->stream->maxThreads);
 
         uint32_t numJobs = GetNumAllocJobsForFilter(f->stream, f);
 

@@ -69,7 +69,8 @@ uint32_t nThreadFlow(struct QsStream *s) {
     //    threads finish their current jobs.
     //
     for(uint32_t i=0; i<s->numSources &&
-            s->numThreads < s->maxThreads; ++i)
+            s->numThreads < s->maxThreads &&
+            s->maxThreads; ++i)
         LaunchWorkerThread(s);
 
 
@@ -80,11 +81,36 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // UNLOCK stream mutex
     CHECK(pthread_mutex_unlock(&s->mutex));
 
-
     // Now the worker threads will run wild in the stream.
 
     DASSERT(s->masterWaiting != true);
 
+    // 3. If this has no worker threads, i.e. the workers are all on
+    // strike, then we run it with this one main thread.  This main thread
+    // will be the one worker thread.
+
+    if(s->maxThreads == 0) {
+
+        // See LaunchWorkerThread() in qs.h.
+        // We pretend we are a worker by saying that maxThreads = 1.
+        // Otherwise the code will shit itself.
+        s->maxThreads = 1;
+        DASSERT(s->numThreads == 0);
+        s->numThreads = 1;
+
+        // This next call may take a while.  Here's where management
+        // goes to work. 
+        RunningWorkerThread(s);
+
+        // Just in case this state needs to be known.
+        s->maxThreads = 0; // We lied.  maxThread really is 0.
+        s->numThreads = 0;
+        // The regular worker threads would have had this set as they
+        // worked, but this is now again acting like the master thread
+        // and the master thread does not setup jobs in it's
+        // pthread_setspecific data under this key _qsKey.
+        CHECK(pthread_setspecific(_qsKey, 0));
+    }
 
     return 0; // success
 }
@@ -196,11 +222,6 @@ int qsStreamWait(struct QsStream *s) {
     ASSERT(s->flags & _QS_STREAM_LAUNCHED,
             "Stream has not been launched");
 
-    if(s->maxThreads == 0)
-        // qsStreamLaunch() was not configured to run with worker
-        // threads.
-        return -1;
-
     // LOCK stream mutex
     CHECK(pthread_mutex_lock(&s->mutex));
 
@@ -241,8 +262,6 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
-    ASSERT(maxThreads!=0, "Write the code for the maxThread=0 case");
-
     DASSERT(s);
     DASSERT(s->app);
     ASSERT(s->sources, "qsStreamReady() must be successfully"
@@ -256,23 +275,19 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
     s->maxThreads = maxThreads;
 
-    if(s->maxThreads) {
+    // TODO: remove pthreads synchronization calls in this code for the
+    // case then s->maxThreads = 0 and s->maxThreads = 1.
 
-        // Set a stream flow function.
-        s->flow = nThreadFlow;
+    // Set a stream flow function.
+    s->flow = nThreadFlow;
 
-        CHECK(pthread_mutex_init(&s->mutex, 0));
-        CHECK(pthread_cond_init(&s->cond, 0));
-        CHECK(pthread_cond_init(&s->masterCond, 0));
+    CHECK(pthread_mutex_init(&s->mutex, 0));
+    CHECK(pthread_cond_init(&s->cond, 0));
+    CHECK(pthread_cond_init(&s->masterCond, 0));
 
-        StreamSetFilterMarks(s, true);
-        for(uint32_t i=0; i<s->numSources; ++i)
-            AllocateFilterJobsAndMutex(s, s->sources[i]);
-    }
-
-
-    ASSERT(s->flow, "Did not set a stream flow function. "
-            "Write this code");
+    StreamSetFilterMarks(s, true);
+    for(uint32_t i=0; i<s->numSources; ++i)
+        AllocateFilterJobsAndMutex(s, s->sources[i]);
 
     return s->flow(s);
 }

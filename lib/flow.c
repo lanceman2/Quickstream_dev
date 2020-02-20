@@ -637,6 +637,5 @@ void *RunningWorkerThread(struct QsStream *s) {
     // STREAM UNLOCK
     CHECK(pthread_mutex_unlock(&s->mutex));
 
-
     return 0; // We're dead now.  It was a good life for a worker/slave.
 }

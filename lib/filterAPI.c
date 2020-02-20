@@ -29,7 +29,6 @@
 static inline
 struct QsJob *GetJob(void) {
 
-    DASSERT(_qsMainThread != pthread_self(), "Is main thread");
     struct QsJob *j = pthread_getspecific(_qsKey);
     // If job, j, was not in thread specific data than this could
     // be due to a user calling this function while not in a filter module

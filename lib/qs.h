@@ -802,6 +802,7 @@ void LaunchWorkerThread(struct QsStream *s) {
             s->numThreads, s->maxThreads);
 }
 
+
 static inline
 void CheckLockFilter(struct QsFilter *f) {
     if(f->mutex)
