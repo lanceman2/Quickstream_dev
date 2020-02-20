@@ -427,7 +427,7 @@ int main(int argc, char **argv) {
                 argv[1][0] != '-' || 
                 (argv[1][1] != 'c' && argv[1][1] != 'h' &&
                  argv[1][1] != 'i' && argv[1][1] != 'o' &&
-                 argv[1][1] != 'O')
+                 argv[1][1] != 'O' && argv[1][1] != 'w')
                 || argv[1][2] != '\0'
         ) {
             printf("   Usage: %s [ -c | -h | -t ]\n"
@@ -438,7 +438,7 @@ int main(int argc, char **argv) {
                 "  consistent, by putting the command-line options\n"
                 "  documentation and code in one file.\n"
                 "  Returns 0 on success and 1 on error.  This\n"
-                "  program always prints to stdout.\n"
+                "  program always prints to stdout when successful.\n"
                 "\n"
                 " -----------------------------------------\n"
                 "              OPTIONS\n"
@@ -453,9 +453,10 @@ int main(int argc, char **argv) {
                 "    -o  print HTML options table\n"
                 "\n"
                 "    -O  print all options with a space between\n"
+                "\n"
+                "    -w  print all options without ARGS in a map\n"
                 "\n",
                 argv[0]);
-            return 1;
         }
     }
 
@@ -532,7 +533,6 @@ int main(int argc, char **argv) {
             printf("<pre>\n");
             s2 = 80;
             printf("\n");
-
             while((*opt).description) {
                 printDescription(opt, s0, s1, s2);
                 printf("\n");
@@ -541,24 +541,47 @@ int main(int argc, char **argv) {
             printf("</pre>\n");
             return 0;
 
-        case 'O':
+        case 'O': // Print all options with a space between
 
-            // First long options
             printf("%s", opt->long_op);
+            printf(" -%c", opt->short_op);
             ++opt;
             while(opt->description) {
                 printf(" %s", opt->long_op);
-                ++opt;
-            }
-            // Next short options
-            opt = opts;
-            while(opt->description) {
                 printf(" -%c", opt->short_op);
                 ++opt;
             }
             putchar('\n');
             return 0;
+    
+        case 'w': // Print all options without ARGS
+
+            {
+                bool gotOne = false;
+
+                // First long options
+                if(opt->arg == 0) {
+                    printf("[%s]=1", opt->long_op);
+                    printf(" [-%c]=1", opt->short_op);
+                    gotOne = true;
+                }
+                ++opt;
+                while(opt->description) {
+                    if(opt->arg == 0) {
+                        if(gotOne)
+                            putchar(' ');
+                        else
+                            gotOne = true;
+                        printf("[%s]=1", opt->long_op);
+                        printf(" [-%c]=1", opt->short_op);
+                    }
+                    ++opt;
+                }
+                putchar('\n');
+                return 0;
+            }
      }
+
 
     // This should not happen.
     return 1;
