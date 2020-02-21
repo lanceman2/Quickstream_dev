@@ -118,14 +118,16 @@ int main(int argc, const char * const *argv) {
     struct QsStream *stream = 0;
     int numFilters = 0;
     struct QsFilter **filters = 0;
-    bool verbose = false;
     bool ready = false;
     // TODO: option to change maxThreads.
     uint32_t maxThreads = DEFAULT_MAXTHREADS;
     char *endptr = 0;
+    int spewLevel = DEFAULT_SPEW_LEVEL;
 
     int i = 1;
     const char *arg = 0;
+
+    qsSetVerboseLevel(DEFAULT_SPEW_LEVEL);
 
     while(i < argc) {
 
@@ -147,12 +149,23 @@ int main(int argc, const char * const *argv) {
                 return 0;
 
             case 'v':
-                verbose = true;
-                break;
 
-            case 'n':
-                verbose = false;
-                break;
+                {
+                    int level = 0;
+                    // LEVEL maybe debug, info, notice, warn, error, and off
+                    // which translates to: 5, 4, 3, 2, 1, and 0
+
+                    if(strncasecmp("debug", arg, 1) == 0) {
+                        level = 5;
+                    }   
+
+                    qsSetVerboseLevel(level);
+
+                    // next
+                    arg = 0;
+                    ++i;
+                    break;
+                }
 
             case 'c':
                 if(numFilters < 2) {
@@ -376,7 +389,7 @@ int main(int argc, const char * const *argv) {
                     }
                     if(strcmp(argv[i], "}") == 0) ++i;
                 }
-                if(verbose) {
+                if(spewLevel >= 4) {
                     fprintf(stderr, "Got filter args[%d]= {", fargc);
                     for(int j=0; j<fargc; ++j)
                         fprintf(stderr, "%s ", fargv[j]);

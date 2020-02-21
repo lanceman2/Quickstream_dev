@@ -360,6 +360,8 @@ int qsStreamReady(struct QsStream *stream);
 extern
 int qsStreamStop(struct QsStream *stream);
 
+extern
+void qsSetVerboseLevel(int level);
 
 
 #endif // #ifndef __qsapp_h__

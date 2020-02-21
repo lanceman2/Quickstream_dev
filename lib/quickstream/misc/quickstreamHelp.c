@@ -34,6 +34,8 @@
 
 
 #define DEFAULT_MAXTHREADS      7
+// This is the spew level just for the quickstream program
+#define DEFAULT_SPEW_LEVEL      2
 
 #define STRING(a)   _STR(a)
 #define _STR(a)     #a
@@ -138,7 +140,7 @@ static struct QsOption
         " brackets (with spaces around the brackets) are passed to"
         " the module construct() function.  For example:\n"
         "\n"
-        "      --filter stdin { --name input }\n"
+        "      --filter stdin { --nagotOne = true;me input }\n"
         "\n"
         "will load the \"stdin\" filter module and pass the arguments"
         " in the brackets, --name input, to the filter module loader,"
@@ -158,11 +160,6 @@ static struct QsOption
     { "--help", 'h', 0,                     false/*arg_optional*/,
 
         "print this help to stdout and then exit."
-    },
-/*----------------------------------------------------------------------*/
-    { "--no-verbose", 'n', 0,                     false/*arg_optional*/,
-
-        "turn off verbose printing.  See --verbose."
     },
 /*----------------------------------------------------------------------*/
     { "--plug", 'p', "\"FROM_F TO_F FROM_PORT TO_PORT\"",  false,
@@ -222,9 +219,13 @@ static struct QsOption
         " work)."
     },
 /*----------------------------------------------------------------------*/
-    { "--verbose", 'v', 0,                  false,
+    { "--verbose", 'v', "LEVEL",                  false,
 
-        "print more information to stderr."
+        "print more information to stderr as quickstream runs."
+        "  LEVEL maybe debug, info, notice, warn, error, and off;"
+        " in upper or lower case.  This is more of a debugging tool."
+        "  Don't try to give to much meaning to the LEVEL terms used."
+        "  They are just levels where debug means more spew."
     },
 /*----------------------------------------------------------------------*/
     { "--version", 'V', 0,                  false/*arg_optional*/,
@@ -491,6 +492,8 @@ int main(int argc, char **argv) {
             printf("// This is a generated file\n\n");
             printf("#define DEFAULT_MAXTHREADS ((uint32_t) %d)\n\n",
                     DEFAULT_MAXTHREADS);
+            printf("#define DEFAULT_SPEW_LEVEL (%d)\n\n",
+                    DEFAULT_SPEW_LEVEL);
             printf("static const\nstruct opts qsOptions[] = {\n");
             while((*opt).description) {
                 printf("    { \"%s\", '%c' },\n",

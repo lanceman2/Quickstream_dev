@@ -386,3 +386,13 @@ int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
 
     return ret; // success ret=0
 }
+
+
+
+int _QsSpewLevel = 5;
+
+void qsSetVerboseLevel(int level) {
+    if(level > 5) level = 5;
+    else if(level < 0) level = 0;
+    _QsSpewLevel = level;
+}

@@ -1,5 +1,8 @@
 #! This is a "GNU make" make file.
 
+# This directory is strictly for testing and development.
+#
+# Nothing in this directory should be installed.
 
 ROOT := ../..
 
@@ -16,11 +19,6 @@ $(BIN): %: %.o
 cleaner: clean
 clean:
 	rm -f *.tmp *.o $(BIN)
-
-
-# This directory is strictly for testing and development.
-#
-# Nothing in this directory should be installed.
 
 
 -include $(ROOT)/config.make

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+cat << EOF | xmessage -file -
+
+# Run:
+
+source ../../share/bash-completion/completions/quickstream
+
+# Next:
+
+<Ctrl-Z> to pause this script then
+
+# Next:
+
+../../bin/quickstream <tab> <tab>
+
+# Next:
+
+
+
+EOF
+
+
