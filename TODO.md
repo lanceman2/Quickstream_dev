@@ -4,10 +4,10 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- docs fix building images
-- quickstream --help in difference formats and arg parsing
-  in a separate program; and have is spew into docs html too.
 - bash completion for the quickstream program
+  - test bash completion with env QS_MODULE_PATH set
+- test/fix installation with GNU autotools
+
 - librtlsdr code is AWESOME unlike GNU radio and libUHD
 - GNU radio tests
 - run tests with DEBUG off 
