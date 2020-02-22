@@ -46,7 +46,6 @@
  *
  * CRTSFilter builders do not have to include this file in their
  * plugin modules.  It's pretty handy for developing/debugging.
- *
  */
 #include <stdbool.h>
 #include <stdio.h>

@@ -174,7 +174,14 @@ int main(int argc, const char * const *argv) {
                     else // error and anything else
                         level = 0;
 
-                    qsSetVerboseLevel(level);
+                    if(level >= 3/*notice*/) {
+                        fprintf("quickstream spew level set to %d\n",
+                                level);
+                        fprintf("The highest libquickstream spew level is %d\n",
+                                qsGetLibSpewLevel());
+                    }
+
+                    qsSetSpewLevel(level);
 
                     // next
                     arg = 0;

@@ -15,6 +15,63 @@
 #include "../include/quickstream/app.h"
 
 
+// This file is compiled into libquickstream.
+// When this file was compiled the spew level was
+#ifdef SPEW_LEVEL_DEBUG
+#  define COMPILED_SPEW_LEVEL 5
+#endif
+#ifndef COMPILED_SPEW_LEVEL
+#  ifdef SPEW_LEVEL_INFO
+#    define COMPILED_SPEW_LEVEL 4
+#  endif
+#endif
+#ifndef COMPILED_SPEW_LEVEL
+#  ifdef SPEW_LEVEL_NOTICE
+#    define COMPILED_SPEW_LEVEL 3
+#  endif
+#endif
+#ifndef COMPILED_SPEW_LEVEL
+#  ifdef SPEW_LEVEL_WARN
+#    define COMPILED_SPEW_LEVEL 2
+#  endif
+#endif
+#ifndef COMPILED_SPEW_LEVEL
+#  ifdef SPEW_LEVEL_ERROR
+#    define COMPILED_SPEW_LEVEL 1
+#  endif
+#endif
+#ifndef COMPILED_SPEW_LEVEL
+#  define COMPILED_SPEW_LEVEL 0
+#endif
+static const int CompiledSpewLevel = COMPILED_SPEW_LEVEL;
+
+// So other code linking to this library may have higher spew levels, but
+// the highest spew level from the code compiled with this value of
+// SPEW_LEVEL_* will be CompiledSpewLevel.  The user of this compiled
+// libquickstream.so will not be able to get more spew from code in
+// libquickstream.so, but other code may have had higher spew levels if
+// they use the spew macro functions: DSPEW(), INFO(), NOTICE(), WARN(),
+// and ERROR().  That could be handy for making new filter modules.
+
+
+// LEVEL maybe debug, info, notice, warn, error, and
+// off which translates to: 5, 4, 3, 2, 1, and 0
+static int spewLevel = 5;
+
+
+int qsGetLibSpewLevel(void) {
+    return CompiledSpewLevel;
+}
+
+
+void qsSetSpewLevel(int level) {
+    if(level > 5) level = 5;
+    else if(level < 0) level = 0;
+    spewLevel = level;
+}
+
+
+
 // We make the access to qsErrorBuffer thread safe:
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static char *qsErrorBuffer = 0;
@@ -66,13 +123,15 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
     {
         char estr[128];
         strerror_r(errn, estr, 128);
-        len = snprintf(buffer, BUFLEN, "%s%s:%d:pid=%u:%zu %s():errno=%d:%s: ",
+        len = snprintf(buffer, BUFLEN,
+                "%s%s:%d:pid=%u:%zu %s():errno=%d:%s: ",
                 pre, file, line,
                 getpid(), syscall(SYS_gettid), func,
                 errn, estr);
     }
     else
-        len = snprintf(buffer, BUFLEN, "%s%s:%d:pid=%u:%zu %s(): ", pre, file, line,
+        len = snprintf(buffer, BUFLEN, "%s%s:%d:pid=%u:%zu %s(): ",
+                pre, file, line,
                 getpid(), syscall(SYS_gettid), func);
 
     if(len < 10 || len > BUFLEN - 40)
@@ -92,7 +151,8 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
                     getpid(), syscall(SYS_gettid), func,
                     errn, estr);
             } else
-                fprintf(stream, "%s%s:%d:pid=%u:%zu %s(): ", pre, file, line,
+                fprintf(stream, "%s%s:%d:pid=%u:%zu %s(): ",
+                        pre, file, line,
                         getpid(), syscall(SYS_gettid), func);
         }
 
