@@ -142,6 +142,8 @@ int main(int argc, const char * const *argv) {
 
             case '?':
             case 'h':
+                // The --help option get stdout and all the error
+                // cases get stderr.
                 return usage(STDOUT_FILENO);
 
             case 'V':
@@ -150,14 +152,27 @@ int main(int argc, const char * const *argv) {
 
             case 'v':
 
+                if(!app) {
+                    fprintf(stderr, "--verbose with no level\n");
+                    return usage(STDERR_FILENO);
+                }
                 {
                     int level = 0;
-                    // LEVEL maybe debug, info, notice, warn, error, and off
-                    // which translates to: 5, 4, 3, 2, 1, and 0
-
-                    if(strncasecmp("debug", arg, 1) == 0) {
+                    // LEVEL maybe debug, info, notice, warn, error, and
+                    // off which translates to: 5, 4, 3, 2, 1, and 0
+                    // as this program (and not the API) define it.
+                    if(strncasecmp("debug", arg, 1) == 0)
                         level = 5;
-                    }   
+                    else if(strncasecmp("info", arg, 1) == 0)
+                        level = 4;
+                    else if(strncasecmp("notice", arg, 1) == 0)
+                        level = 3;
+                    else if(strncasecmp("warn", arg, 1) == 0)
+                        level = 2;
+                    else if(strncasecmp("error", arg, 1) == 0)
+                        level = 1;
+                    else // error and anything else
+                        level = 0;
 
                     qsSetVerboseLevel(level);
 
@@ -168,6 +183,7 @@ int main(int argc, const char * const *argv) {
                 }
 
             case 'c':
+
                 if(numFilters < 2) {
                     fprintf(stderr, "Got --connect "
                             "option with %d filter(s) loaded\n",
@@ -193,7 +209,8 @@ int main(int argc, const char * const *argv) {
                     break;
                 }
                 endptr = 0;
-                for(const char *str = arg; *str && endptr != str; endptr = 0) {
+                for(const char *str = arg; *str && endptr != str;
+                        endptr = 0) {
 
                     long from = strtol(str, &endptr, 10);
                     if(endptr == str) {
@@ -250,7 +267,7 @@ int main(int argc, const char * const *argv) {
                 //
                 //   --plug "0 1 1 2"
                 //
-                //           filter connections ==> (F_0:PORT_1) --> (F_1:PORT_2)
+                //  filter connections ==> (F_0:PORT_1) --> (F_1:PORT_2)
                 //
 
                 endptr = 0;
@@ -417,7 +434,8 @@ int main(int argc, const char * const *argv) {
             case 'R':
 
                 if(ready) {
-                    fprintf(stderr, "--ready with stream already ready\n");
+                    fprintf(stderr, "--ready with stream already"
+                            " ready\n");
                     return 1;
                 } else if(!app) {
                     fprintf(stderr, "--ready with no filters loaded\n");
