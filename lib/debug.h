@@ -122,7 +122,13 @@ extern void qs_assertAction(FILE *stream);
 #  ifdef SPEW_LEVEL_NONE
 #    undef SPEW_LEVEL_NONE
 #  endif
+#else
+#  ifndef SPEW_LEVEL_NONE
+#    define SPEW_LEVEL_NONE // The default.
+#  endif
 #endif
+
+
 
 
 

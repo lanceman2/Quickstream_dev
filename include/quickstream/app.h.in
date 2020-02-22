@@ -360,8 +360,26 @@ int qsStreamReady(struct QsStream *stream);
 extern
 int qsStreamStop(struct QsStream *stream);
 
-extern
-void qsSetVerboseLevel(int level);
 
+/** Set a level of verbosity for libquickstream.so
+ *
+ * A well conditioned library should not write to standard error output.
+ * Doing so should be considered intrusive, and would require users to
+ * make work-a-rounds in order to use standard error in their code.
+ * In developing libquickstream.so we found it necessary to use standard
+ * error in order to watch the code as it runs.  Users of
+ * libquickstream.so may remove such "error spew" automatically just not
+ * defining CPP macros when the library is compiled.
+ *
+ * \param level from 0, less, to 5 , more verbose.
+ */
+extern
+void qsSetSpewLevel(int level);
+
+/** Get the level of verbosity for libquickstream.so that was compiled in
+ *
+ */
+extern
+int qsGetLibSpewLevel(void)
 
 #endif // #ifndef __qsapp_h__
