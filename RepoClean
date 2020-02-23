@@ -149,7 +149,7 @@ rm -f\
 cd dev_tests
 rm -rf\
  qb_build/\
- dev_tests/scc-snapshots-6.80_src/
+ scc-snapshots-*_src
 rm -f\
  *.tmp\
  assert\

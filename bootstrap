@@ -35,6 +35,7 @@ cd $(dirname ${BASH_SOURCE[0]})
 
 # We define "bootstrap", *.bs, scripts as scripts that generate files that
 # are needed for a tarball form of source code.
+# for example: ./lib/quickstream/plugins/filters/tests/gen_makefile.am.bs
 for script in $(find . -name '*.bs') ; do
     set +x
     echo "running $script"
@@ -52,8 +53,10 @@ for f in NEWS README AUTHORS ChangeLog ; do
     fi
 done
 
+
 # make RMS happy.
 echo -e "This is a pre-release generated file\n\nSee file LICENSE\n" > COPYING
+
 
 ./RELEASE.bash configure.ac.rl > configure.ac
 

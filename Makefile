@@ -1,3 +1,10 @@
+# This file is for building and installing quickstream with quickbuild
+# not GNU autotools.  You can build and install quickstream with GNU
+# autotools.
+#
+# The make files with name 'makefile' are generated from 'makefile.am'
+# using GNU autotools, specifically GNU automake; and we used the make
+# file name 'Makefile' and sometimes 'GNUmakefile' for using quickbuild.
 
 SUBDIRS :=\
  include/quickstream\
@@ -5,8 +12,8 @@ SUBDIRS :=\
  lib/quickstream/misc\
  bin\
  lib/quickstream/plugins/filters\
- share/doc/quickstream\
- share/bash-completion/completions
+ share/bash-completion/completions\
+ share/doc/quickstream
 
 
 ifeq ($(strip $(subst cleaner, clean, $(MAKECMDGOALS))),clean)

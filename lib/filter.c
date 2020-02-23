@@ -31,8 +31,6 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
     if(f == 0) f = stderr;
 
     char *path = GetPluginPath("filters", filterName);
-    // It should be a full path now.
-    DASSERT(path[0] == '/', "");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 

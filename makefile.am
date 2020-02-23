@@ -1,49 +1,61 @@
 
 docdir = share/doc/quickstream
-plugindir = lib/quickstream/plugins/filters
+
 
 SUBDIRS =\
  include/quickstream\
  lib\
+ lib/quickstream/misc\
  bin\
- $(plugindir)\
+ lib/quickstream/plugins/filters\
+ share/bash-completion/completions\
  $(docdir)
 
-#DISTCLEANFILES +=
 
+#DISTCLEANFILES +=
 
 # docfiles From running from a clean top source directory:
 # 
 # find share/doc/quickstream share/doc/quickstream/html share/doc/quickstream/images -type f,l -printf ' %p\\\n' | sed -e 's/share\/doc\/quickstream/\$\(docdir\)/g'
 #
 docfiles =\
- $(docdir)/quickstream_complex.dot\
- $(docdir)/quickstream_simple.dot\
- $(docdir)/images/README\
  $(docdir)/stateExpaned.dot\
- $(docdir)/stateSimple.dot\
- $(docdir)/Doxyfile.in\
  $(docdir)/prefix.make.in\
- $(docdir)/mainpage.dox\
- $(docdir)/README\
+ $(docdir)/stateSimple.dot\
+ $(docdir)/images/README\
+ $(docdir)/simpleFlow.dot.bl\
+ $(docdir)/Doxyfile.in\
+ $(docdir)/makefile.am\
  $(docdir)/html/README\
+ $(docdir)/README\
+ $(docdir)/mainpage.dox.in\
+ $(docdir)/complexFlow.dot.bl\
+ $(docdir)/stdinStdout.dot.bl\
+ $(docdir)/jobFlow.dot\
  $(docdir)/Makefile\
  $(docdir)/html/README\
  $(docdir)/images/README
 
+
 # quickbuild_makefiles is from running:
 #
 # find -name Makefile -prune -printf ' %P\\\n'
+# find -name GNUmakefile -prune -printf ' %P\\\n'
 #
 quickbuild_makefiles =\
- $(docdir)/Makefile\
  include/quickstream/Makefile\
- dev_tests/Makefile\
- $(plugindir)/Makefile\
- $(plugindir)/tests/Makefile\
+ share/doc/quickstream/Makefile\
+ share/bash-completion/completions/Makefile\
+ lib/quickstream/misc/Makefile\
+ lib/quickstream/plugins/filters/tests/Makefile\
+ lib/quickstream/plugins/filters/Makefile\
  lib/Makefile\
+ bin/Makefile\
+ dev_tests/Makefile\
  Makefile\
- bin/Makefile
+ tests/GNUmakefile\
+ tests/interactive_tests/GNUmakefile\
+ tests/filters/GNUmakefile
 
 
 # dev_tests files
@@ -52,8 +64,14 @@ quickbuild_makefiles =\
 #
 dev_tests =\
  dev_tests/run.c\
+ dev_tests/install_valgrind.bash\
  dev_tests/test_qsError.c\
- dev_tests/run2.c
+ dev_tests/run2.c\
+ dev_tests/assert.c\
+ dev_tests/getOpts.c\
+ dev_tests/quickstream_00\
+ dev_tests/linesOfCCode.bash\
+ dev_tests/README
 
 
 EXTRA_DIST =\
@@ -67,8 +85,9 @@ EXTRA_DIST =\
  README.md\
  RELEASE.bash\
  RepoClean\
+ config.make.example.rl\
  config.make.example\
+ lib/qb_install_quickstream.pc.bash\
  $(docfiles)\
  $(quickbuild_makefiles)\
  $(dev_tests)
-

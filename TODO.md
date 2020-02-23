@@ -4,9 +4,6 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- write qsSetVerboseLevel()
-- bash completion for the quickstream program
-  - test bash completion with env QS_MODULE_PATH set
 - test/fix installation with GNU autotools
 - fix the DSPEW INFO WARN macros with API options like
    qsSetVerboseLevel(LEVEL )  prints to stderr.

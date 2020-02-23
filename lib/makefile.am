@@ -4,18 +4,19 @@ lib_LTLIBRARIES = libquickstream.la
 
 libquickstream_la_SOURCES =\
  app.c\
- filter.c\
- filterAPI.c\
- stream.c\
- debug.c\
- opts.c\
  buffer.c\
+ debug.c\
+ filterAPI.c\
+ filter.c\
  flow.c\
  makeRingBuffer.c\
+ opts.c\
+ stream.c\
  streamLaunch.c\
  debug.h\
  filterList.h\
  GetPath.h\
+ flowJobLists.h\
  qs.h
 
 libquickstream_la_LDFLAGS = -lpthread -ldl -lrt -export-symbols-regex '^qs'
