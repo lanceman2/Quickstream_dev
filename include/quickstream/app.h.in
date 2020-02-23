@@ -378,8 +378,9 @@ void qsSetSpewLevel(int level);
 
 /** Get the level of verbosity for libquickstream.so that was compiled in
  *
+ * \return a number from 0, being silent, to 5, being very verbose.
  */
 extern
-int qsGetLibSpewLevel(void)
+int qsGetLibSpewLevel(void);
 
 #endif // #ifndef __qsapp_h__

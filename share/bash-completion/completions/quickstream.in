@@ -42,7 +42,14 @@ _quickstream()
 
         -c|--connect)
             COMPREPLY=( ""
-            "filter indexes like \"0 1 3 4\" or none to connect all"
+            "filter indexes like \"0 1\" or none for all loaded"
+            )
+            return 0
+            ;;
+
+        -p|--plug)
+            COMPREPLY=( ""
+            "filter indexes and ports like \"0 1 3 4\""
             )
             return 0
             ;;

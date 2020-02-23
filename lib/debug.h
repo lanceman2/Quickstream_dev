@@ -66,26 +66,27 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 
 
-extern void qs_spew(FILE *stream, int errn, const char *pre, const char *file,
+extern void qs_spew(int level, FILE *stream, int errn, const char *pre, const char *file,
         int line, const char *func, bool bufferIt, const char *fmt, ...)
 #ifdef __GNUC__
         // check printf format errors at compile time:
-        __attribute__ ( ( format (printf, 8, 9 ) ) )
+        __attribute__ ( ( format (printf, 9, 10 ) ) )
 #endif
         ;
+
 
 extern void qs_assertAction(FILE *stream);
 
 
 
-#  define _SPEW(stream, errn, bufferIt, pre, fmt, ... )\
-     qs_spew(stream, errn, pre, __BASE_FILE__, __LINE__,\
+#  define _SPEW(level, stream, errn, bufferIt, pre, fmt, ... )\
+     qs_spew(level, stream, errn, pre, __BASE_FILE__, __LINE__,\
         __func__, bufferIt, fmt, ##__VA_ARGS__)
 
 #  define ASSERT(val, ...) \
     do {\
         if(!((bool) (val))) {\
-            _SPEW(SPEW_FILE, errno, true, "ASSERT("#val") failed: ", "" __VA_ARGS__);\
+            _SPEW(1, SPEW_FILE, errno, true, "ASSERT("#val") failed: ", "" __VA_ARGS__);\
             qs_assertAction(SPEW_FILE);\
         }\
     }\
@@ -139,31 +140,31 @@ extern void qs_assertAction(FILE *stream);
 #endif
 
 #ifdef SPEW_LEVEL_NONE
-#define ERROR(...) _SPEW(0/*no spew stream*/, errno, true, "ERROR: ", "" __VA_ARGS__)
+#define ERROR(...) _SPEW(0, 0/*no spew stream*/, errno, true, "ERROR: ", "" __VA_ARGS__)
 #else
-#define ERROR(...) _SPEW(SPEW_FILE, errno, true, "ERROR: ", "" __VA_ARGS__)
+#define ERROR(...) _SPEW(1, SPEW_FILE, errno, true, "ERROR: ", "" __VA_ARGS__)
 #endif
 
 #ifdef SPEW_LEVEL_WARN
-#  define WARN(...) _SPEW(SPEW_FILE, errno, false, "WARN: ", "" __VA_ARGS__)
+#  define WARN(...) _SPEW(2, SPEW_FILE, errno, false, "WARN: ", "" __VA_ARGS__)
 #else
 #  define WARN(...) /*empty macro*/
 #endif 
 
 #ifdef SPEW_LEVEL_NOTICE
-#  define NOTICE(...) _SPEW(SPEW_FILE, errno, false, "NOTICE: ", "" __VA_ARGS__)
+#  define NOTICE(...) _SPEW(3, SPEW_FILE, errno, false, "NOTICE: ", "" __VA_ARGS__)
 #else
 #  define NOTICE(...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_INFO
-#  define INFO(...)   _SPEW(SPEW_FILE, 0, false, "INFO: ", "" __VA_ARGS__)
+#  define INFO(...)   _SPEW(4, SPEW_FILE, 0, false, "INFO: ", "" __VA_ARGS__)
 #else
 #  define INFO(...) /*empty macro*/
 #endif
 
 #ifdef SPEW_LEVEL_DEBUG
-#  define DSPEW(...)  _SPEW(SPEW_FILE, 0, false, "DEBUG: ", "" __VA_ARGS__)
+#  define DSPEW(...)  _SPEW(5, SPEW_FILE, 0, false, "DEBUG: ", "" __VA_ARGS__)
 #else
 #  define DSPEW(...) /*empty macro*/
 #endif

@@ -35,7 +35,9 @@
 
 #define DEFAULT_MAXTHREADS      7
 // This is the spew level just for the quickstream program
-#define DEFAULT_SPEW_LEVEL      2
+// LEVEL maybe debug, info, notice, warn, error, and
+// off which translates to: 5, 4, 3, 2, 1, and 0
+#define DEFAULT_SPEW_LEVEL      4
 
 #define STRING(a)   _STR(a)
 #define _STR(a)     #a
@@ -140,7 +142,7 @@ static struct QsOption
         " brackets (with spaces around the brackets) are passed to"
         " the module construct() function.  For example:\n"
         "\n"
-        "      --filter stdin { --nagotOne = true;me input }\n"
+        "      --filter stdin { --name input }\n"
         "\n"
         "will load the \"stdin\" filter module and pass the arguments"
         " in the brackets, --name input, to the filter module loader,"
@@ -222,10 +224,16 @@ static struct QsOption
     { "--verbose", 'v', "LEVEL",                  false,
 
         "print more information to stderr as quickstream runs."
-        "  LEVEL maybe debug, info, notice, warn, error, and off;"
-        " in upper or lower case.  This is more of a debugging tool."
+        "  LEVEL maybe debug, info, notice, warn, error, and off"
+        " in upper or lower case;"
+        " or correspondingly the numbers 5, 4, 3, 2, 1, and 0."
+        "  This is more of a debugging tool."
         "  Don't try to give to much meaning to the LEVEL terms used."
-        "  They are just levels where debug means more spew."
+        "  They are just levels where debug means more spew.\n"
+        "\n"
+        "The libquickstream library may be compiled with the more"
+        " verbose spewing levels removed for better performance.  See"
+        " function qsGetLibSpewLevel() for details."
     },
 /*----------------------------------------------------------------------*/
     { "--version", 'V', 0,                  false/*arg_optional*/,

@@ -16,7 +16,7 @@
 
 
 // This file is compiled into libquickstream.
-// When this file was compiled the spew level was
+// When this file was compiled the spew level was:
 #ifdef SPEW_LEVEL_DEBUG
 #  define COMPILED_SPEW_LEVEL 5
 #endif
@@ -43,7 +43,6 @@
 #ifndef COMPILED_SPEW_LEVEL
 #  define COMPILED_SPEW_LEVEL 0
 #endif
-static const int CompiledSpewLevel = COMPILED_SPEW_LEVEL;
 
 // So other code linking to this library may have higher spew levels, but
 // the highest spew level from the code compiled with this value of
@@ -56,20 +55,23 @@ static const int CompiledSpewLevel = COMPILED_SPEW_LEVEL;
 
 // LEVEL maybe debug, info, notice, warn, error, and
 // off which translates to: 5, 4, 3, 2, 1, and 0
-static int spewLevel = 5;
+static int spewLevel = COMPILED_SPEW_LEVEL;
 
 
 int qsGetLibSpewLevel(void) {
-    return CompiledSpewLevel;
+    // Returns the compile time spew level.
+    return COMPILED_SPEW_LEVEL;
 }
 
 
+// This is where the user of libquickstream can quit down the code in the
+// library, assuming that the library was not quit already.
 void qsSetSpewLevel(int level) {
     if(level > 5) level = 5;
     else if(level < 0) level = 0;
     spewLevel = level;
+    DSPEW("Spew level set to %d", level);
 }
-
 
 
 // We make the access to qsErrorBuffer thread safe:
@@ -196,9 +198,16 @@ static void _vspew(FILE *stream, int errn, const char *pre, const char *file,
 }
 
 
-void qs_spew(FILE *stream, int errn, const char *pre, const char *file,
-        int line, const char *func, bool bufferIt, const char *fmt, ...)
+void qs_spew(int levelIn, FILE *stream, int errn,
+        const char *pre, const char *file,
+        int line, const char *func,
+        bool bufferIt, const char *fmt, ...)
 {
+    if(levelIn > spewLevel)
+        // The spew level in is larger (more verbose) than one we let
+        // spew.
+        return;
+
     va_list ap;
     va_start(ap, fmt);
     _vspew(stream, errn, pre, file, line, func, bufferIt, fmt, ap);
