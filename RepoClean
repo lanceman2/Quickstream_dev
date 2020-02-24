@@ -165,7 +165,7 @@ cd -
 # Remove some files from tests/
 
 rm -rf tests/qb_build/ tests/filters/qb_build/
-rm -f tests/*.tmp tests/filters/my_stdout.so tests/tests
+rm -f tests/*.tmp tests/filters/my_stdout.so
 
 
 # Remove some files from tests/interactive_tests/
