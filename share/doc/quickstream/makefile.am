@@ -31,11 +31,12 @@ Doxyfile: Doxyfile.in
 	rm $@.tmp
 
 
-$(DOX_TARGET): Doxyfile $(DOX_INFILES)
+$(DOX_TARGET): Doxyfile $(DOX_INFILES) quickstreamIntro.htm quickstreamOptions.htm
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search
 	rm -rf latex
 	doxygen
+
 
 
 %.dot: %.dot.bl
