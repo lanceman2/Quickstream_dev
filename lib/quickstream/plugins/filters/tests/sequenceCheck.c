@@ -177,11 +177,12 @@ int input(void *buffers[], const size_t lens[],
 
         if(i < numOutputs)
             comp = out = qsGetOutputBuffer(i, len, len);
-
-        if(compare[i])
+        else {
+            DASSERT(compare[i]);
             // This has no corresponding output for this input port
             // so we use a buffer that we allocated in start().
             comp = compare[i];
+        }
 
         randomString_get(rs + i, len, comp);
 
