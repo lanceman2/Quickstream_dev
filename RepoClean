@@ -198,6 +198,6 @@ cd -
 
 cd lib/quickstream/misc/
 rm -rf .deps/
-rm -f *.o
+rm -f *.o quickstreamHelp.c
 cd -
 

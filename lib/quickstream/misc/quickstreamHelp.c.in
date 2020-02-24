@@ -94,7 +94,9 @@ static const char *usage =
 "&&"
 "\n"
 "\n"
-"     -filter stdin  and  -filter=stdin  are not valid option arguments.";
+"     -filter stdin  and  -filter=stdin  are not valid option arguments.\n"
+"\n"
+"  See the quickstream homepage at @PACKAGE_URL@." ;
 
 
 

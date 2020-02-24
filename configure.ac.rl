@@ -129,6 +129,7 @@ AC_CONFIG_FILES(
  share/doc/quickstream/makefile
  share/bash-completion/completions/makefile
  lib/quickstream/misc/makefile
+ lib/quickstream/misc/quickstreamHelp.c
 )
 
 AC_OUTPUT
