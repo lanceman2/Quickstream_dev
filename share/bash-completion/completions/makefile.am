@@ -1,0 +1,9 @@
+
+bashcompdir = $(sharedir)/bash-completion/completions
+
+bashcomp_DATA = quickstream
+
+
+quickstream:
+	./quickstream.bl
+

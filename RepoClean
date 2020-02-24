@@ -180,3 +180,16 @@ rm -f lib/quickstream/plugins/filters/tests/makefile.am
 rm -rf lib/quickstream/misc/qb_build
 rm -f lib/quickstream/misc/qsOptions.h lib/quickstream/misc/quickstreamHelp
 
+
+cd lib/quickstream/plugins/filters/tests/
+rm -f Sequence X0 X1
+cd -
+
+cd share/doc/quickstream
+rm -f complexFlow.dot simpleFlow.dot stdinStdout.dot mainpage.dox quickstreamIntro.htm quickstreamOptions.htm
+cd -
+
+cd share/bash-completion/completions
+rm -f quickstream
+cd -
+

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# This script builds quickstream the bash completion script
+# from quickstream.in
+
+set -e
+
+helper="../../../lib/quickstream/misc/quickstreamHelp"
+
+opts="$($helper -O)"
+opts_noarg="$($helper -w)"
+
+
+sed\
+ -e "s/@GEN_FILE@/\# This is a generated file/g"\
+ -e "s/@OPTS@/$opts/g"\
+ -e "s/@OPTS_NOARG@/$opts_noarg/g"\
+ quickstream.in > quickstream
+
+

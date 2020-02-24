@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
+#include <signal.h>
 
 /*  description special sequences that make HTML markup that is
  *  in the description.  Of course they mean something else for
@@ -44,6 +45,17 @@
 
 
 #define PROG   "quickstream"
+
+
+static void
+catcher(int sig) {
+
+    fprintf(stderr,
+            "Caught signal number %d\n\n"
+            "Pid %u will sleep now\n",
+            sig, getpid());
+    while(1) usleep(10000);
+}
 
 
 
@@ -426,13 +438,15 @@ printDescription(const struct QsOption *opt, int s0, int s1, int s2) {
 
 
 int main(int argc, char **argv) {
-    
+   
+    signal(SIGSEGV, catcher);
+
     {
         ssize_t n = 2;
         if(argc > 1)
             n = strlen(argv[1]);
 
-        if(argc < 2 || argc > 3 || n != 2 ||
+        if(argc != 2 || n != 2 ||
                 argv[1][0] != '-' || 
                 (argv[1][1] != 'c' && argv[1][1] != 'h' &&
                  argv[1][1] != 'i' && argv[1][1] != 'o' &&
@@ -466,6 +480,7 @@ int main(int argc, char **argv) {
                 "    -w  print all options without ARGS in a map\n"
                 "\n",
                 argv[0]);
+            return 1;
         }
     }
 

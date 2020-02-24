@@ -4,6 +4,7 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 datadir=@datadir@
+datarootdir=@datarootdir@
 
 homepage=@PACKAGE_URL@
 

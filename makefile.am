@@ -88,6 +88,7 @@ EXTRA_DIST =\
  config.make.example.rl\
  config.make.example\
  lib/qb_install_quickstream.pc.bash\
+ share/bash-completion/completions/quickstream.bl\
  $(docfiles)\
  $(quickbuild_makefiles)\
  $(dev_tests)
