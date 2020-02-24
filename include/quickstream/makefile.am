@@ -1,5 +1,5 @@
 
 BUILT_SOURCES = app.h
 
-pkginclude_HEADERS = app.h filter.h
+pkginclude_HEADERS = app.h filter.h filter.hpp
 
