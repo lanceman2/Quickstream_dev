@@ -1,13 +1,18 @@
 #!/bin/bash
 
-set -eo pipefail
 
-cd "$(dirname ${BASH_SOURCE[0]})"
+# We make this work for the case when GNU autotools puts
+# plugins in a .libs directory and the quickbuild case:
+export QS_FILTER_PATH=\
+../../../lib/quickstream/plugins/filters/tests:\
+../../../lib/quickstream/plugins/filters/tests/.libs:\
+../../../lib/quickstream/plugins/filters/.libs
+
 
 ../../../bin/quickstream\
  -f stdin { --name input }\
- -f tests/copy { --name transWarpConduit }\
- -f tests/copy { --name malulator }\
+ -f copy { --name transWarpConduit }\
+ -f copy { --name malulator }\
  -f stdout { --name output }\
  -c\
  -g > simpleFlow.dot

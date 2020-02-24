@@ -1,3 +1,9 @@
 #!/bin/bash
 
+# We make this work for the case when GNU autotools puts
+# plugins in a .libs directory and the quickbuild case:
+export QS_FILTER_PATH=\
+../../../lib/quickstream/plugins/filters/.libs
+
+
 ../../../bin/quickstream -f stdin -f stdout -c --dot > stdinStdout.dot

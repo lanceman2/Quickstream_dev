@@ -1,16 +1,10 @@
-# TODO: make this more consistent with makefile.am
-
-root := ../../..
 
 INSTALL_DIR = $(PREFIX)/share/bash-completion/completions
 
-IN_VARS := OPTS GEN_FILE OPTS_NOARG
+BUILD := quickstream
 
-helper := $(root)/lib/quickstream/misc/quickstreamHelp
+quickstream: quickstream.build quickstream.IN
+	./quickstream.build > $@
 
-OPTS := $(shell $(helper) -O)
-OPTS_NOARG := $(shell $(helper) -w)
 
-GEN_FILE := \# This is a generated file
-
-include $(root)/quickbuild.make
+include ../../../quickbuild.make

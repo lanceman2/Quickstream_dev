@@ -21,6 +21,9 @@ DOX_INFILES =\
  mainpage.dox
 
 
+export QS_FILTER_PATH = ../../../lib/quickstream/plugins/filters/.libs:../../../lib/quickstream/plugins/filters/tests/.libs
+
+
 Doxyfile: Doxyfile.in
 	@echo "# This is a generated file" > $@.tmp
 	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@.tmp

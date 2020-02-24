@@ -1,11 +1,20 @@
 #!/bin/bash
 
 
+# We make this work for the case when GNU autotools puts
+# plugins in a .libs directory and the quickbuild case:
+export QS_FILTER_PATH=\
+../../../lib/quickstream/plugins/filters/tests:\
+../../../lib/quickstream/plugins/filters/tests/.libs:\
+../../../lib/quickstream/plugins/filters/.libs
+
+
 ../../../bin/quickstream\
+ --verbose 5\
  -f stdin\
- -f tests/copy\
- -f tests/copy { --name foodog }\
- -f tests/copy { --name cow_milker }\
+ -f copy\
+ -f copy { --name foodog }\
+ -f copy { --name cow_milker }\
  -f stdout\
  -p "0 1 0 0"\
  -p "0 2 0 0"\

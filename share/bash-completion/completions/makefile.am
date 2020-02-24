@@ -1,11 +1,9 @@
-# TODO: make this more consistent with Makefile in the quickbuild method
-# of building.
 
-bashcompdir = $(sharedir)/bash-completion/completions
+bashcompdir = $(datarootdir)/bash-completion/completions
 
 bashcomp_DATA = quickstream
 
 
-quickstream:
-	./quickstream.build
+quickstream: quickstream.build quickstream.IN
+	./quickstream.build > $@
 
