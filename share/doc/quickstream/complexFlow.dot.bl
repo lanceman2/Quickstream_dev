@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 ../../../bin/quickstream\
  -f stdin\
  -f tests/copy\

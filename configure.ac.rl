@@ -141,7 +141,7 @@ AC_MSG_RESULT([
   ------------------------------------------------------------
 
               extra debug code (--enable-debug): $debug
-                 extra spew code (--spew-level): $spew_level
+          extra spew code (--enable-spew-level): $spew_level
 
                    C Compiler (CC): $CC
    C Preprocesser Flags (CPPFLAGS): $CPPFLAGS

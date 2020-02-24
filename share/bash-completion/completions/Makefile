@@ -1,3 +1,4 @@
+# TODO: make this more consistent with makefile.am
 
 root := ../../..
 

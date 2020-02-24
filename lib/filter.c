@@ -30,7 +30,7 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
 
     if(f == 0) f = stderr;
 
-    char *path = GetPluginPath("filters", filterName);
+    char *path = GetPluginPath("filters/", filterName);
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
@@ -121,7 +121,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         return 0;
     }
 
-    char *path = GetPluginPath("filters", fileName);
+    char *path = GetPluginPath("filters/", fileName);
 
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);

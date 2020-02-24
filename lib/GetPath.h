@@ -2,10 +2,13 @@
 // Returned malloc() memory must be free()ed.
 // or 0 if it's not found.
 //
+// example: category = "filters/"
+//
 // This returns a value if we can access it with the composed path.
 //
 //
-static inline char *GetPluginPathFromEnv(const char *category,
+static inline char *GetPluginPathFromEnv(const char *envs,
+        const char *category,
         const char *name)
 {
     char *env = 0;
@@ -15,25 +18,15 @@ static inline char *GetPluginPathFromEnv(const char *category,
         // TODO: We could find the longest directory path string in this
         // colon separated path list
 
-        // TODO: Maybe more than one environment variable can
-        // be added to this list of C strings.
-        const char *envs[] = { "QS_MODULE_PATH", 0 };
-
-        const char **e = envs; // dummy pointer.
-
-        for(;*e; ++e)
-            if((env = getenv(*e)))
-                break;
-
-        // We are now done with the envs and stack memory pointers.
-
-        if(!env) return env; // move on to the next method.
+        if(!(env = getenv(envs)))
+            // move on to the next method.
+            return env;
 
         envLen = strlen(env);
 
-        DASSERT(*env, "env QS_MODULE_PATH has zero length");
+        DASSERT(*env, "env \"%s\" has zero length", envs);
 
-        DSPEW("Got env: %s=%s", envs[0], env);
+        DSPEW("Got env: %s=%s", envs, env);
 
         // We make a copy of this colon separated path list.
         env = strdup(env);
@@ -70,10 +63,10 @@ static inline char *GetPluginPathFromEnv(const char *category,
 
     }
 
-    // len = strlen("$env" + '/' + category + '/' + name + ".so")
+    // len = strlen("$env" + '/' + category + name + ".so")
     // More than long enough.
     const ssize_t len = envLen + strlen(category) +
-            strlen(name) + 6/* for '//' and ".so" and '\0' */;
+            strlen(name) + 5/* for '//' and ".so" and '\0' */;
 
     // In case it's stupid long...
     DASSERT(len > 0 && len < 1024*1024);
@@ -90,7 +83,7 @@ static inline char *GetPluginPathFromEnv(const char *category,
     // So now envPaths[] is an array of strings that is Null terminated.
     for(char **path = envPaths; *path; ++path)
     {
-        snprintf(buf, len, "%s/%s/%s%s", *path, category, name, suffix);
+        snprintf(buf, len, "%s/%s%s%s", *path, category, name, suffix);
 
         if(access(buf, R_OK) == 0)
         {
@@ -119,8 +112,10 @@ static inline char *GetPluginPathFromEnv(const char *category,
 
 //
 // A thread-safe path finder that looks at /proc/self which is the same as
-// /proc/<PID>, which PID is the processes id number, like 2342.  Note
+// /proc/<PID>, which PID is the processes id number, like 2342.  Note,
 // this is linux specific code using the linux /proc/ file system.
+//
+// example: category = "filters/"
 //
 // The returned pointer must be free()ed.
 static inline char *GetPluginPath(const char *category, const char *name)
@@ -143,15 +138,24 @@ static inline char *GetPluginPath(const char *category, const char *name)
         return path;
     }
 
-
     DASSERT(category && strlen(category) >= 1);
 
     char *buf;
 
-    if((buf = GetPluginPathFromEnv(category, name)))
-        return buf;
+    if(strcmp(category, "filters/") == 0) {
+        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category, name)))
+            return buf;
+        if((buf = GetPluginPathFromEnv("QS_FILTER_PATH", "", name)))
+            return buf;
+    }
+#ifdef DEBUG
+    else
+        ASSERT(0, "category != \"filters/\" Need "
+                "to add category \"%s\"", category);
+#endif
 
-    // postLen = strlen("/lib/quickstream/plugins/" + category + '/' + name)
+
+    // postLen = strlen("/lib/quickstream/plugins/" + category + name)
     const ssize_t postLen =
         strlen(PRE) + strlen(category) +
         strlen(name) + 5/* for '/' and ".so" and '\0' */;
@@ -200,12 +204,11 @@ static inline char *GetPluginPath(const char *category, const char *name)
     // If we counted chars correctly strcat() should be safe.
 
     DASSERT(strlen(buf) + strlen(PRE) +
-            strlen(category) + strlen("/") +
+            strlen(category) +
             strlen(name) + 1 < (size_t) bufLen);
 
     strcat(buf, PRE);
     strcat(buf, category);
-    strcat(buf, "/");
     strcat(buf, name);
 
     // Reuse the bufLen variable.

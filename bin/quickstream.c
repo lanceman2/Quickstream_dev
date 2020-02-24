@@ -154,7 +154,7 @@ int main(int argc, const char * const *argv) {
 
             case 'v':
 
-                if(!app) {
+                if(!arg) {
                     fprintf(stderr, "--verbose with no level\n");
                     return usage(STDERR_FILENO);
                 }

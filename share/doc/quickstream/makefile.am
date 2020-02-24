@@ -14,19 +14,17 @@ DOX_TARGET = html/index.html
 html_DATA = $(DOX_TARGET)
 
 
-topdir = ../../..
-
 DOX_INFILES =\
- $(topdir)/include/quickstream/app.h\
- $(topdir)/include/quickstream/filter.h\
- $(topdir)/bin/quickstream.c\
+ $(top_srcdir)/include/quickstream/app.h\
+ $(top_srcdir)/include/quickstream/filter.h\
+ $(top_srcdir)/bin/quickstream.c\
  mainpage.dox
 
 
 Doxyfile: Doxyfile.in
 	@echo "# This is a generated file" > $@.tmp
 	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@.tmp
-	$(topdir)/RELEASE.bash $@.tmp > $@
+	$(top_srcdir)/RELEASE.bash $@.tmp > $@
 	rm $@.tmp
 
 
