@@ -1,6 +1,13 @@
 # This needs to be made more consistent with Makefile
 # which is used when building and installing with quickbuild.
 
+
+
+# complexFlow.dot.bl simpleFlow.dot.bl stdinStdout.dot.bl
+
+BUILT_SOURCES = images/complexFlow.png images/simpleFlow.png images/stdinStdout.png
+
+
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET = html/index.html
 
@@ -17,14 +24,44 @@ DOX_INFILES =\
 
 
 Doxyfile: Doxyfile.in
-	@echo "# This is a generated file" > $@
-	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@
+	@echo "# This is a generated file" > $@.tmp
+	sed $< -e 's!@DOX_INFILES@!$(DOX_INFILES)!g' >> $@.tmp
+	$(topdir)/RELEASE.bash $@.tmp > $@
+	rm $@.tmp
+
 
 $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
 	rm -rf html/search
 	rm -rf latex
 	doxygen
+
+
+%.dot: %.dot.bl
+	./$<
+
+images/%.svg: %.dot
+	dot $< -T svg > $@
+
+images/%.png: %.dot
+	dot $< -T png > $@
+
+
+clean-local:
+	cd html/ && rm -f *.png *.js *.css *.png *.html *.md5 *.map
+	rm -rf html/search
+	rm -rf latex
+
+
+quickstreamIntro.htm:
+	$(top_srcdir)/lib/quickstream/misc/quickstreamHelp -i > $@
+
+quickstreamOptions.htm:
+	$(top_srcdir)/lib/quickstream/misc/quickstreamHelp -o > $@
+
+
+mainpage.dox: mainpage.dox.in
+	$(top_srcdir)/RELEASE.bash $< '//' > $@
 
 
 install-exec-hook:

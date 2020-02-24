@@ -103,6 +103,8 @@ int usage(int fd) {
 
     execl(buf, buf, "-h", NULL);
 
+    fprintf(stderr, "execl(\"%s\",,) failed\n", buf);
+
     return 1; // non-zero error code
 }
 
@@ -424,7 +426,7 @@ int main(int argc, const char * const *argv) {
                     if(strcmp(argv[i], "}") == 0) ++i;
                 }
 
-                if(spewLevel >= 4) {
+                if(spewLevel >= 5 && fargc) {
                     fprintf(stderr, "Got filter args[%d]= {", fargc);
                     for(int j=0; j<fargc; ++j)
                         fprintf(stderr, "%s ", fargv[j]);

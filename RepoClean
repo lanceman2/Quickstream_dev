@@ -86,6 +86,8 @@ for dir in .\
  include/quickstream\
  lib/quickstream/plugins/filters\
  lib/quickstream/plugins/filters/tests\
+ share/bash-completion/completions\
+ lib/quickstream/misc\
  $docdir ; do
     rm -f $dir/makefile.in $dir/makefile
 done
@@ -191,5 +193,10 @@ cd -
 
 cd share/bash-completion/completions
 rm -f quickstream
+cd -
+
+cd lib/quickstream/misc/
+rm -rf .deps/
+rm -f *.o
 cd -
 
