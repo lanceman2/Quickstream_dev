@@ -1,0 +1,11 @@
+
+quickstreamHelp_SOURCES = quickstreamHelp.c
+
+BUILT_SOURCES = qsOptions.h
+
+miscdir = $(libdir)/quickstream/misc
+miscdir_DATA = quickstreamHelp
+
+qsOptions.h: quickstreamHelp
+	./quickstreamHelp -c > $@
+
