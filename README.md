@@ -107,7 +107,8 @@ you want run:
 ./bootstrap
 ```
 
-which will generate many files needed for a tarball release.  Then run:
+which will download/generate many files needed for a tarball release.
+Then run:
 
 ```console
 ./configure
