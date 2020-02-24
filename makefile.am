@@ -73,6 +73,44 @@ dev_tests =\
  dev_tests/linesOfCCode.bash\
  dev_tests/README
 
+# tests/
+#
+# find tests -type f -printf ' %p\\\n'
+#
+tests =\
+ tests/run_tests\
+ tests/interactive_tests/GNUmakefile\
+ tests/interactive_tests/024_bash-completion\
+ tests/interactive_tests/120_sequence\
+ tests/interactive_tests/002\
+ tests/206_localPlugin\
+ tests/GNUmakefile\
+ tests/090_sequence\
+ tests/190_cpp\
+ tests/101_sequence\
+ tests/012\
+ tests/006_restart\
+ tests/050_sequence\
+ tests/200_localPlugin\
+ tests/170_passThrough\
+ tests/130_sequenceRestart\
+ tests/testsEnv\
+ tests/160_passThrough\
+ tests/005\
+ tests/080_sequence\
+ tests/110_sequence\
+ tests/README\
+ tests/007\
+ tests/030_sequence\
+ tests/216_localPlugin\
+ tests/070_sequence\
+ tests/120_sequence\
+ tests/150_passThrough\
+ tests/filters/GNUmakefile\
+ tests/filters/my_stdout.c\
+ tests/095_sequence\
+ tests/002
+
 
 EXTRA_DIST =\
  bootstrap\
@@ -88,7 +126,10 @@ EXTRA_DIST =\
  config.make.example.rl\
  config.make.example\
  lib/qb_install_quickstream.pc.bash\
- share/bash-completion/completions/quickstream.bl\
+ share/bash-completion/completions/quickstream.build\
+ share/bash-completion/completions/quickstream.IN\
  $(docfiles)\
  $(quickbuild_makefiles)\
- $(dev_tests)
+ $(dev_tests)\
+ $(tests)\
+ tests/tests
