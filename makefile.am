@@ -130,6 +130,7 @@ EXTRA_DIST =\
  share/bash-completion/completions/quickstream.build\
  share/bash-completion/completions/quickstream.IN\
  lib/quickstream/plugins/filters/tests/gen_makefile.am.bs\
+ include/quickstream/filter.hpp\
  $(docfiles)\
  $(quickbuild_makefiles)\
  $(dev_tests)\
