@@ -39,6 +39,7 @@ filterdir = \$(pkglibdir)/plugins/filters/tests
 
 EOF
 
+# Filter plugins
 
 echo -en "filter_LTLIBRARIES ="
 
@@ -47,13 +48,31 @@ filters=([a-z]*.c)
 for f in ${filters[@]} ; do
     echo -en "\\\\\n ${f%%.c}.la"
 done
+
+filters=([a-z]*.cpp)
+
+for f in ${filters[@]} ; do
+    echo -en "\\\\\n ${f%%.cpp}.la"
+done
+
 echo -e "\n"
+
+
+filters=([a-z]*.c)
 
 for f in ${filters[@]} ; do
     echo -e "${f%%.c}_la_SOURCES = ${f}"
 done
 
+filters=([a-z]*.cpp)
+
+for f in ${filters[@]} ; do
+    echo -e "${f%%.cpp}_la_SOURCES = ${f}"
+done
+
 echo -e "\n"
+
+
 
 
 hfiles=([a-zA-Z]*.h)

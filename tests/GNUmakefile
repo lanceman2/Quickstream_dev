@@ -3,7 +3,10 @@
 # If this directory is not recursed into from the directory above this we
 # recurse up a directory if make was run in this directory.
 ifeq ($(strip $(MAKELEVEL)),0)
+# We do not try to build in .. if this is using GNU autotools.
+ifeq ($(wildcard ../makefile)),)
 SUBDIRS := ..
+endif
 endif
 
 SUBDIRS += filters
