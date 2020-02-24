@@ -17,6 +17,9 @@ The quickstream starting point is this web page at
 https://github.com/lanceman2/quickstream.git, should it move we wish to
 keep that URL current.
 
+We keep the current Doxygen generated manual in html at
+https://lanceman2.github.io/quickstream.doc/html/index.html
+
 
 ## Development Status
 
@@ -491,10 +494,6 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/complexFlow.p
 ![job flow and related data structures](
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
 
-
-## Doxygen generated html
-
-https://lanceman2.github.io/quickstream.doc/html/index.html
 
 
 ## Developer notes
