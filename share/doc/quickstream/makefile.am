@@ -17,6 +17,7 @@ html_DATA = $(DOX_TARGET)
 DOX_INFILES =\
  $(top_srcdir)/include/quickstream/app.h\
  $(top_srcdir)/include/quickstream/filter.h\
+ $(top_srcdir)/include/quickstream/filter.hpp\
  $(top_srcdir)/bin/quickstream.c\
  mainpage.dox
 
