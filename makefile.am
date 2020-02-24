@@ -113,6 +113,7 @@ tests =\
 
 
 EXTRA_DIST =\
+ TODO.md\
  bootstrap\
  quickbuild\
  quickbuild.make\
@@ -128,8 +129,14 @@ EXTRA_DIST =\
  lib/qb_install_quickstream.pc.bash\
  share/bash-completion/completions/quickstream.build\
  share/bash-completion/completions/quickstream.IN\
+ lib/quickstream/plugins/filters/tests/gen_makefile.am.bs\
  $(docfiles)\
  $(quickbuild_makefiles)\
  $(dev_tests)\
- $(tests)\
- tests/tests
+ $(tests)
+
+# tests/tests is a symlink
+# putting tests/tests in EXTRA_DIST fails.
+# So we do this:
+dist-hook:
+	cp -d $(top_srcdir)/tests/tests $(distdir)/tests/
