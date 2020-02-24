@@ -1,8 +1,8 @@
 #include <iostream>
 #include <bitset>
 
-#include "quickstream/filter.h"
-#include "quickstream/filter.hpp"
+#include "../../../../../include/quickstream/filter.h"
+#include "../../../../../include/quickstream/filter.hpp"
 
 
 class Stdout: public QsFilter {

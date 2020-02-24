@@ -2,6 +2,7 @@
 
 set -e
 
+source testsEnv
 
 # A complex flow graph being run by one thread.
 ../bin/quickstream\

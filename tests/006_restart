@@ -2,6 +2,8 @@
 
 set -e
 
+source testsEnv
+
 ../bin/quickstream\
  -f tests/sequenceGen { --length 1000000 }\
  -f tests/sequenceCheck\

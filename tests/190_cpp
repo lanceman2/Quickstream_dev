@@ -2,6 +2,9 @@
 
 set -e
 
+source testsEnv
+
+
 in=$0.IN.tmp
 out=$0.OUT.tmp
 

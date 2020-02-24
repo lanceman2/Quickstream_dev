@@ -2,6 +2,8 @@
 
 set -e
 
+source testsEnv
+
 ../bin/quickstream\
  -f tests/sequenceGen { --length 102001 }\
  -f tests/passThrough\

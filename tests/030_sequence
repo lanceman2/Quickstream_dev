@@ -2,6 +2,7 @@
 
 set -e
 
+source testsEnv
 
 ../bin/quickstream\
  -f tests/sequenceGen\
