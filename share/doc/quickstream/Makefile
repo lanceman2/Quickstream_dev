@@ -58,8 +58,6 @@ DOX_INFILES =\
 
 
 
--include ../../config.make
-
 
 build: $(GEN_DOT) $(GEN_IMAGES) $(DOX_TARGET)
 
@@ -144,6 +142,8 @@ endif
 $(topdir)/include/quickstream/app.h: $(topdir)/include/quickstream/app.h.in
 	cd $(topdir)/include/quickstream && $(MAKE) app.h
 
+
+-include ../../../config.make
 
 INSTALL_DIR = $(PREFIX)/share/doc/quickstream
 
