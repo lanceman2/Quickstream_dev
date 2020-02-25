@@ -33,18 +33,14 @@ set -ex
 
 cd $(dirname ${BASH_SOURCE[0]})
 
+
 # We define "bootstrap", *.bs, scripts as scripts that generate files that
 # are needed for a tarball form of source code.
+# find . -name '*.bs'
 # for example: ./lib/quickstream/plugins/filters/tests/gen_makefile.am.bs
-for script in $(find . -name '*.bs') ; do
-    set +x
-    echo "running $script"
-    set -x
-    run="$(basename $script)"
-    cd "$(dirname $script)"
-    ./$run
-    cd -
-done
+cd lib/quickstream/plugins/filters/tests
+./gen_makefile.am.bs
+cd -
 
 
 for f in NEWS README AUTHORS ChangeLog ; do

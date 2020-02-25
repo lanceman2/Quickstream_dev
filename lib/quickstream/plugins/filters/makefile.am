@@ -8,3 +8,6 @@ filter_LTLIBRARIES = stdin.la stdout.la
 
 stdin_la_SOURCES = stdin.c
 stdout_la_SOURCES = stdout.c
+
+install-exec-hook:
+	cd $(DESTDIR)$(pkglibdir) && $(RM) $(pkglib_LTLIBRARIES)
