@@ -70,9 +70,6 @@ quickstreamIntro.htm: $(QS_DOC_GEN)
 quickstreamOptions.htm: $(QS_DOC_GEN)
 	$< -o > $@
 
-%.dot: %.dot.bl
-	./$<
-
 
 # WEB_DOCS_TARGET_DIR directory may be a git clone of the WEB_DOCS_URL
 # ../../../RELEASE.bash | grep WEB_DOCS_URL
@@ -173,6 +170,9 @@ $(DOX_TARGET): Doxyfile $(DOX_INFILES)
 	doxygen
 
 
+
+%.dot: %.dot.bl
+	./$<
 
 images/%.svg: %.dot
 	dot $< -T svg > $@

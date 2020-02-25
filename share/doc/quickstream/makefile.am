@@ -1,18 +1,32 @@
 # This needs to be made more consistent with Makefile
 # which is used when building and installing with quickbuild.
 
+images =\
+ images/complexFlow.png\
+ images/simpleFlow.png\
+ images/stdinStdout.png\
+ images/complexFlow.svg\
+ images/simpleFlow.svg\
+ images/stdinStdout.svg\
+ images/jobFlow.png\
+ images/jobFlow.svg\
+ images/stateExpaned.png\
+ images/stateExpaned.svg\
+ images/stateSimple.png\
+ images/stateSimple.svg
 
+BUILT_SOURCES = $(images)
 
-# complexFlow.dot.bl simpleFlow.dot.bl stdinStdout.dot.bl
-
-BUILT_SOURCES = images/complexFlow.png images/simpleFlow.png images/stdinStdout.png
 
 
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET = html/index.html
 
-html_DATA = $(DOX_TARGET)
+subhtmldir = $(htmldir)/html
+imagedir = $(htmldir)/images
 
+image_DATA = $(images) images/README
+subhtml_DATA = $(DOX_TARGET)
 
 DOX_INFILES =\
  $(top_srcdir)/include/quickstream/app.h\
@@ -65,7 +79,6 @@ mainpage.dox: mainpage.dox.in
 	$(top_srcdir)/RELEASE.bash $< '//' > $@
 
 
-install-exec-hook:
+install-data-hook:
 	mkdir -p $(htmldir)
-	cp -r html images $(htmldir)
-	rm -f $(htmldir)/index.html
+	cp -r html $(htmldir)
