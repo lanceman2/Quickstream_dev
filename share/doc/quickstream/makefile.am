@@ -11,7 +11,7 @@ BUILT_SOURCES = images/complexFlow.png images/simpleFlow.png images/stdinStdout.
 # DOX_TARGET is a file that depends on running doxygen
 DOX_TARGET = html/index.html
 
-html_DATA = $(DOX_TARGET)
+#html_DATA = $(DOX_TARGET)
 
 
 DOX_INFILES =\
