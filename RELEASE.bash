@@ -62,7 +62,7 @@ function ReplaceReleaseStrings() {
 
         [PACKAGE_MAJOR]=0
         [PACKAGE_MINOR]=0
-        [PACKAGE_EDIT]=1
+        [PACKAGE_EDIT]=2
 
 
 # installed library version numbers
