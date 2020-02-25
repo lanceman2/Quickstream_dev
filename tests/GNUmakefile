@@ -11,7 +11,13 @@ endif
 
 SUBDIRS += filters
 
+BUILD_NO_INSTALL := tests/tests
+
+tests/tests:
+	ln -fs ../lib/quickstream/plugins/filters/tests/.libs tests/tests
 
 CLEANFILES := $(wildcard *.tmp)
+
+CLEANERFILES := tests/tests
 
 include ../quickbuild.make
