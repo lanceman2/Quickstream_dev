@@ -4,13 +4,6 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- test/fix installation with GNU autotools
-- fix the DSPEW INFO WARN macros with API options like
-   qsSetVerboseLevel(LEVEL )  prints to stderr.
-   have the compiler flag be the default.
-   Do we want the option of removing it if from the
-   compiled code?
-
 - librtlsdr code is AWESOME unlike GNU radio and libUHD
 - GNU radio tests
 - run tests with DEBUG off 
