@@ -56,9 +56,6 @@ DOX_INFILES =\
  $(topdir)/bin/quickstream.c\
  mainpage.dox
 
-INSTALL_DIR = $(PREFIX)/share/doc/quickstream
-
-
 
 
 -include ../../config.make
@@ -148,8 +145,10 @@ $(topdir)/include/quickstream/app.h: $(topdir)/include/quickstream/app.h.in
 	cd $(topdir)/include/quickstream && $(MAKE) app.h
 
 
+INSTALL_DIR = $(PREFIX)/share/doc/quickstream
+
 install:
-ifdef PREFIX
+ifneq ($(PREFIX),)
 	mkdir -p $(INSTALL_DIR)
 	cp -r html images $(INSTALL_DIR)
 else
