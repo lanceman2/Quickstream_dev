@@ -103,6 +103,3 @@ for f in ${bnfiles[@]} ; do
 done
 
 echo
-echo "install-exec-hook:"
-echo -e "\tcd \$(DESTDIR)\$(pkglibdir) && \$(RM) \$(pkglib_LTLIBRARIES)"
-echo
