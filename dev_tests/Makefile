@@ -28,6 +28,9 @@ run2_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 test_qsError_SOURCES := test_qsError.c
 test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
+udev_test_SOURCES := udev_test.c
+udev_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
+
 
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)
