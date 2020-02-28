@@ -11,12 +11,14 @@
 #include "../include/quickstream/qsu.h"
 
 
-const char **
+
+
+const struct QsuUsbdev **
 qsu_usbdev_find_new(const char *idVender, const char *idProduct,
         const char *speed) {
 
     struct udev *udev = udev_new();
-    const char **ret = 0;
+    struct QsuUsbdev **ret = 0;
     uint32_t n = 0; // number of devices found.
 
     struct udev_enumerate *e = udev_enumerate_new(udev);
@@ -71,12 +73,17 @@ qsu_usbdev_find_new(const char *idVender, const char *idProduct,
             ASSERT(devnode,
                     "dev_device_get_devnode() failed "
                     "after finding entry");
+            // Add it to the return list.
             ++n;
             ret = realloc(ret, (n+1)*sizeof(*ret));
             ASSERT(ret, "realloc(%p, %zu) failed",
                     ret, (n+1)*sizeof(*ret));
-            ret[n-1] = strdup(devnode);
-            ASSERT(ret[n-1], "stddup() failed");
+            ret[n-1] = calloc(1, sizeof(**ret));
+            ASSERT(ret[n-1], "calloc(1,%zu) failed", sizeof(**ret));
+            ret[n-1]->devnode = strdup(devnode);
+            ASSERT(ret[n-1]->devnode, "stddup() failed");
+            ret[n-1]->path = strdup(path);
+            ASSERT(path, "strdup() failed");
             ret[n] = 0; // null terminate.
         }
 
@@ -85,15 +92,18 @@ qsu_usbdev_find_new(const char *idVender, const char *idProduct,
 
     udev_enumerate_unref(e);
 
-    return ret;
+    return (const struct QsuUsbdev **) ret;
 }
 
 
-void qsu_usbdev_find_delete(const char **devices) {
+void qsu_usbdev_find_delete(const struct QsuUsbdev **devices) {
     if(!devices) return;
     // We made the user interface const but we need to cleanup.
-    char **d = (char **) devices;
-    while(*devices)
-        free((char *) *devices++);
+    struct QsuUsbdev **d = (struct QsuUsbdev **) devices;
+    while(*devices) {
+        free((char *) (*devices)->path);
+        free((char *) (*devices)->devnode);
+        free((struct QsuUsbdev  *) *devices++);
+    }
     free(d);
 }

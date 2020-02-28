@@ -28,9 +28,6 @@ run2_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 test_qsError_SOURCES := test_qsError.c
 test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
-udev_test_SOURCES := udev_test.c
-udev_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
-
 RTL-SDR_test_SOURCES := RTL-SDR_test.c
 RTL-SDR_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 

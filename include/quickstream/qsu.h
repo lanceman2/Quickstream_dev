@@ -8,14 +8,24 @@
 
 
 // https://www.beyondlogic.org/usbnutshell/usb1.shtml
+//
+
+struct QsuUsbdev {
+
+    const char *devnode;
+    const char *path;
+};
+
+
+
 
 extern
-const char **
+const struct QsuUsbdev **
 qsu_usbdev_find_new(const char *venderId, const char *productId,
         const char *speed);
 
 extern
 void
-qsu_usbdev_find_delete(const char **devices);
+qsu_usbdev_find_delete(const struct QsuUsbdev **devices);
 
 
