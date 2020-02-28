@@ -12,7 +12,8 @@
 
 
 const char **
-qsu_usbdev_new(const char *idVender, const char *idProduct) {
+qsu_usbdev_find_new(const char *idVender, const char *idProduct,
+        const char *speed) {
 
     struct udev *udev = udev_new();
     const char **ret = 0;
@@ -43,22 +44,40 @@ qsu_usbdev_new(const char *idVender, const char *idProduct) {
             return 0;
         }
 
-        if(strcmp(idVender,
-                udev_device_get_sysattr_value(udev_dev, "idVendor")) == 0
-                && strcmp(idProduct,
-                udev_device_get_sysattr_value(udev_dev, "idProduct")) == 0
-                ) {
-            INFO("udev found: manufacturer \"%s\", product \"%s\",\n"
-                    " configuration \"%s\", devnode \"%s\"",
-                    udev_device_get_sysattr_value(udev_dev, "manufacturer"),
+        const char *idV =
+            udev_device_get_sysattr_value(udev_dev, "idVendor");
+        const char *idP =
+            udev_device_get_sysattr_value(udev_dev, "idProduct");
+        const char *sp =
+            udev_device_get_sysattr_value(udev_dev, "speed");
+
+        // See if we found what we were looking for:
+        if(
+                (!idVender || strcmp(idVender, idV) == 0) &&
+                (!idProduct || strcmp(idProduct, idP) == 0) &&
+                (!speed || strcmp(speed, sp) == 0)
+          ) {
+            const char *devnode = udev_device_get_devnode(udev_dev);
+            INFO("\n udev found match: manufacturer \"%s\", product \"%s\",\n"
+                    " configuration \"%s\", devnode \"%s\",\n"
+                    " udev_path \"%s\",\n"
+                    " speed \"%s\"",
+                    udev_device_get_sysattr_value(udev_dev,
+                        "manufacturer"),
                     udev_device_get_sysattr_value(udev_dev, "product"),
-                    udev_device_get_sysattr_value(udev_dev, "configuration"),
-                    udev_device_get_devnode(udev_dev)
+                    udev_device_get_sysattr_value(udev_dev,
+                        "configuration"), devnode, path, sp
                     );
+            ASSERT(devnode,
+                    "dev_device_get_devnode() failed "
+                    "after finding entry");
             ++n;
             ret = realloc(ret, (n+1)*sizeof(*ret));
             ASSERT(ret, "realloc(%p, %zu) failed",
                     ret, (n+1)*sizeof(*ret));
+            ret[n-1] = strdup(devnode);
+            ASSERT(ret[n-1], "stddup() failed");
+            ret[n] = 0; // null terminate.
         }
 
         udev_device_unref(udev_dev);
@@ -66,12 +85,15 @@ qsu_usbdev_new(const char *idVender, const char *idProduct) {
 
     udev_enumerate_unref(e);
 
-    return 0;
+    return ret;
 }
 
 
-void
-qsu_usbdev_delete(const char **devices) {
-
-
+void qsu_usbdev_find_delete(const char **devices) {
+    if(!devices) return;
+    // We made the user interface const but we need to cleanup.
+    char **d = (char **) devices;
+    while(*devices)
+        free((char *) *devices++);
+    free(d);
 }

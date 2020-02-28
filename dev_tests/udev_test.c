@@ -24,13 +24,19 @@ int main(void) {
 
     signal(SIGSEGV, catchSegv);
 
-    const char **devices = qsu_usbdev_new("0bda"/*idVender*/,
-            "2838" /*idProduct*/ /* for Generic RTL2832U OEM */);
+    const char **devices = qsu_usbdev_find_new("0bda"/*idVender*/,
+            "2838" /*idProduct*/ /* for Generic RTL2832U OEM */, 0/*speed*/);
 
-    qsu_usbdev_delete(devices);
+    for(const char **d = devices; d && *d; ++d)
+        printf("found %s\n", *d);
+
+    qsu_usbdev_find_delete(devices);
 
     const char *msg = "exiting\n";
 
+    // We added a know system call for our running:
+    // 'strace ./udev_test'
+    //
     write(2, msg, strlen(msg));
 
     return 0;

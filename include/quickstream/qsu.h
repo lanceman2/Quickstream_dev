@@ -7,12 +7,15 @@
 // https://www.beyondlogic.org/usbnutshell/usb1.shtml
 
 
+// https://www.beyondlogic.org/usbnutshell/usb1.shtml
+
 extern
 const char **
-qsu_usbdev_new(const char *venderId, const char *productId);
+qsu_usbdev_find_new(const char *venderId, const char *productId,
+        const char *speed);
 
 extern
 void
-qsu_usbdev_delete(const char **devices);
+qsu_usbdev_find_delete(const char **devices);
 
 

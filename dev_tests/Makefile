@@ -31,6 +31,8 @@ test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 udev_test_SOURCES := udev_test.c
 udev_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 
+RTL-SDR_test_SOURCES := RTL-SDR_test.c
+RTL-SDR_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)
