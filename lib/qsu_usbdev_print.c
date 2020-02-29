@@ -75,6 +75,12 @@ end:
     return ret;
 }
 
+void PrintBits(FILE *f, uint8_t byte) {
+
+    for(int i=0; i<8; ++i)
+        fprintf(f, "%hhu", (byte & ( 01 << i)) >> i);
+}
+
 // Returns total length of buf eaten.
 //
 static size_t printEndpointDescriptor(FILE *f, uint8_t *buf,
@@ -92,7 +98,7 @@ static size_t printEndpointDescriptor(FILE *f, uint8_t *buf,
     ++buf;
     fprintf(f, "|bEndpointAddress=0x%02hhx", *buf);
     ++buf;
-    fprintf(f, "|bmAttributes=0%hho", *buf);
+    fprintf(f, "|bmAttributes="); PrintBits(f, *buf);
     ++buf;
     fprintf(f, "|wMaxPacketSize=%hu Bytes", *((uint16_t *)buf));
     buf += 2;
@@ -292,4 +298,3 @@ fprintf(stderr, "clen=%zu     len=%zu\n",clen, len);
 
     fprintf(f, "}\n");
 }
-
