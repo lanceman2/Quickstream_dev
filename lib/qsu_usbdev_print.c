@@ -5,44 +5,43 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 #include <fcntl.h>
 
 #include "debug.h"
 #include "../include/quickstream/qsu.h"
 
+// Reference:
+// https://www.beyondlogic.org/usbnutshell/usb5.shtml#InterfaceDescriptors
 
-
-static inline bool ckprintU8(FILE *f,
-        const char *name, uint8_t rd, uint8_t ck) {
-    
-    if(rd != ck) {
-        fprintf(f, "invalid %s", name);
-        return true;
-    }
-    fprintf(f, "%s=%" PRIu8, name, rd);
-    return false;
-}
 
 // Returns bNumConfigurations
+//
 static uint8_t
 printDeviceDescriptor(FILE *f, uint8_t *buf, size_t len) {
 
     uint8_t ret = 0;
 
     fprintf(f, "  Device [shape=record  label=\"{"
-            "Device|"
+            "Device"
             );
-    
-    if(len < 18) {
-        fprintf(f, "invalid Descriptor");
-        goto end;
-    }
 
-    if(ckprintU8(f, "bLength", *buf++, 18)) goto end;
-    fprintf(f, " Bytes|");
-    if(ckprintU8(f, "bDescriptorType", *buf++, 1)) goto end;
-    fprintf(f, "|");
-    fprintf(f, "bcdUSB=%hu", *(uint8_t *)buf);
+    if(*buf != 18) {
+        fprintf(f, "|BAD bLength=%hhu not 18", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
+    fprintf(f, "|bLength=%hhu Bytes", *buf);
+    ++buf;
+
+    if(*buf != 0x01) {
+        fprintf(f, "|BAD bDescriptorType=0x%02hhx not 0x01", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
+    fprintf(f, "|bDescriptorType=0x%02hhx", *buf);
+    ++buf;
+    fprintf(f, "|bcdUSB=%hu", *(uint8_t *)buf);
     buf += 2;
     fprintf(f, "|bDeviceClass=%hhu", *(uint8_t *)buf);
     ++buf;
@@ -68,8 +67,6 @@ printDeviceDescriptor(FILE *f, uint8_t *buf, size_t len) {
 
     ret = *(uint8_t *)buf; //NumConfigurations
 
-end:
-
     fprintf(f, "}\"];\n");
 
     return ret;
@@ -81,7 +78,7 @@ void PrintBits(FILE *f, uint8_t byte) {
         fprintf(f, "%hhu", (byte & ( 01 << i)) >> i);
 }
 
-// Returns total length of buf eaten.
+// Returns length of buf eaten.
 //
 static size_t printEndpointDescriptor(FILE *f, uint8_t *buf,
         size_t len, uint8_t cCount, uint8_t iCount, uint8_t eCount) {
@@ -91,9 +88,19 @@ static size_t printEndpointDescriptor(FILE *f, uint8_t *buf,
             "Endpoint %hhd %hhu %hhu"
             , cCount, iCount, eCount,
             cCount, iCount, eCount);
-
+    if(*buf != 7) {
+        fprintf(f, "|BAD bLength=%hhu not 7", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
     fprintf(f, "|bLength=%hhu Bytes", *buf);
     ++buf;
+
+    if(*buf != 0x05) {
+        fprintf(f, "|BAD bDescriptorType=0x%02hhx not 0x05", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
     fprintf(f, "|bDescriptorType=0x%02hhx", *buf);
     ++buf;
     fprintf(f, "|bEndpointAddress=0x%02hhx", *buf);
@@ -115,7 +122,7 @@ static size_t printEndpointDescriptor(FILE *f, uint8_t *buf,
 
 
 
-// Returns total length of buf eaten.
+// Returns length of buf eaten.
 //
 static size_t printInterfaceDescriptor(FILE *f, uint8_t *buf,
         size_t len, uint8_t cCount, uint8_t iCount) {
@@ -128,9 +135,19 @@ static size_t printInterfaceDescriptor(FILE *f, uint8_t *buf,
             " [shape=record  label=\"{"
             "Interface %hhd %hhu"
             , cCount, iCount, cCount, iCount);
-
+    if(*buf != 9) {
+        fprintf(f, "|BAD bLength=%hhu not 9", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
     fprintf(f, "|bLength=%hhu Bytes", *buf);
     ++buf;
+
+    if(*buf != 0x04) {
+        fprintf(f, "|BAD bDescriptorType=0x%02hhx not 0x04", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
     fprintf(f, "|bDescriptorType=%02hhx", *buf);
     ++buf;
     fprintf(f, "|bInterfaceNumber=%hhu", *buf);
@@ -169,7 +186,7 @@ static size_t printInterfaceDescriptor(FILE *f, uint8_t *buf,
 }
 
 
-// Returns total length of buf eaten.
+// Returns length of buf eaten.
 //
 static size_t
 printConfigurationDescriptor(FILE *f, uint8_t *buf,
@@ -183,30 +200,38 @@ printConfigurationDescriptor(FILE *f, uint8_t *buf,
 
     fprintf(f, "  Configuration%hhu"
             " [shape=record  label=\"{"
-            "Configuration %hhu|"
+            "Configuration %hhu"
             , count, count);
 
-    if((*buf) != 9) {
-        printf("BAD bLength=%hhu != 9", *buf);
+    if(*buf != 9) {
+        fprintf(f, "|BAD bLength=%hhu not 9", *buf);
         fprintf(f, "}\"];\n");
         return len; // eat the whole length
     }
-    fprintf(f, "bLength=%hhu|", *buf);
+    fprintf(f, "|bLength=%hhu", *buf);
     ++buf;
-    fprintf(f, "bDescriptorType=%hhx|", *buf);
+
+    if(*buf != 0x02) {
+        fprintf(f, "|BAD bDescriptorType=0x%02hhx not 0x02", *buf);
+        fprintf(f, "}\"];\n");
+        return len; // eat the whole length
+    }
+
+    fprintf(f, "|bDescriptorType=0x%hhx", *buf);
     ++buf;
-    fprintf(f, "wTotalLength=%hu bytes|", *buf);
+    fprintf(f, "|wTotalLength=%hu bytes", *buf);
+    uint16_t wTotalLength = *((uint16_t *) buf);
     buf += 2;
-    fprintf(f, "bNumInterfaces=%hhu|", *buf);
+    fprintf(f, "|bNumInterfaces=%hhu", *buf);
     numInterfaces = *buf;
     ++buf;
-    fprintf(f, "bConfigurationValue=%hhu|", *buf);
+    fprintf(f, "|bConfigurationValue=%hhu", *buf);
     ++buf;
-    fprintf(f, "iConfiguration=%hhu|", *buf);
+    fprintf(f, "|iConfiguration=%hhu", *buf);
     ++buf;
-    fprintf(f, "bmAttributes=0%hho|", *buf);
+    fprintf(f, "|bmAttributes=0%hho", *buf);
     ++buf;
-    fprintf(f, "bMaxPower=%hhux2mA", *buf);
+    fprintf(f, "|bMaxPower=%hhux2mA", *buf);
     ++buf;
 
     tlen += 9;
@@ -215,14 +240,12 @@ printConfigurationDescriptor(FILE *f, uint8_t *buf,
     fprintf(f, "}\"];\n");
     fprintf(f, "  Device -> Configuration%hhd;\n", count);
  
-
     if(len < numInterfaces * 9) {
-        printf("Descriptors length is short for %hhu interfaces",
-                numInterfaces);
+        fprintf(f, " ERROR [ label=\"ERROR: Descriptors length is short %zu for "
+                "%hhu interfaces (<%d)\"];\n",
+                len, numInterfaces, numInterfaces * 9);
         return len; // eat the whole length
     }
-
-    if(len < 9) return len;
 
     while(numInterfaces && len >= 9) {
         size_t r = printInterfaceDescriptor(f, buf, len, count, iCount++);
@@ -232,6 +255,11 @@ printConfigurationDescriptor(FILE *f, uint8_t *buf,
         --numInterfaces;
     }
 
+    if(((size_t) wTotalLength) != tlen)
+        fprintf(f, "  Configuation_%hhu [shape=record label=\"{"
+                "Configuration %hhu has BAD wTotalLength"
+                "=%hu measured %zu}\"];\n",
+                count, count, wTotalLength, tlen);
     return tlen;
 }
 
@@ -240,17 +268,27 @@ printConfigurationDescriptor(FILE *f, uint8_t *buf,
 void qsu_usbdev_descriptor_print_dot(FILE *f, const char *path) {
 
     int dirfd = open(path, 0, O_DIRECTORY);
-    if(dirfd < 0) return;
+    if(dirfd < 0) {
+        ERROR("open(\"%s\",,) failed", path);
+        return;
+    }
 
     int fd = openat(dirfd, "descriptors", O_RDONLY);
     close(dirfd);
-    if(fd < 0) return; // error
+    if(fd < 0) {
+        ERROR("openat(%d,\"descriptors\",) failed",
+                dirfd);
+        return; // error
+    }
 
-    uint8_t buf[1024];
+    size_t buflen = 512;
+    uint8_t *buf = malloc(buflen);
+    ASSERT(buf, "malloc(%zu) failed", buflen);
     uint8_t *ptr = buf;
     size_t len = 0;
     while(true) {
-        ssize_t r = read(fd, ptr, 1024-len);
+        // read the descriptor into one buffer.
+        ssize_t r = read(fd, ptr, buflen-len);
         if(r <= 0) {
             close(fd);
             if(len <= 0 || r < 0)
@@ -260,41 +298,62 @@ void qsu_usbdev_descriptor_print_dot(FILE *f, const char *path) {
         }
         len += r;
         ptr += r;
-        if(len == 1024) {
-            ERROR("We need a larger buffer here");
-            close(fd);
-            return; // error
+        if(len == buflen) {
+            if(buflen > 1024*1024) {
+                ERROR("%s/descriptor appears to be stupid large "
+                    "> 1024*1024 bytes", path);
+                return;
+            }
+            buf = realloc(buf, buflen += 512);
+            ASSERT(buf, "realloc(%p,%zu) failed",
+                buf, buflen);
+            ptr = buf + len;
         }
     }
-    
+
     size_t totalLen = len;
+    uint8_t numconfig = 0;
 
     ptr = buf;
 
     fprintf(f, "digraph {\n");
 
-    uint8_t numconfig = printDeviceDescriptor(f, ptr, len);
+    if(len >= 18) {
+        numconfig = printDeviceDescriptor(f, ptr, len);
+        ptr += 18;
+        len -= 18;
+    } else {
+        fprintf(f, "label=\"USB Descriptors, length %zu"
+            " bytes is too small < 18\";\n", len);
+        fprintf(f, "}\n");
+        free(buf);
+        return;
+    }
 
-    ptr += 18;
-    len -= 18;
     uint8_t configCount = 0;
 
-    while(numconfig && len) {
-
-        if(len < 10) break;
+    while(numconfig && len >= 10) {
 
         size_t clen = printConfigurationDescriptor(f,
                 ptr, len, configCount++);
         len -= clen;
-fprintf(stderr, "clen=%zu     len=%zu\n",clen, len);
         ptr += clen;
         --numconfig;
     }
 
+    if(len) {
+        // We have extra length of data that does not conform
+        // to the USB Descriptors standard.
+        fprintf(f, "  Unknown_data [shape=record  label=\"{"
+                "Unknown data length %zu Bytes}\"];\n"
+                "}\n", len);
+        free(buf);
+        return;
+    }
+
     fprintf(f, "label=\"USB Descriptors, length %zu"
-            " bytes %zu unused\";\n", totalLen, len);
-
-
+            " bytes\";\n", totalLen);
 
     fprintf(f, "}\n");
+    free(buf);
 }
