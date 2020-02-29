@@ -14,7 +14,7 @@ libquickstream.so_SOURCES :=\
  streamLaunch.c
 
 
-libqsu.so_SOURCES := qsu_usbdev.c debug.c
+libqsu.so_SOURCES := qsu_usbdev.c debug.c qsu_usbdev_print.c
 libqsu.so_LDFLAGS := $(shell pkg-config --libs libudev)
 libqsu.so_CFLAGS := $(shell pkg-config --cflags libudev)
 

@@ -24,8 +24,13 @@ const struct QsuUsbdev **
 qsu_usbdev_find_new(const char *venderId, const char *productId,
         const char *speed);
 
+
 extern
 void
 qsu_usbdev_find_delete(const struct QsuUsbdev **devices);
 
+
+extern
+void
+qsu_usbdev_descriptor_print_dot(FILE *file, const char *path);
 
