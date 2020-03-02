@@ -28,8 +28,12 @@ run2_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 test_qsError_SOURCES := test_qsError.c
 test_qsError_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
-RTL-SDR_test_SOURCES := RTL-SDR_test.c
-RTL-SDR_test_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
+RTL-SDR_dot_SOURCES := RTL-SDR_dot.c
+RTL-SDR_dot_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
+
+RTL-SDR_read_SOURCES := RTL-SDR_read.c
+RTL-SDR_read_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
+
 
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)

@@ -41,7 +41,7 @@ printDeviceDescriptor(FILE *f, uint8_t *buf, size_t len) {
     }
     fprintf(f, "|bDescriptorType=0x%02hhx", *buf);
     ++buf;
-    fprintf(f, "|bcdUSB=%hu", *(uint8_t *)buf);
+    fprintf(f, "|bcdUSB=%hu", *(uint16_t *)buf);
     buf += 2;
     fprintf(f, "|bDeviceClass=%hhu", *(uint8_t *)buf);
     ++buf;
@@ -51,9 +51,11 @@ printDeviceDescriptor(FILE *f, uint8_t *buf, size_t len) {
     ++buf;
     fprintf(f, "|bMaxPacketSize=%hhu", *(uint8_t *)buf);
     ++buf;
-    fprintf(f, "|idVender=0x%04hx", *(uint16_t *)buf);
+    fprintf(f, "|idVender=0x%04hx =%hu",
+            *(uint16_t *)buf, *(uint16_t *)buf);
     buf += 2;
-    fprintf(f, "|idProduct=0x%04hx", *(uint16_t *)buf);
+    fprintf(f, "|idProduct=0x%04hx =%hu",
+            *(uint16_t *)buf, *(uint16_t *)buf);
     buf += 2;
     fprintf(f, "|bcdDevice=0x%04hx", *(uint16_t *)buf);
     buf += 2;
