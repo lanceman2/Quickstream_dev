@@ -33,11 +33,11 @@ int main(void) {
 
     signal(SIGSEGV, catchSegv);
 
-    struct QsuRtlsdr rtlsdr;
-    
-    ASSERT(qsu_rtlsdr_open(&rtlsdr));
+    struct QsuRtlsdr *rtlsdr = qsu_rtlsdr_new();
 
-    qsu_rtlsdr_close(&rtlsdr);
+    ASSERT(rtlsdr);
+
+    qsu_rtlsdr_delete(rtlsdr);
 
     DSPEW("FINISHED");
 

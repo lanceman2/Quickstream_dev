@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+
 // USB isochronous transfer urb  MAX_ISO_PACKETS_PER_URB
 // https://www.kernel.org/doc/html/latest/driver-api/usb/URB.html
 // https://stackoverflow.com/questions/19593420/isochronous-usb-transfers-confusion#19624959
@@ -17,12 +18,7 @@ struct QsuUsbdev {
     const char *path;
 };
 
-
-struct QsuRtlsdr {
-
-    int fd;
-};
-
+struct QsuRtlsdr;
 
 
 extern
@@ -42,7 +38,7 @@ qsu_usbdev_descriptor_print_dot(FILE *file, const char *path);
 
 
 extern
-struct QsuRtlsdr *qsu_rtlsdr_open(struct QsuRtlsdr *rtlsdr);
+struct QsuRtlsdr *qsu_rtlsdr_new(void);
 
 extern
-void qsu_rtlsdr_close(struct QsuRtlsdr *rtlsdr);
+void qsu_rtlsdr_delete(struct QsuRtlsdr *rtlsdr);
