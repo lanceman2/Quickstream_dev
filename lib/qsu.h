@@ -53,3 +53,13 @@ struct QsuRtlsdr {
     //
     struct Descriptor descriptor;
 };
+
+
+
+extern
+bool _qsu_rtlsdr_GetDescriptor(struct Descriptor *desc, const char *path);
+
+
+extern
+void _qsu_rtlsdr_FreeConfig(struct Config *config);
+
