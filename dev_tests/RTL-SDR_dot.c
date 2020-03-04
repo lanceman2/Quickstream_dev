@@ -70,22 +70,6 @@ int main(void) {
     ASSERT(r == 0, "ioctl(%d, USBDEVFS_GET_CAPABILITIES,) failed", fd);
 
     DSPEW("caps=0%o = 0x%x", caps, caps);
-#if 0
-// from libusbi.h
-#define USBI_CAP_SUPPORTS_DETACH_KERNEL_DRIVER	0x00020000
-    
-    ASSERT(USBI_CAP_SUPPORTS_DETACH_KERNEL_DRIVER & caps,
-            "USBI_CAP_ Does not SUPPORTS_DETACH_KERNEL_DRIVER");
-
-    struct usbdevfs_getdriver getdriver;
-    r = ioctl(fd, USBDEVFS_GETDRIVER, &getdriver);
-    ASSERT(r == 0, "ioctl(%d, USBDEVFS_GETDRIVER,) failed", fd);
-
-    DSPEW("got (interface=0x%x) driver=\"%s\"",
-            getdriver.interface, getdriver.driver);
-
-#endif
-    
 
     const char *msg = "exiting SUCCESS\n";
 
