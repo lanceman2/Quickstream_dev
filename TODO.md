@@ -4,7 +4,56 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
+- hash table for controls.
+
+- Control objects either set or get.  Pairs of control objects like for
+  example tx:freq has a setter and a getter; with the getter can be used
+  after the setter to see what the setter did.  The setter/getter combo
+  can to be synchronous and asynchronous.  So that gives 3 functions:
+  get(), set(withCallback), which are both non-blocking and just do what
+  they can, and the optional set::callback is called after the action
+  completes, and a setSync() that is blocking and waits to get what the
+  result is after the set() part; and the get() should not need a
+  callback, it is required to store the current state.  The set() and
+  setSync() functions do not necessarily keep state.  ... But wait there's
+  one more:  what if a controller needs all state changes: than we have
+  getCallback(callback) which registers interest in parameter state
+  changes, the get callback is called every time the parameter changes.
+  If a set happens and does not cause a change to the get state, then the
+  get callbacks are not called.  setSync() may not be a good thing to call
+  in a filter::input().
+
+  In summary two functions times two variants.  set() and get() with and
+  without callbacks.  We can set callback=0 for the non-callback versions.
+  Only the set() with callback=0 is a blocking call.
+
+  But wait there's more: controls may be grouped in sets.  The
+  filter/controller makes and serves the so defined groups.  The thing
+  (being filter or controller) getting values via get() may a group of
+  parameters all at the same time.  The serving filter/controller must
+  keep the values that are being got consistent but putting up values only
+  in consistent groups.  If a parameter is part of a group, it is assumed
+  that all the values shelved in that group are always consistent; so if
+  not all values in a parameter group change, it is assumed that the
+  parameters that did not change are consistent with all the parameters
+  that did change and all parameters in the group are "pushed" to their
+  registered getters.  The getters need to get() all parameters that it
+  wishes to stay consistent in one get() call.
+
+
+- Stream (or App) has a list of all controls in a hash table.
+  - All filters can create and access controls
+  - All controllers can create and access controls
+  - Controls are really just a set of parameter getters and setters.
+  - The control parameter type is just void * data.
+    - Fuck that type proliferation shit; no matter how many types you
+      make it will never be enough.  Not much thought to prove that.
+- controller modules; they are not a filter because they do not connect
+  to the flow stream.
+
 - librtlsdr code is AWESOME unlike GNU radio and libUHD
+  - I take it back it sucks, takes a call stack of 8 to get
+    to any of the ioctl() calls; hard to follow.
 - GNU radio tests
 - run tests with DEBUG off 
 - controls
