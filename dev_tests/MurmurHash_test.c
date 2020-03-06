@@ -10,8 +10,8 @@
 int main(void) {
 
     
-    const size_t len_max = 9101;
-    const size_t num = 500;
+    const size_t len_max = 90101;
+    const size_t num = 150;
     size_t len = num * 1.5;
     uint32_t seed;
 
@@ -19,7 +19,7 @@ int main(void) {
 
     for(;len < len_max; ++len) {
         uint64_t i=0;
-        for(seed=0xfefff010; seed != 0xfefff100; ++seed) {
+        for(seed=0xfffff000; seed != 0xfffff400; ++seed) {
 
             memset(dist, 0, sizeof(dist));
             for(i=0; i<num; ++i) {
