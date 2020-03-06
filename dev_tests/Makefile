@@ -34,6 +34,9 @@ RTL-SDR_dot_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 RTL-SDR_read_SOURCES := RTL-SDR_read.c
 RTL-SDR_read_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 
+MurmurHash_test_SOURCES := MurmurHash_test.c
+MurmurHash_test_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
+
 
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)

@@ -11,7 +11,8 @@ libquickstream.so_SOURCES :=\
  buffer.c\
  flow.c\
  makeRingBuffer.c\
- streamLaunch.c
+ streamLaunch.c\
+ MurmurHash1.c
 
 
 libqsu.so_SOURCES :=\

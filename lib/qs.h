@@ -815,3 +815,9 @@ void CheckUnlockFilter(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_unlock(f->mutex));
 }
+
+
+// From: https://github.com/aappleby/smhasher
+// MurmurHash1.cpp
+extern
+uint32_t MurmurHash1(const void *key, int len, uint32_t seed);
