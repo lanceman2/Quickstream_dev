@@ -34,8 +34,9 @@ RTL-SDR_dot_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 RTL-SDR_read_SOURCES := RTL-SDR_read.c
 RTL-SDR_read_LDFLAGS := -L../lib -lqsu -Wl,-rpath=\$$ORIGIN/../lib
 
-MurmurHash_test_SOURCES := MurmurHash_test.c
-MurmurHash_test_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
+MurmurHash_test_SOURCES := MurmurHash_test.c ../lib/MurmurHash1.c
+
+Dictionary_test_SOURCES := Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 
 
 # Add extra clean files for this directory.

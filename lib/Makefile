@@ -12,7 +12,7 @@ libquickstream.so_SOURCES :=\
  flow.c\
  makeRingBuffer.c\
  streamLaunch.c\
- MurmurHash1.c
+ Dictionary.c
 
 
 libqsu.so_SOURCES :=\

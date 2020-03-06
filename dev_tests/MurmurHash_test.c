@@ -7,12 +7,18 @@
 #include "../lib/debug.h"
 #include "../lib/qs.h"
 
+// From: https://github.com/aappleby/smhasher
+// MurmurHash1.cpp
+extern
+uint32_t MurmurHash1(const void *key, int len, uint32_t seed);
+
+
 int main(void) {
 
     
     const size_t len_max = 90101;
-    const size_t num = 150;
-    size_t len = num * 1.5;
+    const size_t num = 1000;
+    size_t len = num;
     uint32_t seed;
 
     uint64_t dist[len_max];
@@ -27,7 +33,7 @@ int main(void) {
                 uint32_t val = MurmurHash1(&key, sizeof(key), seed);
                 size_t bin = val%len;
                 dist[val%len] += 1;
-                if(dist[bin] > 2 && len != len_max)
+                if(dist[bin] > 3 && len != len_max)
                     break;
             }
             if(i == num)
