@@ -17,7 +17,7 @@ int main(void) {
 
     
     const size_t len_max = 90101;
-    const size_t num = 1000;
+    const size_t num = 100;
     size_t len = num;
     uint32_t seed;
 
