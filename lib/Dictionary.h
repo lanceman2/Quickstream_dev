@@ -12,11 +12,13 @@ extern
 void qsDictionaryDestroy(struct QsDictionary *dict);
 
 // Insert key/value if not present.
-// Returns 0 if this key is present already.
+// 
+// Returns 0 on success or 1 if already present and -1 if it is not added
+// and have an invalid character.
 extern
-void *qsDictionaryInsert(struct QsDictionary *dict,
+int qsDictionaryInsert(struct QsDictionary *dict,
         const char *key, const void *value);
 
-// Returns element ptr.
+// Returns element value for key.
 extern
 void *qsDictionaryFind(struct QsDictionary *dict, const char *key);
