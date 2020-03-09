@@ -20,12 +20,16 @@ int main(void) {
 
     struct QsDictionary *d = qsDictionaryCreate();
 
+#if 1
     const char *keys[] = {
+        "0123", "",
+        "099", "",
         "foo", "fooVal",
         "bar", "barVal",
-        "Bar", 0,
-        "Star:start3", "Star:start3Val",
-        "Star:start", "poo",
+        "Bar", "",
+        "Star start3", "Star:start3Val",
+        "Star start", "poo",
+        "Star star", "poo",
         "dog", "poo",
         "cat", "poo",
         "catdog", "poo   from catdog",
@@ -33,16 +37,32 @@ int main(void) {
         "a", "b",
         "aa", "aa",
         "ab", "ab",
+        "01", "",
+        "02", "",
+        "012", "",
+        "0123", "",
+        "01234", "",
         0, 0
     };
+#else
+    const char *keys[] = {
+
+        "02", "",
+        "012", "",
+        0, 0
+    };
+#endif
+
 
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
         qsDictionaryInsert(d, *key, val);
-        printf("%s, %s\n", *key, val);
+        fprintf(stderr, "adding %s, %s\n", *key, val);
         ++key;
     }
+
+    qsDictionaryPrintDot(d, stdout);
 
     qsDictionaryDestroy(d); 
 

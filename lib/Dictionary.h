@@ -21,4 +21,7 @@ int qsDictionaryInsert(struct QsDictionary *dict,
 
 // Returns element value for key.
 extern
-void *qsDictionaryFind(struct QsDictionary *dict, const char *key);
+void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
+
+extern
+void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
