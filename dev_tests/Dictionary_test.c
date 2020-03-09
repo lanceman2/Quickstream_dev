@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "../lib/Dictionary.h"
+#include "../lib/debug.h"
 
 
 void catchSegv(int sig) {
@@ -40,15 +41,14 @@ int main(void) {
         "01", "",
         "02", "",
         "012", "",
-        "0123", "",
         "01234", "",
         0, 0
     };
 #else
     const char *keys[] = {
-
-        "02", "",
-        "012", "",
+        "0123", "",
+        "099", "",
+        "099", "",
         0, 0
     };
 #endif
@@ -57,7 +57,7 @@ int main(void) {
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
-        qsDictionaryInsert(d, *key, val);
+        ASSERT(qsDictionaryInsert(d, *key, val) == 0);
         fprintf(stderr, "adding %s, %s\n", *key, val);
         ++key;
     }

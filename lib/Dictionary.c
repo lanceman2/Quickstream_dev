@@ -209,6 +209,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                         node2->suffix = strdup(ee+1);
                         ASSERT(node2->suffix, "strdup(%p) failed", ee+1);
                     }
+
                     const char *oldSuffix = node->suffix;
                     // Now remake node
                     node->value = value; // it has the new value.
@@ -256,6 +257,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     new->suffix = strdup(cc+1);
                     ASSERT(new->suffix, "strdup(%p) failed", cc+1);
                 }
+
                 // The new node that will contain the old fork and all old
                 // children:
                 struct QsDictionary *old = nchildren + *ee - START;
@@ -267,7 +269,9 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 if(*(ee+1)) {
                     old->suffix = strdup(ee+1);
                     ASSERT(old->suffix, "strdup(%p) failed", ee+1);
-                }
+                } else
+                    old->suffix = 0;
+
                 // node now gets the new children.
                 node->children = nchildren;
 
@@ -280,26 +284,18 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     *((char *) ee) = '\0';
                     node->suffix = strdup(oldSuffix);
                     ASSERT(node->suffix, "strdup(%p) failed", oldSuffix);
-                }
+                } else
+                    node->suffix = 0;
+
                 // We have copied all that we needed from this old suffix.
                 free((char *) oldSuffix);
 
                 return 0; // success
             }
-            // We have no suffix
-            // We go to the next char unless we can put the rest of the
-            // characters in a suffix in the current node.
 
-            if(node->value == 0) {
-                // This is our node.
-                node->value = value;
-                if(*(c+1)) {
-                    node->suffix = strdup(c+1);
-                    // This nod may or may not have children already.
-                    ASSERT(node->suffix, "strdup(%p) failed", c+1);
-                }
-                return 0;
-            }
+            // We have no suffix
+
+            // This is our node if there are no children that match.
 
             ++c;
             continue;
