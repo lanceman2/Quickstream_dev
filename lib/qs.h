@@ -815,3 +815,22 @@ void CheckUnlockFilter(struct QsFilter *f) {
     if(f->mutex)
         CHECK(pthread_mutex_unlock(f->mutex));
 }
+
+
+struct QsParameter {
+
+    
+
+};
+
+
+// A group of parameters
+struct QsControl {
+
+
+
+};
+
+struct QsController {
+
+};

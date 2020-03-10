@@ -29,17 +29,16 @@ given that quickstream is not in an alpha (usable) state yet.
 
   But wait there's more: controls may be grouped in sets.  The
   filter/controller makes and serves the so defined groups.  The thing
-  (being filter or controller) getting values via get() may a group of
-  parameters all at the same time.  The serving filter/controller must
-  keep the values that are being got consistent but putting up values only
-  in consistent groups.  If a parameter is part of a group, it is assumed
-  that all the values shelved in that group are always consistent; so if
-  not all values in a parameter group change, it is assumed that the
+  (being filter or controller) getting values via get() may need a group
+  of parameters all at the same time.  The serving filter/controller must
+  keep the values that are being got consistent but putting up values
+  only in consistent groups.  If a parameter is part of a group, it is
+  assumed that all the values shelved in that group are always consistent;
+  so if not all values in a parameter group change, it is assumed that the
   parameters that did not change are consistent with all the parameters
   that did change and all parameters in the group are "pushed" to their
   registered getters.  The getters need to get() all parameters that it
   wishes to stay consistent in one get() call.
-
 
 - Stream (or App) has a list of all controls in a hash table.
   - All filters can create and access controls

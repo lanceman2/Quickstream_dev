@@ -572,6 +572,22 @@ void qsRemoveDefaultFilterOptions(void);
 
 
 
+//////////////////////////// Control/Parameter Stuff /////////////////////
+
+
+
+
+extern
+void *qsGet(const char * className, const char *name,
+        int (*callback)(const char * className,
+            const char *name, void *value));
+
+extern
+void *qsSet(const char * className, const char *name,
+        int (*callback)(const char * className,
+            const char *name, void *value));
+
+
 #ifdef __cplusplus
 }
 #endif
