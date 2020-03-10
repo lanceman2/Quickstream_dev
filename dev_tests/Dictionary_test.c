@@ -21,7 +21,7 @@ int main(void) {
 
     struct QsDictionary *d = qsDictionaryCreate();
 
-#if 1
+#if 0
     const char *keys[] = {
         "0123", "",
         "099", "",
@@ -35,20 +35,20 @@ int main(void) {
         "cat", "poo",
         "catdog", "poo   from catdog",
         "hay stack", "needle",
-        "a", "b",
         "aa", "aa",
         "ab", "ab",
         "01", "",
         "02", "",
         "012", "",
-        "01234", "",
+       // "01234", "",
         0, 0
     };
 #else
     const char *keys[] = {
-        "0123", "",
-        "099", "",
-        "099", "",
+        "0123", "0123",
+        "01", "01",
+        "11", "11",
+        "023", "023",
         0, 0
     };
 #endif
@@ -63,6 +63,17 @@ int main(void) {
     }
 
     qsDictionaryPrintDot(d, stdout);
+
+    return 0;
+
+    for(const char **key = keys; *key; ++key) {
+        const char *stored = qsDictionaryFind(d, *key);
+        const char *val = *(key + 1);
+        ASSERT(val == stored, "key=\"%s\" val=\"%s\" != stored=\"%s\"",
+                *key, val, stored);
+        fprintf(stderr, "key=\"%s\", %s\n", *key, val);
+        ++key;
+    }
 
     qsDictionaryDestroy(d); 
 

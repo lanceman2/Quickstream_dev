@@ -83,17 +83,17 @@ struct QsDictionary *qsDictionaryCreate(void) {
 
 
 static
-void FreeChildren(struct QsDictionary *d) {
+void FreeChildren(struct QsDictionary *children) {
 
-    for(struct QsDictionary *i = d + ALPHABET_SIZE -1; i >= d; --i)
-        if(i->children) {
+    for(struct QsDictionary *i = children + ALPHABET_SIZE - 1;
+            i >= children; --i)
+        if(i->children)
             // Recurse
             FreeChildren(i->children);
 #if DEBUG
-            memset(i->children, 0, ALPHABET_SIZE*sizeof(*i->children));
+    memset(children, 0, ALPHABET_SIZE*sizeof(*children));
 #endif
-            free(i->children);
-        }
+    free(children);
 }
 
 
@@ -105,7 +105,7 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
         FreeChildren(dict->children);
 
 #if DEBUG
-    memset(dict, 0, ALPHABET_SIZE*sizeof(*dict));
+    memset(dict, 0, sizeof(*dict));
 #endif
     free(dict);
 }
@@ -129,12 +129,12 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     key);
             return -1;
         }
+
         if(node->children) {
             // We will go to next child in the traversal.
-            // firstChar is the character that we are at now.
-            char firstChar = *c;
+            //
             // Go to the next child in the traversal.
-            node = node->children + firstChar - START;
+            node = node->children + (*c) - START;
 
             if(node->suffix) {
                 // We have a suffix in this node.
@@ -256,7 +256,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 if(*(cc+1)) {
                     new->suffix = strdup(cc+1);
                     ASSERT(new->suffix, "strdup(%p) failed", cc+1);
-                }
+                } else
+                    new->suffix = 0;
 
                 // The new node that will contain the old fork and all old
                 // children:
@@ -293,36 +294,47 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 return 0; // success
             }
 
-            // We have no suffix
-
-            // This is our node if there are no children that match.
-
             ++c;
-            continue;
+
+#if 0
+            // We have no suffix in node
+            if(node->value == 0) {
+                // And no value, so this is home for this value.
+                if(*c) {
+                    node->suffix = strdup(c);
+                    ASSERT(node->suffix, "strdup(%p) failed", c);
+                }
+                node->value = value;
+                return 0; // success.
+            }
+#endif
+            continue; // See if there are more children.
         }
 
         // We have no more children
         //
         // Make children, insert and return.
         //
+        DASSERT(node->children == 0);
 
         struct QsDictionary *children =
             calloc(ALPHABET_SIZE, sizeof(*children));
         ASSERT(children, "calloc(%d,%zu) failed",
                 ALPHABET_SIZE, sizeof(*children));
         node->children = children;
+
         // go to this character (*c) node.
-        DSPEW("Making node (%c)", *c);
         node = children + (*c) - START;
         node->value = value;
         // add any suffix characters if needed.
         ++c;
         if(*c) {
+            // TODO: check c characters are valid.
             node->suffix = strdup(c);
             ASSERT(node->suffix, "strdup(%p) failed", c);
         }
         return 0; // success
-        
+
     } // for() on characters *c
 
 
@@ -356,6 +368,7 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
             if(node->suffix) {
 
                 const char *ee = node->suffix;
+                ++c;
 
                 for(;*ee && *c && *c == *ee; ++c, ++ee)
                     if(*c < START || *c > END) {
@@ -368,7 +381,8 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
                 else {
                     // The suffix has more characters that we did not
                     // match.
-                    ERROR("No key=\"%s\" found", key);
+                    ERROR("No key=\"%s\" found ee=\"%s\"  c=\"%s\"",
+                            key, ee, c);
                     return 0;
                 }
             }
@@ -397,9 +411,11 @@ PrintNode(const struct QsDictionary *node, char parent_c,
             suffix = (suffix?suffix:"");
 
             if(child->children || child->value) {
-                fprintf(f, "  \"N%c%s_%d\" [label=\"%c%s\"];\n",
+                fprintf(f, "  \"N%c%s_%d\" [label=\"%c%s%s%s%s\"];\n",
                         c, suffix, count+1,
-                        c, suffix);
+                        c, suffix, ((child->value)?"\n|":""),
+                        ((child->value)?((const char *) child->value):""),
+                        ((child->value)?"|":""));
 
                 PrintNode(child, c, suffix, count+1, f);
 
