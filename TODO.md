@@ -4,7 +4,12 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- hash table for controls.
+- hash table ==> Trie instead
+  - next have trie Dictionary use a smaller alphabet 2 bits of char for
+    when it makes branch points, but store the rest of the chars as chars.
+    So it will use 4 * 8 + 2 * 8 + key length + 2 chars needed for the
+    after branch point to encode the fraction of a char as 0,1,2,3 a two
+    bit quads.
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used
@@ -39,6 +44,15 @@ given that quickstream is not in an alpha (usable) state yet.
   that did change and all parameters in the group are "pushed" to their
   registered getters.  The getters need to get() all parameters that it
   wishes to stay consistent in one get() call.
+
+- Problem with current class hierarchy.  The App loads filters without
+  a stream; but it appears that the filter construct() function needs
+  a stream to put any controls it wants to create in construct() function.
+  This makes the filter a holder of controls before it's added to a
+  stream.  Maybe that's okay...  Q: Does the filter own the controls it
+  creates, or do be need reference counts for users of particular
+  controls.  Or is it just the setter of the parameters in controls that
+  own them; nope, that can't be for input knobs.
 
 - Stream (or App) has a list of all controls in a hash table.
   - All filters can create and access controls
