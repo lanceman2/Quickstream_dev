@@ -302,7 +302,6 @@ int qsDictionaryInsert(struct QsDictionary *node,
         if(node->value == 0) {
             DASSERT(node->suffix == 0);
             if(*c) {
-                // TODO: check c characters are valid.
                 node->suffix = strdup(c);
                 ASSERT(node->suffix, "strdup(%p) failed", c);
             }
