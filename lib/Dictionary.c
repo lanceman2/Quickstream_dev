@@ -194,17 +194,17 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     // and the old children.
                     //
                     // New node children:
-                    struct QsDictionary *nchildren =
-                            calloc(ALPHABET_SIZE, sizeof(*nchildren));
-                    ASSERT(nchildren, "calloc(%d,%zu) failed",
-                            ALPHABET_SIZE, sizeof(*nchildren));
+                    struct QsDictionary *children =
+                            calloc(ALPHABET_SIZE, sizeof(*children));
+                    ASSERT(children, "calloc(%d,%zu) failed",
+                            ALPHABET_SIZE, sizeof(*children));
 
                     // parent -> node1 (firstChar + start of suffix) ->
                     //   node2 (ee* + rest of suffix) -> ...
 
                     // dummy pointer node will be acting as node1.
 
-                    struct QsDictionary *node2 = nchildren + (*ee) - START;
+                    struct QsDictionary *node2 = children + (*ee) - START;
                     // node2 has all the children of node and the old
                     // value and the remaining suffix that was in node.
                     node2->children = node->children;
@@ -235,7 +235,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     free((char *)oldSuffix);
                     // This node now gets the new children and has one
                     // child that is node2 from above.
-                    node->children = nchildren;
+                    node->children = children;
                     return 0; // success
                 }
 
@@ -248,19 +248,19 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 // New node children:
                 //
                 // 2 of these children will be used in this bifurcation.
-                struct QsDictionary *nchildren =
-                        calloc(ALPHABET_SIZE, sizeof(*nchildren));
-                ASSERT(nchildren, "calloc(%d,%zu) failed",
-                        ALPHABET_SIZE, sizeof(*nchildren));
+                struct QsDictionary *children =
+                        calloc(ALPHABET_SIZE, sizeof(*children));
+                ASSERT(children, "calloc(%d,%zu) failed",
+                        ALPHABET_SIZE, sizeof(*children));
 
-                struct QsDictionary *n1 = nchildren + (*ee) - START;
-                struct QsDictionary *n2 = nchildren + (*cc) - START;
+                struct QsDictionary *n1 = children + (*ee) - START;
+                struct QsDictionary *n2 = children + (*cc) - START;
                 const char *oldSuffix = node->suffix;
                 n1->value = node->value;
                 n1->children = node->children;
                 n2->value = value;
 
-                node->children = nchildren;
+                node->children = children;
                 node->value = 0;
 
                 if(*(ee+1)) {
