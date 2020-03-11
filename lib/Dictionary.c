@@ -128,14 +128,19 @@ int qsDictionaryInsert(struct QsDictionary *node,
     DASSERT(*key);
     DASSERT(value);
 
-    for(const char *c = key; *c;) {
-
-        // Checking the key characters along the way.
+    // Since we have no need for speed in Insert and the code is simpler
+    // this way, we check all the characters in the key at the start of
+    // this function.
+    //
+    for(const char *c = key; *c; ++c)
         if(*c < START || *c > END) {
             ERROR("Invalid character in key: \"%s\"",
                     key);
             return -1;
         }
+
+
+    for(const char *c = key; *c;) {
 
         if(node->children) {
             // We will go to next child in the traversal.
@@ -151,15 +156,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 const char *ee = node->suffix; // one for current suffix
 
                 // Find the point where key and suffix do not match.
-                for(;*ee && *cc && *ee == *cc; ++cc, ++ee)
-                    if(*cc < START || *cc > END) {
-                        // Checking the key characters along the way.
-                        ERROR("Invalid character in key: \"%s\"",
-                                key);
-                        // Nothing changed at this point so we can just
-                        // return -1;
-                        return -1; // fail
-                    }
+                for(;*ee && *cc && *ee == *cc; ++cc, ++ee);
+
 
                 // CASES:
                 //
@@ -246,17 +244,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 // We match up to "ee" but there is more to go and we
                 // don't match after that.  Result is we need to add 2
                 // nodes.
-                 if(node->children == 0) {
-        // The root node starts with no children and here we make the
-        // root family.
-        struct QsDictionary *children =
-                calloc(ALPHABET_SIZE, sizeof(*children));
-        ASSERT(children, "calloc(%d,%zu) failed",
-                ALPHABET_SIZE, sizeof(*children));
-        node->children = children;
-    }
 
-   //
                 // New node children:
                 //
                 // 2 of these children will be used in this bifurcation.
@@ -271,17 +259,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 n1->value = node->value;
                 n1->children = node->children;
                 n2->value = value;
-                 if(node->children == 0) {
-        // The root node starts with no children and here we make the
-        // root family.
-        struct QsDictionary *children =
-                calloc(ALPHABET_SIZE, sizeof(*children));
-        ASSERT(children, "calloc(%d,%zu) failed",
-                ALPHABET_SIZE, sizeof(*children));
-        node->children = children;
-    }
 
-   node->children = nchildren;
+                node->children = nchildren;
                 node->value = 0;
 
                 if(*(ee+1)) {
@@ -311,18 +290,6 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
             ++c;
 
-#if 0
-            // We have no suffix in node
-            if(node->value == 0) {
-                // And no value, so this is home for this value.
-                if(*c) {
-                    node->suffix = strdup(c);
-                    ASSERT(node->suffix, "strdup(%p) failed", c);
-                }
-                node->value = value;
-                return 0; // success.
-            }
-#endif
             continue; // See if there are more children.
         }
 
