@@ -23,6 +23,7 @@ int main(void) {
 
 #if 1
     const char *keys[] = {
+        "hello", "hello",
         "0123", "0123",
         "01234", "0123",
         "0123456", "0123",
@@ -75,8 +76,8 @@ int main(void) {
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
+        fprintf(stderr, "key=\"%s\", value=\"%s\"\n", *key, val);
         ASSERT(qsDictionaryInsert(d, *key, val) == 0);
-        fprintf(stderr, "added %s, %s\n", *key, val);
         ++key;
     }
 
@@ -87,9 +88,9 @@ int main(void) {
     for(const char **key = keys; *key; ++key) {
         const char *stored = qsDictionaryFind(d, *key);
         const char *val = *(key + 1);
+        fprintf(stderr, "key=\"%s\", val=\"%s\"\n", *key, val);
         ASSERT(val == stored, "key=\"%s\" val=\"%s\" != stored=\"%s\"",
                 *key, val, stored);
-        fprintf(stderr, "key=\"%s\", val=\"%s\"\n", *key, val);
         ++key;
     }
 
