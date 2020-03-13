@@ -233,23 +233,6 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
     free(dict);
 }
 
-// Returns bits[] that is null terminated
-static inline
-int Bitify(const char *e, char *bits) {
-    
-    int i = 0;
-    for(;*e < START && *e && i < 4;) {
-
-        // TODO:  HEREEEEEEEEEEEE
-        *bits = 0; 
-    }
-
-    bits[i] = 0;
-
-    return 0;
-}
-        
-
 
 // Returns the next character
 // This returns the next character after we run out of the 2 bit encoded
@@ -343,6 +326,9 @@ char GetBits(char **bits, const char **c) {
 }
 
 
+// Speed of Insert is not much of a concern.  If Find that needs to be
+// fast.
+//
 // Returns 0 on success or 1 if already present and -1 if it is not added
 // and have an invalid character.
 int qsDictionaryInsert(struct QsDictionary *node,
@@ -374,6 +360,19 @@ int qsDictionaryInsert(struct QsDictionary *node,
     b[3] = 1;
     b[4] = 0; // null terminate.
     // We'll use bits to swim through this "bit" character array.
+
+    // We need two sets of these things:
+    char eb[5];
+    char *ebits = eb + 4;
+    eb[0] = 1;
+    eb[1] = 1;
+    eb[2] = 1;
+    eb[3] = 1;
+    eb[4] = 0;
+
+    // TODO remove this:
+    DSPEW("%d", eb[3]);
+
 
 #if 0
     for(const char *str = key; *str;)
@@ -446,6 +445,98 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     continue;
                 }
 
+                if(*e >= START) {
+                    // The no match point char is a regular ASCII
+                    // character like 'w' or '3'.  We need to break
+                    // that character into the 2 bit +1 form and find
+                    // where the 2 bit +1 form does not match.
+
+                    // Now insert the 2 bit +1 encoding of *e into the
+                    // suffix.
+                    char *str = malloc(strlen(node->suffix) + 4);
+                    ASSERT(str, "malloc(%zu) failed",
+                            strlen(node->suffix) + 4);
+
+                    DASSERT(e >= node->suffix);
+
+                    // missI is the distance into the node->suffix
+                    // string where the key iterator, c, started to
+                    // miss-match.
+                    size_t missI = e - node->suffix;
+
+                    if(missI)
+                        strncpy(str, node->suffix, e - node->suffix);
+                    // s is a dummy iterator.
+                    char *s = str + missI;
+                    // Insert the 4 encoded chars into the new suffix.
+                    *(s++) = GetBits(&ebits, &e);
+                    *(s++) = GetBits(&ebits, &e);
+                    *(s++) = GetBits(&ebits, &e);
+                    *(s++) = GetBits(&ebits, &e);
+                    // Put the rest of the string on the end of this
+                    // new string.  The buffer overrun was checked in
+                    // the size of the malloc(), strlen(node->suffix)
+                    // + 4.
+                    strcpy(str, s);
+                    // Kind of late to check this now, but just
+                    // checking this once should be good for all runs
+                    // after for all time to the end of the universe.
+                    // Not likely to SEGV due to being 1 char off, but
+                    // this should be exact.  If I was not so
+                    // feeble, I would not check stuff like this
+                    // DASSERT() below:
+                    DASSERT(strlen(str) == strlen(node->suffix) + 3);
+
+                    // Switch the strings for the suffix.
+                    free((char *) node->suffix);
+                    node->suffix = str;
+                    // Now we have the same suffix, but with an
+                    // additional 3 chars, from a 4 char encoding of
+                    // the regular char that did not match one of the
+                    // key string characters.
+
+                    // Now reset the e iterator to line up with the
+                    // point just before the key iterator c started to
+                    // miss-match.
+                    if(missI)
+                        e = str + missI - 1;
+                    else
+                        e = str;
+                    --c;
+
+                    // We need to rerun the finding of the character
+                    // miss-match just like before.
+                    //
+                    // The bits should be reset to 0 because the
+                    // miss-match happened at a regular character in
+                    // the suffix.
+                    DASSERT(*bits == 0);
+#ifdef DEBUG
+                    char lastKeyChar;
+#endif
+                    // Find the point where key and suffix do not match.
+                    for(;*e && *c;) {
+                        DASSERT(*e < START);
+                        if((*e) != (
+#ifdef DEBUG
+                                    lastKeyChar =
+#endif
+                                    GetBits(&bits, &c)))
+                            break;
+                        ++e;
+                    }
+
+                    // We should be guaranteed to have a suffix
+                    // character and miss-matching key character.
+                    DASSERT(*e);
+                    DASSERT(lastKeyChar);
+                    DASSERT(*e != lastKeyChar);
+                } // ELSE
+                // The point that the key and traversal char did
+                // not match was a 2 bit + 1 char thingy like
+                // \3 or \4 as we wrote in the comments above.
+
+
                 if(*c == '\0') { // There are unmatched chars in suffix
                     //
                     // 2. INSERT a node
@@ -462,10 +553,12 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     ASSERT(children, "calloc(4,%zu) failed",
                             sizeof(*children));
 
+
+
                     // parent -> node1 (firstChar + start of suffix) ->
                     //   node2 (ee* + rest of suffix) -> ...
 
-                    // dummy pointer node will be acting as node1.
+                    // dummy pointer "node" will be acting as node1.
 
                     struct QsDictionary *node2 = children + (*e) - 1;
                     // node2 has all the children of node and the old
@@ -504,7 +597,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                 // BIFURCATE
                 //
-                // We match up to "ee" but there is more to go and we
+                // We match up to "e" but there is more to go and we
                 // don't match after that.  Result is we need to add 2
                 // nodes.
 
