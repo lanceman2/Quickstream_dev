@@ -233,25 +233,29 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
     free(dict);
 }
 
-
-// Returns true is we are at a regular character as we have defined them
-// or false if there are those funny 2 bit characters in the queue.
+// Returns bits[] that is null terminated
 static inline
-bool CheckChars(char **bits[], const char **c) {
+int Bitify(const char *e, char *bits) {
+    
+    int i = 0;
+    for(;*e < START && *e && i < 4;) {
 
-    // We cannot call this function if there are no more characters left
-    // in the string.
-    DASSERT(**c);
+        // TODO:  HEREEEEEEEEEEEE
+        *bits = 0; 
+    }
 
-    return (**bits)?false:true;
+    bits[i] = 0;
+
+    return 0;
 }
+        
 
 
 // Returns the next character
 // This returns the next character after we run out of the 2 bit encoded
 // characters.
 static inline
-char GetChar(char **bits[], const char **c) {
+char GetChar(char **bits, const char **c) {
 
     // We cannot call this function if there are no more characters left
     // in the string.
@@ -261,28 +265,29 @@ char GetChar(char **bits[], const char **c) {
         // For this use case we encode the 0 as 1 and the 1 as 2
         // and the 2 as 3 and the 3 as 4; because we need 0 to terminate
         // the string.
-        DASSERT((***bits) < 4);
-        char ret = (***bits) + 1;
+        DASSERT((**bits) <= 4);
+        char ret = (**bits);
         *bits += 1;
         if(**bits == 0)
+            // We hit the 0 terminator.
             // Advance to the next character for next time.
             *c += 1;
-        // Return a 2 bits of a byte.
+        // Return a 2 bits of a byte + 1.
         return ret;
     }
 
     // *bits is at the null terminator.
 
     *c += 1;
-    
+
     return (**c);
 }
 
 
 // I wish C had pass by reference.  This is only used to index into a
-// child node.
+// child node.  So the 1 offset is not added.
 static inline
-char GetBits(char **bits[], const char **c) {
+char GetBits(char **bits, const char **c) {
 
     // We cannot call this function if there are no more characters left
     // in the string.
@@ -291,12 +296,17 @@ char GetBits(char **bits[], const char **c) {
     char ret;
 
     if(**bits) {
-        ret = ***bits;
+        // For this use case we encode the 0 as 1 and the 1 as 2
+        // and the 2 as 3 and the 3 as 4; because we need 0 to terminate
+        // the string.
+        DASSERT((**bits) <= 4);
+        ret = (**bits);
         *bits += 1;
         if(**bits == 0)
+            // We hit the 0 terminator.
             // Advance to the next character for next time.
             *c += 1;
-        // Return a 2 bits of a byte.
+        // Return a 2 bits of a byte + 1.
         return ret;
     }
 
@@ -317,19 +327,19 @@ char GetBits(char **bits[], const char **c) {
 
     // We can use a pointer to a 32 bit = 4 byte x 8 bit/byte thing to set
     // all the *bits[] array at one shot.
-    uint32_t *val32 = (uint32_t *) (*(*bits - 1));
+    uint32_t *val32 = (uint32_t *) (*bits - 1);
 
     // We must keep this order when decoding in the Find() function.
 
-    *val32 =   ((0x00000003) & ret) // mask out just the first 2 bits
-            | (((0x0000000C) & ret) << 6)// mask 2 bits and shift
-            | (((0x00000030) & ret) << 12) // mask 2 bits and shift
-            | (((0x000000C0) & ret) << 18); // mask 2 bits and shift
+    *val32 =   (((0x00000003) & ret)        + 0x00000001)
+            | ((((0x0000000C) & ret) << 6)  + 0x00000100)
+            | ((((0x00000030) & ret) << 12) + 0x00010000)
+            | ((((0x000000C0) & ret) << 18) + 0x01000000);
     //
     // The next bits[] to be returned after this call will be **bits =
     // *bits[0], not *bits[-1].
     //
-    return **(*bits -1); // Return the first set of 2 bits.
+    return *(*bits -1); // Return the first set of 2 bits.
 }
 
 
@@ -356,14 +366,12 @@ int qsDictionaryInsert(struct QsDictionary *node,
         }
 
     // Setup pointers to an array of chars that null terminates.
-    char *b[5];
-    char **bits = b + 4;
-    char bit[4];
-    memset(bits, 0, 4);
-    b[0] = bit;
-    b[1] = bit + 1;
-    b[2] = bit + 2;
-    b[3] = bit + 3;
+    char b[5];
+    char *bits = b + 4;
+    b[0] = 1;
+    b[1] = 1;
+    b[2] = 1;
+    b[3] = 1;
     b[4] = 0; // null terminate.
     // We'll use bits to swim through this "bit" character array.
 
@@ -411,7 +419,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     ++e;
                 }
 
-///// HERE LANCE
+                DASSERT(*e <= 4 || (*e >= START && *e <= END));
+
 
                 // CASES:
                 //
@@ -458,21 +467,21 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                     // dummy pointer node will be acting as node1.
 
-                    struct QsDictionary *node2 = children + (*ee) - 1;
+                    struct QsDictionary *node2 = children + (*e) - 1;
                     // node2 has all the children of node and the old
                     // value and the remaining suffix that was in node.
                     node2->children = node->children;
                     node2->value = node->value;
                     // node2 just has part of the old suffix.
-                    if(*(ee+1)) {
-                        node2->suffix = strdup(ee+1);
-                        ASSERT(node2->suffix, "strdup(%p) failed", ee+1);
+                    if(*(e+1)) {
+                        node2->suffix = strdup(e+1);
+                        ASSERT(node2->suffix, "strdup(%p) failed", e+1);
                     }
 
                     const char *oldSuffix = node->suffix;
                     // Now remake node
                     node->value = value; // it has the new value.
-                    if(ee == node->suffix) {
+                    if(e == node->suffix) {
                         // There where no matching chars in suffix
                         // and the char pointers never advanced.
                         node->suffix = 0;
@@ -481,7 +490,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                         // terminate the suffix after the last matching
                         // char and then dup it, and free the old remains
                         // of suffix.
-                        * (char *) ee = '\0';
+                        * (char *) e = '\0';
                         node->suffix = strdup(oldSuffix);
                         ASSERT(node->suffix, "strdup(%p) failed",
                                 oldSuffix);
@@ -507,8 +516,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 ASSERT(children, "calloc(%d,%zu) failed",
                         4, sizeof(*children));
 
-                struct QsDictionary *n1 = children + (*ee) - START;
-                struct QsDictionary *n2 = children + (*cc) - START;
+                struct QsDictionary *n1 = children + (*e) - START;
+                struct QsDictionary *n2 = children + (*c) - START;
                 const char *oldSuffix = node->suffix;
                 n1->value = node->value;
                 n1->children = node->children;
@@ -517,21 +526,21 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 node->children = children;
                 node->value = 0;
 
-                if(*(ee+1)) {
-                    n1->suffix = strdup(ee+1);
-                    ASSERT(n1->suffix, "strdup(%p) failed", ee+1);
+                if(*(e+1)) {
+                    n1->suffix = strdup(e+1);
+                    ASSERT(n1->suffix, "strdup(%p) failed", e+1);
                 }
 
-                ++cc;
-                if(*cc) {
-                    n2->suffix = strdup(cc);
-                    ASSERT(n2->suffix, "strdup(%p) failed", cc);
+                ++c;
+                if(*c) {
+                    n2->suffix = strdup(c);
+                    ASSERT(n2->suffix, "strdup(%p) failed", c);
                 }
 
-                if(ee == node->suffix)
+                if(e == node->suffix)
                     node->suffix = 0;
                 else {
-                    *((char *)ee) = '\0';
+                    *((char *)e) = '\0';
                     node->suffix = strdup(oldSuffix);
                     ASSERT(node->suffix, "strdup(%p) failed", oldSuffix);
                 }
