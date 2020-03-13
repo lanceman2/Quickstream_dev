@@ -411,7 +411,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 // Find the point where key and suffix do not match.
                 for(;*e && *c;) {
                     // Consider iterating over 2 bit chars
-                    if(*e < START && (*e) - 1 != GetBits(&bits, &c))
+                    if(*e < START && (*e) != GetBits(&bits, &c))
                         break;
                     // Else iterate over regular characters.
                     if(*e != GetChar(&bits, &c))
