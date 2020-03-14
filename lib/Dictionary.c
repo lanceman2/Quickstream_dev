@@ -678,7 +678,7 @@ DSPEW("DOUBLE FUCK  \"%s\"  \"%s\"", STRING(e), c);
                 *s = '\0'; // Null terminate the suffix string.
 
                 struct QsDictionary *n1 = children + (*e) - 1;
-                struct QsDictionary *n2 = children + (*c++) - 1;
+                struct QsDictionary *n2 = children + (*str) - 1;
                 const char *oldSuffix = node->suffix;
                 n1->value = node->value;
                 n1->children = node->children;
