@@ -81,6 +81,7 @@ int main(void) {
         ++key;
     }
 
+    return 0;
 
     qsDictionaryPrintDot(d, stdout);
 

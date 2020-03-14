@@ -240,16 +240,14 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
 static inline
 char GetChar(char **bits, const char **c) {
 
-    // We cannot call this function if there are no more characters left
-    // in the string.
-    DASSERT(**c);
+    char ret;
 
     if(**bits) {
         // For this use case we encode the 0 as 1 and the 1 as 2
         // and the 2 as 3 and the 3 as 4; because we need 0 to terminate
         // the string.
         DASSERT((**bits) <= 4);
-        char ret = (**bits);
+        ret = (**bits);
         *bits += 1;
         if(**bits == 0)
             // We hit the 0 terminator.
@@ -260,10 +258,36 @@ char GetChar(char **bits, const char **c) {
     }
 
     // *bits is at the null terminator.
+    ret = **c;
 
     *c += 1;
 
-    return (**c);
+    return ret;
+}
+
+
+// TODO: Remove this debugging print thing.
+static inline char *
+STRING(const char *s) {
+
+    static char *str = 0;
+
+    str = realloc(str, strlen(s) * 4 + 2);
+    ASSERT(str, "realloc() failed");
+
+    char *ss = str;
+
+    for(; *s; ++s) {
+        if(*s >= START)
+            *ss++ = *s;
+        else {
+            *ss++ = '\\';
+            *ss++ = *s + '0';
+        }
+    }
+    *ss = '\0';
+
+    return str;
 }
 
 
@@ -334,6 +358,8 @@ char GetBits(char **bits, const char **c) {
 int qsDictionaryInsert(struct QsDictionary *node,
         const char *key, const void *value) {
 
+DSPEW("KEY=\"%s\"", key);
+
     DASSERT(node);
     DASSERT(key);
     DASSERT(*key);
@@ -370,17 +396,15 @@ int qsDictionaryInsert(struct QsDictionary *node,
     eb[3] = 1;
     eb[4] = 0;
 
-    // TODO remove this:
-    DSPEW("%d", eb[3]);
-
 
 #if 0
     for(const char *str = key; *str;)
-        fprintf(stderr, "\\%d", GetBits(&bits, &str));
+        fprintf(stderr, "\\%c", '0' + GetBits(&bits, &str));
     fprintf(stderr, "\n");
 
     return 0;
 #endif
+DSPEW("KEY=\"%s\"", key);
 
 
     for(const char *c = key; *c;) {
@@ -392,13 +416,21 @@ int qsDictionaryInsert(struct QsDictionary *node,
         //
         // We cannot call GetBits() or GetChar() without knowing that
         // *c != 0.
+DSPEW("SUBKEY=\"%s\"", STRING(c));
+
+
+DSPEW("'%c'  suffix=\"%s\"  node->children=%p", *c, node->suffix, node->children);
 
         if(node->children) {
             // We will go to next child in the traversal.
             //
             // Go to the next child in the traversal.
             //
+DSPEW("SUBKEY=\"%s\"", STRING(c));
+
             node = node->children + GetBits(&bits, &c);
+DSPEW("SUBKEY=\"%s\"", STRING(c));
+
 
             if(node->suffix) {
                 // We have a suffix in this node.
@@ -407,19 +439,25 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 //
                 const char *e = node->suffix; // one for current suffix
 
+DSPEW("%d != %d  suffix=\"%s\"  SUBKEY=\"%s\"", *e, *c, STRING(e), c);
+
+
+                char lastChar = 0;
+
                 // Find the point where key and suffix do not match.
                 for(;*e && *c;) {
                     // Consider iterating over 2 bit chars
-                    if(*e < START && (*e) != GetBits(&bits, &c))
+                    if(*e < START && (*e) != (lastChar = GetBits(&bits, &c)))
                         break;
                     // Else iterate over regular characters.
-                    if(*e != GetChar(&bits, &c))
+                    if(*e != (lastChar = GetChar(&bits, &c)))
                         break;
                     ++e;
                 }
 
                 DASSERT(*e <= 4 || (*e >= START && *e <= END));
 
+DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
 
                 // CASES:
                 //
@@ -531,6 +569,9 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     DASSERT(*e);
                     DASSERT(lastKeyChar);
                     DASSERT(*e != lastKeyChar);
+
+DSPEW("fixed existing suffix to => \"%s\"", STRING(node->suffix));
+
                 } // ELSE
                 // The point that the key and traversal char did
                 // not match was a 2 bit + 1 char thingy like
@@ -592,8 +633,13 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     // This node now gets the new children and has one
                     // child that is node2 from above.
                     node->children = children;
+DSPEW("suffix=\"%s\"", node->suffix);
+
+
+
                     return 0; // success
                 }
+
 
                 // BIFURCATE
                 //
@@ -609,12 +655,43 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 ASSERT(children, "calloc(%d,%zu) failed",
                         4, sizeof(*children));
 
-                struct QsDictionary *n1 = children + (*e) - START;
-                struct QsDictionary *n2 = children + (*c) - START;
+
+DSPEW("DOUBLE FUCK  \"%s\"  \"%s\"", STRING(e), c);
+
+
+                DASSERT(*c);
+
+
+                // We remake what's left of the key at c with
+                // extra low values characters are it's start.
+                //
+                // We add 4 more because there may be extra encoding
+                // characters in the front.
+                char *str = malloc(strlen(c) + 4);
+                char *s = str;
+                ASSERT(s, "malloc(%zu) failed", strlen(c) + 4);
+                char cc = GetBits(&bits, &c);
+                while(cc) {
+                    *(s++) = cc;
+                    cc = GetChar(&bits, &c);
+                }
+                *s = '\0'; // Null terminate the suffix string.
+
+                struct QsDictionary *n1 = children + (*e) - 1;
+                struct QsDictionary *n2 = children + (*c++) - 1;
                 const char *oldSuffix = node->suffix;
                 n1->value = node->value;
                 n1->children = node->children;
                 n2->value = value;
+
+                // We must strdup() and allocate yet more memory because
+                // we remove the first character and we need to be able to
+                // free it later, knowing where to free from.  We don't
+                // sweat this extra crappy code, because remember Insert()
+                // does not need to be fast like Find() does.
+                n2->suffix = strdup(str + 1);
+                ASSERT(n2->suffix, "strdup(%p) failed", str + 1);
+                free(str);
 
                 node->children = children;
                 node->value = 0;
@@ -622,12 +699,6 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 if(*(e+1)) {
                     n1->suffix = strdup(e+1);
                     ASSERT(n1->suffix, "strdup(%p) failed", e+1);
-                }
-
-                ++c;
-                if(*c) {
-                    n2->suffix = strdup(c);
-                    ASSERT(n2->suffix, "strdup(%p) failed", c);
                 }
 
                 if(e == node->suffix)
@@ -642,12 +713,15 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 free((char *) oldSuffix);
 
                 return 0; // success
-            }
 
-            ++c;
+            } // if(node->suffix)
+
+DSPEW("FUCKME");
 
             continue; // See if there are more children.
-        }
+        
+        } // if(node->children) {
+
 
         // We have no more children
         //
@@ -658,12 +732,27 @@ int qsDictionaryInsert(struct QsDictionary *node,
         if(node->value == 0) {
             DASSERT(node->suffix == 0);
             if(*c) {
-                node->suffix = strdup(c);
-                ASSERT(node->suffix, "strdup(%p) failed", c);
+
+                // We add 4 more because there may be extra encoding
+                // characters.
+                char *s = malloc(strlen(c) + 4);
+                ASSERT(s, "malloc(%zu) failed", strlen(c) + 4);
+                node->suffix = s;
+                char cc = GetChar(&bits, &c);
+                while(cc) {
+DSPEW("%d", cc);
+                    *(s++) = cc;
+                    cc = GetChar(&bits, &c);
+                }
+                *s = '\0'; // Null terminate the suffix string.
             }
+
+DSPEW("suffix=\"%s\"", STRING(node->suffix));
+
             node->value = value;
             return 0; // success
-        }
+
+        } //if(node->children) 
 
         struct QsDictionary *children =
                 calloc(4, sizeof(*children));
@@ -672,7 +761,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
         node->children = children;
 
         // go to this character (*c) node.
-        node = children + (*c) - START;
+        node = children + (*c) - 1;
         node->value = value;
         // add any suffix characters if needed.
         ++c;
@@ -681,6 +770,9 @@ int qsDictionaryInsert(struct QsDictionary *node,
             node->suffix = strdup(c);
             ASSERT(node->suffix, "strdup(%p) failed", c);
         }
+DSPEW("suffix=\"%s\"", STRING(node->suffix));
+
+
         return 0; // success
 
     } // for() on characters *c
