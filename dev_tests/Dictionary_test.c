@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdbool.h>
-
+#include <inttypes.h>
 #include "../lib/Dictionary.h"
 #include "../lib/debug.h"
 
@@ -21,11 +21,61 @@ int main(void) {
 
     struct QsDictionary *d = qsDictionaryCreate();
 
-#if 1
+#define START          (32) // start at SPACE
+#define END            (126) // ~
+
+#if 0
+    char key[5];
+    key[3] = 0;
+    key[4] = 0;
+    void *val = 0;
+
+    for(int i = START; i<=END; ++i) {
+        key[0] = i;
+        for(int j = END; j>=START; --j) {
+            key[1] = j;
+            for(int k = START; k<=START+2; ++k) {
+                key[2] = k;
+                val = (void *) (uintptr_t) (i + (j * END) +  k * END * END);
+                fprintf(stderr, "key=\"%s\", value=\"%p\"\n", key, val);
+                ASSERT(qsDictionaryInsert(d, key, val) == 0);
+            }
+        }
+    }
+    key[3] = 'r';
+    for(int i = START; i<=END; ++i) {
+        key[1] = i;
+        for(int j = END; j>=START; --j) {
+            key[0] = j;
+            for(int k = START; k<=START+2; ++k) {
+                key[2] = k;
+                val = (void *) (uintptr_t) (i + (j * END) +  k * END * END);
+                fprintf(stderr, "key=\"%s\", value=\"%p\"\n", key, val);
+                ASSERT(qsDictionaryInsert(d, key, val) == 0);
+            }
+        }
+    }
+    key[2] = 'r';
+    for(int i = START; i<=END; ++i) {
+        key[1] = i;
+        for(int j = END; j>=START; --j) {
+            key[0] = j;
+            for(int k = START; k<=START+2; ++k) {
+                key[3] = k;
+                val = (void *) (uintptr_t) (i + (j * END) +  k * END * END);
+                fprintf(stderr, "key=\"%s\", value=\"%p\"\n", key, val);
+                ASSERT(qsDictionaryInsert(d, key, val) == 0);
+            }
+        }
+    }
+#else
     const char *keys[] = {
-        //"hello", "hello",
-        //"0123", "0123",
-        //"01234", "0123",
+        "healo", "hello",
+        "heal", "hello",
+        //"hea", "hello",
+#  if 0
+        "0123", "0123",
+        "01234", "0123",
         "0123456", "0123",
         "012345", "0123",
         "123", "0123",
@@ -61,18 +111,9 @@ int main(void) {
         "02", "02",
         "012", "012",
         "q", "q",
-
+#  endif
         0, 0
     };
-#else
-    const char *keys[] = {
-        "0123", "0123",
-        "01", "01",
-        "11", "11",
-        "023", "023",
-        0, 0
-    };
-#endif
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
@@ -81,21 +122,16 @@ int main(void) {
         ++key;
     }
 
-    return 0;
+#endif
+
+
 
     qsDictionaryPrintDot(d, stdout);
 
 
-    for(const char **key = keys; *key; ++key) {
-        const char *stored = qsDictionaryFind(d, *key);
-        const char *val = *(key + 1);
-        fprintf(stderr, "key=\"%s\", val=\"%s\"\n", *key, val);
-        ASSERT(val == stored, "key=\"%s\" val=\"%s\" != stored=\"%s\"",
-                *key, val, stored);
-        ++key;
-    }
-
     qsDictionaryDestroy(d); 
+
+    fprintf(stderr, "SUCCESS\n");
 
     return 0;
 }

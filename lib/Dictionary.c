@@ -270,6 +270,8 @@ char GetChar(char **bits, const char **c) {
 static inline char *
 STRING(const char *s) {
 
+    if(s == 0) return "(null)";
+
     static char *str = 0;
 
     str = realloc(str, strlen(s) * 4 + 2);
@@ -350,6 +352,26 @@ char GetBits(char **bits, const char **c) {
 }
 
 
+static inline
+char *GetSuffix(const char **c, char **bits) {
+
+    char cc = GetChar(bits, c);
+    char *str = 0;
+    if(cc) {
+        str = malloc(strlen(*c) + 4);
+        ASSERT(str, "malloc(%zu) failed", strlen(*c) + 4);
+        char *s = str;
+        while(cc) {
+            *(s++) = cc;
+            cc = GetChar(bits, c);
+        }
+        *s = '\0';
+    }
+    return str;
+}
+
+
+
 // Speed of Insert is not much of a concern.  If Find that needs to be
 // fast.
 //
@@ -357,8 +379,6 @@ char GetBits(char **bits, const char **c) {
 // and have an invalid character.
 int qsDictionaryInsert(struct QsDictionary *node,
         const char *key, const void *value) {
-
-DSPEW("KEY=\"%s\"", key);
 
     DASSERT(node);
     DASSERT(key);
@@ -404,7 +424,6 @@ DSPEW("KEY=\"%s\"", key);
 
     return 0;
 #endif
-DSPEW("KEY=\"%s\"", key);
 
 
     for(const char *c = key; *c;) {
@@ -416,20 +435,17 @@ DSPEW("KEY=\"%s\"", key);
         //
         // We cannot call GetBits() or GetChar() without knowing that
         // *c != 0.
-DSPEW("SUBKEY=\"%s\"", STRING(c));
-
-
-DSPEW("'%c'  suffix=\"%s\"  node->children=%p", *c, node->suffix, node->children);
 
         if(node->children) {
             // We will go to next child in the traversal.
             //
             // Go to the next child in the traversal.
             //
-DSPEW("SUBKEY=\"%s\"", STRING(c));
+            char ww;
 
-            node = node->children + GetBits(&bits, &c);
-DSPEW("SUBKEY=\"%s\"", STRING(c));
+            node = node->children + (ww = GetBits(&bits, &c)) - 1;
+
+DSPEW(" child 2bit+1 thingy=\\%d SUBKEY=\"%s\"", ww, STRING(c));
 
 
             if(node->suffix) {
@@ -439,19 +455,24 @@ DSPEW("SUBKEY=\"%s\"", STRING(c));
                 //
                 const char *e = node->suffix; // one for current suffix
 
-DSPEW("%d != %d  suffix=\"%s\"  SUBKEY=\"%s\"", *e, *c, STRING(e), c);
+DSPEW("suffix=\"%s\"", STRING(e));
+DSPEW("               SUBKEY=\"%s\"", STRING(c));
+
 
 
                 char lastChar = 0;
-
                 // Find the point where key and suffix do not match.
-                for(;*e && *c;) {
+                while(*e && *c) {
                     // Consider iterating over 2 bit chars
-                    if(*e < START && (*e) != (lastChar = GetBits(&bits, &c)))
+                    if(*e < START)
+                        lastChar = GetBits(&bits, &c);
+                    else
+                        // Else iterate over regular characters.
+                        lastChar = GetChar(&bits, &c);
+DSPEW("c=\\%d e=\\%d", lastChar, *e);
+                    if(lastChar != *e)
                         break;
-                    // Else iterate over regular characters.
-                    if(*e != (lastChar = GetChar(&bits, &c)))
-                        break;
+
                     ++e;
                 }
 
@@ -484,10 +505,17 @@ DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
                 }
 
                 if(*e >= START) {
-                    // The no match point char is a regular ASCII
+                    // The miss-match point char is a regular ASCII
                     // character like 'w' or '3'.  We need to break
                     // that character into the 2 bit +1 form and find
                     // where the 2 bit +1 form does not match.
+                    //
+                    // Example *e = 'a' != 'b'  = *c
+                    // Or      *e = 'a' != '\0' = *c
+
+
+                    // Backup one char and it's not a 2 bit+1 encoded
+                    // thing, because *
 
                     // Now insert the 2 bit +1 encoding of *e into the
                     // suffix.
@@ -500,6 +528,11 @@ DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
                     // missI is the distance into the node->suffix
                     // string where the key iterator, c, started to
                     // miss-match.
+
+DSPEW("misses at sub-suffix=\"%s\"", STRING(e));
+DSPEW("SUBKEY=\"%s\"", STRING(c));
+
+
                     size_t missI = e - node->suffix;
 
                     if(missI)
@@ -515,7 +548,10 @@ DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
                     // new string.  The buffer overrun was checked in
                     // the size of the malloc(), strlen(node->suffix)
                     // + 4.
-                    strcpy(str, s);
+                    if(*e)
+                        strcpy(s, e);
+                    else
+                        *s = '\0';
                     // Kind of late to check this now, but just
                     // checking this once should be good for all runs
                     // after for all time to the end of the universe.
@@ -536,11 +572,10 @@ DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
                     // Now reset the e iterator to line up with the
                     // point just before the key iterator c started to
                     // miss-match.
-                    if(missI)
-                        e = str + missI - 1;
-                    else
-                        e = str;
+                    e = str + missI;
                     --c;
+
+WARN("suffix  e=\"%s\"", STRING(e));
 
                     // We need to rerun the finding of the character
                     // miss-match just like before.
@@ -567,18 +602,22 @@ DSPEW("%d != %d  SUBKEY=\"%s\"", *e, lastChar, STRING(c));
                     // We should be guaranteed to have a suffix
                     // character and miss-matching key character.
                     DASSERT(*e);
-                    DASSERT(lastKeyChar);
                     DASSERT(*e != lastKeyChar);
 
-DSPEW("fixed existing suffix to => \"%s\"", STRING(node->suffix));
+DSPEW("***********fixed existing suffix=\"%s\"", STRING(node->suffix));
+DSPEW("SUBKEY=\"%s\"  lastKeyChar=%d", STRING(c), lastKeyChar);
 
                 } // ELSE
                 // The point that the key and traversal char did
                 // not match was a 2 bit + 1 char thingy like
                 // \3 or \4 as we wrote in the comments above.
 
+ERROR("SUBKEY=\"%s\"", STRING(c));
+ERROR("e=\"%s\"", STRING(e));
 
-                if(*c == '\0') { // There are unmatched chars in suffix
+
+
+                if(*c == '\0') { // The whole key matched
                     //
                     // 2. INSERT a node
                     //
@@ -594,12 +633,12 @@ DSPEW("fixed existing suffix to => \"%s\"", STRING(node->suffix));
                     ASSERT(children, "calloc(4,%zu) failed",
                             sizeof(*children));
 
-
-
                     // parent -> node1 (firstChar + start of suffix) ->
                     //   node2 (ee* + rest of suffix) -> ...
 
                     // dummy pointer "node" will be acting as node1.
+                    
+                    DASSERT(*e > 0 && *e < 4);
 
                     struct QsDictionary *node2 = children + (*e) - 1;
                     // node2 has all the children of node and the old
@@ -633,12 +672,11 @@ DSPEW("fixed existing suffix to => \"%s\"", STRING(node->suffix));
                     // This node now gets the new children and has one
                     // child that is node2 from above.
                     node->children = children;
-DSPEW("suffix=\"%s\"", node->suffix);
-
-
+DSPEW("suffix=\"%s\"", STRING(node->suffix));
 
                     return 0; // success
-                }
+
+                } // else *c != '\0'
 
 
                 // BIFURCATE
@@ -649,33 +687,41 @@ DSPEW("suffix=\"%s\"", node->suffix);
 
                 // New node children:
                 //
-                // 2 of these children will be used in this bifurcation.
+                // 2 of these children in this array will be used in this
+                // bifurcation.
                 struct QsDictionary *children =
                         calloc(4, sizeof(*children));
                 ASSERT(children, "calloc(%d,%zu) failed",
                         4, sizeof(*children));
 
 
-DSPEW("DOUBLE FUCK  \"%s\"  \"%s\"", STRING(e), c);
+DSPEW("e=\"%s\"", STRING(e));
+DSPEW("SUBKEY=\"%s\"", STRING(c));
+
 
 
                 DASSERT(*c);
 
 
-                // We remake what's left of the key at c with
-                // extra low values characters are it's start.
+                // We remake what's left of the key at c with extra
+                // 2 bit +1 encoded characters at it's start.
                 //
                 // We add 4 more because there may be extra encoding
                 // characters in the front.
                 char *str = malloc(strlen(c) + 4);
                 char *s = str;
                 ASSERT(s, "malloc(%zu) failed", strlen(c) + 4);
+                if(lastChar) --bits;
                 char cc = GetBits(&bits, &c);
                 while(cc) {
                     *(s++) = cc;
                     cc = GetChar(&bits, &c);
                 }
                 *s = '\0'; // Null terminate the suffix string.
+
+DSPEW("  encoded key=\"%s\"", STRING(str));
+DSPEW("  remaining suffix=\"%s\"", STRING(e-1));
+
 
                 struct QsDictionary *n1 = children + (*e) - 1;
                 struct QsDictionary *n2 = children + (*str) - 1;
@@ -697,14 +743,19 @@ DSPEW("DOUBLE FUCK  \"%s\"  \"%s\"", STRING(e), c);
                 node->value = 0;
 
                 if(*(e+1)) {
+
+
+
                     n1->suffix = strdup(e+1);
                     ASSERT(n1->suffix, "strdup(%p) failed", e+1);
+                
+
                 }
 
                 if(e == node->suffix)
                     node->suffix = 0;
                 else {
-                    *((char *)e) = '\0';
+                    *((char *)e-1) = '\0';
                     node->suffix = strdup(oldSuffix);
                     ASSERT(node->suffix, "strdup(%p) failed", oldSuffix);
                 }
@@ -715,8 +766,6 @@ DSPEW("DOUBLE FUCK  \"%s\"  \"%s\"", STRING(e), c);
                 return 0; // success
 
             } // if(node->suffix)
-
-DSPEW("FUCKME");
 
             continue; // See if there are more children.
         
@@ -730,22 +779,10 @@ DSPEW("FUCKME");
         DASSERT(node->children == 0);
 
         if(node->value == 0) {
-            DASSERT(node->suffix == 0);
-            if(*c) {
 
-                // We add 4 more because there may be extra encoding
-                // characters.
-                char *s = malloc(strlen(c) + 4);
-                ASSERT(s, "malloc(%zu) failed", strlen(c) + 4);
-                node->suffix = s;
-                char cc = GetChar(&bits, &c);
-                while(cc) {
-DSPEW("%d", cc);
-                    *(s++) = cc;
-                    cc = GetChar(&bits, &c);
-                }
-                *s = '\0'; // Null terminate the suffix string.
-            }
+            DASSERT(node->suffix == 0);
+
+            node->suffix = (const char *) GetSuffix(&c, &bits);
 
 DSPEW("suffix=\"%s\"", STRING(node->suffix));
 
@@ -761,16 +798,13 @@ DSPEW("suffix=\"%s\"", STRING(node->suffix));
         node->children = children;
 
         // go to this character (*c) node.
-        node = children + (*c) - 1;
+        node = children + GetBits(&bits, &c) - 1;
         node->value = value;
+
         // add any suffix characters if needed.
-        ++c;
-        if(*c) {
-            // TODO: check c characters are valid.
-            node->suffix = strdup(c);
-            ASSERT(node->suffix, "strdup(%p) failed", c);
-        }
-DSPEW("suffix=\"%s\"", STRING(node->suffix));
+        node->suffix = (const char *) GetSuffix(&c, &bits);
+
+DSPEW(" suffix=\"%s\"", STRING(node->suffix));
 
 
         return 0; // success
@@ -794,36 +828,49 @@ DSPEW("suffix=\"%s\"", STRING(node->suffix));
 // Returns element ptr.
 void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
 
-    for(const char *c = key; *c;) {
+    DASSERT(key);
+    DASSERT(key[0]);
+
+    // Setup pointers to an array of chars that null terminates.
+    char b[5];
+    char *bits = b + 4;
+    b[0] = 1;
+    b[1] = 1;
+    b[2] = 1;
+    b[3] = 1;
+    b[4] = 0; // null terminate.
+    // We'll use bits to swim through this "bit" character array.
+
+    for(const char *c = key; *c; ) {
+
         if(node->children) {
 
-            DASSERT(*c >= START);
-            DASSERT(*c <= END);
-            if(*c < START || *c > END) {
-                ERROR("Invalid character in key=\"%s\"", key);
-                return 0;
-            }
-            node = node->children + (*c) - START;
-            ++c;
+            node = node->children + GetBits(&bits, &c)  - 1;
 
             if(node->suffix) {
 
-                const char *ee = node->suffix;
+                const char *e = node->suffix;
 
-                for(; *ee && *c && *c == *ee; ++c, ++ee)
-                    if(*c < START || *c > END) {
-                        ERROR("Invalid character in key=\"%s\"", key);
-                        return 0;
-                    }
+                // Find the point where key and suffix do not match.
+                for(;*e && *c;) {
+                    // Consider iterating over 2 bit chars
+                    if(*e < START) {
+                        if((*e) != GetBits(&bits, &c))
+                            break;
+                    } else
+                    // Else iterate over regular characters.
+                    if(*e != GetChar(&bits, &c))
+                        break;
+                    ++e;
+                }
 
-                if(*ee == 0)
+                if(*e == 0)
                     // Matched so far
                     continue;
                 else {
                     // The suffix has more characters that we did not
                     // match.
-                    ERROR("No key=\"%s\" found ee=\"%s\"  c=\"%s\"",
-                            key, ee, c);
+                    ERROR("No key=\"%s\" found", key);
                     return 0;
                 }
             }
@@ -840,46 +887,153 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
 }
 
 
+
 static void
-PrintChildren(const struct QsDictionary *node, char *lastString, FILE *f) {
+PrintEscChar(char c, FILE *f) {
+
+    DASSERT((1 <= c && c <= 4) ||
+            (START <= c && c <= END), "c=\\%d", c);
+
+    if(c < '0' || ('9' < c && c < 'A') ||
+            ('Z' < c && c < 'a') || 'z' < c)
+        fprintf(f, "\\\\%d", c); // like \\2
+    else
+        // Print like a regular character like 'a' or '5'.
+        putc(c, f);
+}
+
+
+static void
+PrintEscStr(const char *s, FILE *f) {
+
+    while(*s)
+        PrintEscChar(*s++, f);
+}
+
+
+static void
+Print_Char(char c, FILE *f) {
+
+    DASSERT((1 <= c && c <= 4) ||
+            (START <= c && c <= END), "c=\\%d", c);
+
+    if(c < '0' || ('9' < c && c < 'A') ||
+            ('Z' < c && c < 'a') || 'z' < c)
+        fprintf(f, "_%d", c); // like \\2
+    else
+        // Print like a regular character like 'a' or '5'.
+        putc(c, f);
+}
+
+
+static void
+Print_Str(const char *s, FILE *f) {
+
+    while(*s)
+        Print_Char(*s++, f);
+}
+
+
+static void
+PrintStr(const char *s, FILE *f) {
+
+    while(*s) {
+
+
+        if(*s < 5) {
+
+            DASSERT(*(s+1) && *(s+2) && *(s+3));
+            DASSERT(*(s+1) < 5, "*(s+1)=%d", *(s+1));
+            DASSERT(*(s+2) < 5, "*(s+1)=%d", *(s+2));
+            DASSERT(*(s+3) < 5, "*(s+1)=%d", *(s+3));
+
+            //                        bits
+            char val = (*s - 1); //   0 1
+            ++s;
+            val |= (*s - 1) << 2;
+            ++s;
+            val |= (*s - 1) << 4;
+            ++s;
+            val |= (*s - 1) << 6;
+
+            PrintEscChar(val, f);
+        } else
+
+            PrintEscChar(*s, f);
+        ++s;
+    }
+}
+
+
+
+// This function is called recursively adding to parentPrefix at each
+// level in the call stack.
+static void
+PrintChildren(const struct QsDictionary *node, char *parentPrefix,
+        char *parentSum, FILE *f) {
 
     if(node->children) {
-        struct QsDictionary *end = node->children + 4;
-        char c = START;
+        char c = 1;
         for(struct QsDictionary *child = node->children;
-                child < end; ++child, ++c) {
+                c <= 4; ++c, child = node->children + c - 1) {
+
+            if(child->value == 0 && child->children == 0) continue;
+
             const char *suffix = child->suffix;
-            suffix = (suffix?suffix:"");
 
-            if(child->children || child->value) {
+            // Make a new longer prefix
+            size_t l1 = strlen(parentPrefix);
+            char *prefix = malloc(l1 + 2);
+            ASSERT(prefix, "malloc() failed");
+            strcpy(prefix, parentPrefix);
+            *(prefix + l1) = c;
+            *(prefix + l1 + 1) = '\0';
 
-                const char *suffix = ((child->suffix)?(child->suffix):"");
-                const char *value =
-                    ((child->value)?((const char *) child->value):"");
+            // Make a longer sum
+            l1 = strlen(parentSum);
+            size_t l2 = strlen(suffix?suffix:"");
+            size_t len = l1 + 1 + l2 + 1;
+            char *sum = malloc(len);
+            ASSERT(sum, "malloc() failed");
+            strcpy(sum, parentSum);
+            *(sum + l1) = c;
+            strcpy(sum + l1 + 1, suffix?suffix:"");
+            *(sum + l1 + 1 + l2) = '\0';
 
-                size_t len = strlen(lastString) + 1 + strlen(suffix) + 1;
-                char *str = malloc(len);
-                ASSERT(str, "malloc(%zu) failed", len);
+            // parent -> child
+            fprintf(f, "  \"");
+            Print_Str(parentPrefix, f);
+            fprintf(f, "\" -> \"");
+            Print_Str(prefix, f);
+            fprintf(f, "\";\n");
 
-                if(child->value)
-                    // Create child node id
-                    fprintf(f, "  \"%s%c%s\" [label=\"%c%s\\n|%s|\"];\n",
-                            lastString, c, suffix, c, suffix, value);
-                else
-                    // Create child node id
-                    fprintf(f, "  \"%s%c%s\" [label=\"%c%s\"];\n",
-                            lastString, c, suffix, c, suffix);
-
-
-                snprintf(str, len, "%s%c%s", lastString, c, suffix);
-
-                PrintChildren(child, str, f);
-
-                free(str);
-
-                fprintf(f, "  \"%s\" -> \"%s%c%s\";\n",
-                        lastString, lastString, c, suffix);
+            // child label
+            fprintf(f, "  \"");
+            Print_Str(prefix, f);
+            fprintf(f, "\" [label=\"");
+            PrintEscChar(c, f);
+            if(suffix) {
+                fprintf(f, "\\nsuffix=|");
+                PrintEscStr(suffix, f);
+                fprintf(f, "|");
             }
+            fprintf(f, "\\ntotal=");
+            PrintEscStr(sum, f);
+            fprintf(f, "");
+
+            if(child->value) {
+
+                fprintf(f, "\\nkey=\\{ ");
+                PrintStr(sum, f);
+                fprintf(f, " \\}");
+            }
+
+            fprintf(f, "\"];\n");
+
+            PrintChildren(child, prefix, sum, f);
+            
+            free(prefix);
+            free(sum);
         }
     }
 }
@@ -892,7 +1046,7 @@ void qsDictionaryPrintDot(const struct QsDictionary *node, FILE *f) {
     fprintf(f, "  \"\" [label=\"ROOT\"];\n");
 
 
-    PrintChildren(node, "", f);
+    PrintChildren(node, "", "", f);
 
     fprintf(f, "}\n");
 }
