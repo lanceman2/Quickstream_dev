@@ -70,18 +70,19 @@ int main(void) {
     }
 #else
     const char *keys[] = {
-        "key", "",
+        "kea", "kea",
+        "keb", "keb",
         "healo", "hello",
         "heal", "hello",
         "hea", "hello",
+#if 1
         "0123", "0123",
         "01234", "0123",
         "0123456", "0123",
         "012345", "0123",
         "123", "0123",
         "11", "111111",
-        //"11111", "111111",
-#  if 0
+        "11111", "111111",
         "1111x11", "111111",
         "1111x111", "111111",
         "1111z11", "111111",
@@ -125,6 +126,12 @@ int main(void) {
 
 #endif
 
+    for(const char **key = keys; *key; ++key) {
+        const char *val = *(key + 1);
+        fprintf(stderr, "key=\"%s\", value=\"%s\"\n", *key, val);
+        ASSERT(val == qsDictionaryFind(d, *key));
+        ++key;
+    }
 
 
     qsDictionaryPrintDot(d, stdout);

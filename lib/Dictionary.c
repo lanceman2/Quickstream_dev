@@ -213,6 +213,10 @@ void FreeChildren(struct QsDictionary *children) {
         if(i->children)
             // Recurse
             FreeChildren(i->children);
+
+    if(children->suffix)
+        free(children->suffix);
+
 #if DEBUG
     memset(children, 0, 4*sizeof(*children));
 #endif
@@ -227,10 +231,38 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
     if(dict->children)
         FreeChildren(dict->children);
 
+    if(dict->suffix)
+        free(dict->suffix);
+
 #if DEBUG
     memset(dict, 0, sizeof(*dict));
 #endif
     free(dict);
+}
+
+
+// TODO: Remove this debugging print thing.
+static inline char *
+STRING(const char *s) {
+
+    static char *str = 0;
+
+    str = realloc(str, strlen(s) * 4 + 2);
+    ASSERT(str, "realloc() failed");
+
+    char *ss = str;
+
+    for(; *s; ++s) {
+        if(*s >= START)
+            *ss++ = *s;
+        else {
+            *ss++ = '\\';
+            *ss++ = *s + '0';
+        }
+    }
+    *ss = '\0';
+
+    return str;
 }
 
 
@@ -250,25 +282,36 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
 static inline
 char *Expand(const char *key) {
 
-    char *s = malloc(strlen(key)*4 + 1);
-    ASSERT(s, "malloc(%zu) failed", strlen(key)*4 + 1);
+    size_t l = 1;
+    for(const char *c = key; *c; ++c) {
+        if(*c > 4)
+            l += 4;
+        else
+            ++l;
+    }
 
+    char *s = malloc(l);
+    ASSERT(s, "malloc(%zu) failed", l);
     char *str = s;
 
     for(const char *c = key; *c; ++c) {
 
         uint32_t code = *c;
 
-        uint32_t *val = (uint32_t *) str;
+        if(code > 4) {
+            uint32_t *val = (uint32_t *) str;
 
-        *val =     (((0x00000003) & code)        + 0x00000001)
-                | ((((0x0000000C) & code) << 6 ) + 0x00000100)
-                | ((((0x00000030) & code) << 12) + 0x00010000)
-                | ((((0x000000C0) & code) << 18) + 0x01000000);
-        str += 4;
+            *val =     (((0x00000003) & code)        + 0x00000001)
+                    | ((((0x0000000C) & code) << 6 ) + 0x00000100)
+                    | ((((0x00000030) & code) << 12) + 0x00010000)
+                    | ((((0x000000C0) & code) << 18) + 0x01000000);
+            str += 4;
+        } else
+            *(str++) = code;
     }
 
     *str = '\0';
+
     return s;
 }
 
@@ -306,7 +349,7 @@ char *Compress(const char *suffix) {
     char *new = malloc(newL + 1);
     ASSERT(new, "malloc(%zu) failed", newL + 1);
     char *newEnd = new + newL - 1;
-    newEnd[newL] = '\0';
+    new[newL] = '\0';
     end = suffix + l - 1;
 
     while(end-3 >= suffix) {
@@ -330,7 +373,7 @@ char *Compress(const char *suffix) {
 
 
 
-// Speed of Insert is not much of a concern.  If Find that needs to be
+// Speed of Insert is not much of a concern.  It's Find that needs to be
 // fast.
 //
 // Returns 0 on success or 1 if already present and -1 if it is not added
@@ -355,10 +398,10 @@ int qsDictionaryInsert(struct QsDictionary *node,
             return -1;
         }
 
-
+    // We put the key input the form like: "he" = \1\3\3\2 \2\2\3\2
     char *key = Expand(key_in);
 
-#if 1
+#if 0
     for(char *str = key; *str; ++str) {
         fprintf(stderr, "\\%d", *str);
     }
@@ -368,7 +411,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 #endif
 
 
-    for(char *c = key; *c; ++c) {
+    for(char *c = key; *c;) {
 
         if(node->children) {
             // We will go to next child in the traversal.
@@ -376,10 +419,12 @@ int qsDictionaryInsert(struct QsDictionary *node,
             // Go to the next child in the traversal.
 
             node = node->children + *c - 1;
+            ++c;
 
             if(node->suffix) {
 
-                char *e = node->suffix;
+                char *eSuffix = Expand(node->suffix); // gets freed.
+                char *e = eSuffix;
 
                 for(;*e && *c && *e == *c; ++c, ++e );
                 // e and c are at:
@@ -391,19 +436,23 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     // Prefect match.
                     if(node->value) {
                         ERROR("Entry for key=\"%s\" exists", key_in);
+                        free(eSuffix);
                         free(key);
                         return 1;
                     }
                     node->value = value;
+                    free(eSuffix);
                     free(key);
                     return 0;
                 }
-                if(*e == 0)
+                if(*e == 0) {
                     // CONTINUE
                     //
                     // Suffix matched and ran out.  Still have key
                     // characters.  Go to the next child if there is one.
+                    free(eSuffix);
                     continue;
+                }
                 if(*c == 0) {
                     // SPLIT
                     //
@@ -433,22 +482,22 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                     char *oldSuffix = node->suffix;
                     node->value = value;
-                    if(e == node->suffix) {
+                    if(e == eSuffix) {
                         // There where no matching chars in suffix and the
                         // char pointers never advanced.
                         node->suffix = 0;
                     } else {
                         // At least one char matched in suffix.  Null
                         // terminate the suffix after the last matching
-                        // char and then dup it, and later we free the old
-                        // remains of suffix.
+                        // char and then dup it.
                         *(char *) e = '\0'; // It's okay we copied it
                         // above.  We have less characters for this node.
-                        node->suffix = Compress(oldSuffix);
+                        node->suffix = Compress(eSuffix);
                     }
                     node->children = children;
 
                     free(oldSuffix);
+                    free(eSuffix);
                     free(key);
                     return 0; // success
                 }
@@ -468,9 +517,32 @@ int qsDictionaryInsert(struct QsDictionary *node,
                         4, sizeof(*children));
 
                 char *oldSuffix = node->suffix;
+                struct QsDictionary *n1 = children + (*e) - 1;
+                struct QsDictionary *n2 = children + (*c) - 1;
+                n1->value = node->value;
+                n1->children = node->children;
+                n2->value = value;
+                node->children = children;
+                node->value = 0;
 
+                if(*(e+1))
+                    n1->suffix = Compress(e+1);
+
+                ++c;
+                if(*c)
+                    n2->suffix = Compress(c);
+
+                if(e == eSuffix)
+                    node->suffix = 0;
+                else {
+                    // No need to worry, we copied this above, so now we
+                    // came hack it up.
+                    *((char *)(e)) = '\0';
+                    node->suffix = Compress(eSuffix);
+                }
 
                 free(oldSuffix);
+                free(eSuffix);
                 free(key);
                 return 0; // success
 
@@ -478,13 +550,36 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
             // The simple case.  We matched, to get to this node.
             // We'll act after we break out of this 
-            ++c;
             continue; // See if there are more children.
 
         } // if(node->children) { // node = next child
 
-    DASSERT(node->children == 0);
 
+        DASSERT(node->children == 0);
+        DASSERT(*c);
+
+        if(node->value == 0) {
+            DASSERT(node->suffix == 0);
+            node->suffix = Compress(c);
+            node->value = value;
+
+            free(key);
+            return 0; // success
+        }
+
+        struct QsDictionary *children = calloc(4, sizeof(*children));
+        ASSERT(children, "calloc(%d,%zu) failed", 4, sizeof(*children));
+        node->children = children;
+
+        // go to this character (*c) node.
+        node = children + (*c) - 1;
+        node->value = value;
+        // add any suffix characters if needed.
+        if(*(c+1))
+            node->suffix = Compress(c+1);
+
+        free(key);
+        return 0; // success
 
 
     } // for(char *c = key; *c; ++c) {
@@ -500,6 +595,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
     free(key);
     return 0; // success done
 }
+
+
 
 // Returns the next character
 // This returns the next character after we run out of the 2 bit encoded
@@ -700,9 +797,15 @@ Print_Str(const char *s, FILE *f) {
         Print_Char(*s++, f);
 }
 
-
+#if 0
 static void
 PrintStr(const char *s, FILE *f) {
+    PrintEscStr(s,f);
+}
+#else
+static void
+PrintStr(const char *s, FILE *f) {
+
 
     while(*s) {
 
@@ -730,7 +833,7 @@ PrintStr(const char *s, FILE *f) {
         ++s;
     }
 }
-
+#endif
 
 
 // This function is called recursively adding to parentPrefix at each

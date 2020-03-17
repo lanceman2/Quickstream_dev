@@ -21,8 +21,13 @@ int main(void) {
 
     struct QsDictionary *d = qsDictionaryCreate();
 
-#if 1
     const char *keys[] = {
+        "kea", "kea",
+        "keb", "keb",
+        "healo", "hello",
+        "heal", "hello",
+        "hea", "hello",
+
         "0123", "0123",
         "01234", "0123",
         "0123456", "0123",
@@ -100,15 +105,6 @@ int main(void) {
 
         0, 0
     };
-#else
-    const char *keys[] = {
-        "0123", "0123",
-        "01", "01",
-        "11", "11",
-        "023", "023",
-        0, 0
-    };
-#endif
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
