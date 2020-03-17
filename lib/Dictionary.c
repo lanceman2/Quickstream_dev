@@ -315,6 +315,26 @@ char *Expand(const char *key) {
     return s;
 }
 
+static inline
+bool
+IsEndOfCharacter(const char *suffix, const char *end, uint32_t count) {
+
+    DASSERT((end-3) >= suffix);
+    DASSERT(*end && *(end-1) && *(end-2) && *(end-3));
+
+    return false;
+
+    if(
+            count%4 == 0 &&
+            *end < 5 &&
+            *(end-1) < 5 &&
+            *(end-2) < 5 &&
+            *(end-3) < 5
+            )
+        return true;
+    return false;
+}
+
 
 // Returns allocated string.
 //
@@ -327,7 +347,7 @@ char *Expand(const char *key) {
 // Output: \3\2ey
 //
 static inline
-char *Compress(const char *suffix) {
+char *Compress(const char *suffix, uint32_t count) {
 
     DASSERT(suffix);
     DASSERT(*suffix);
@@ -337,13 +357,17 @@ char *Compress(const char *suffix) {
 
     const char *end = suffix + l - 1;
 
-    while(end - 3 >= suffix) {
-        DASSERT(*end && *(end-1) && *(end-2) && *(end-3));
-        if(*end < 5 && *(end-1) < 5 && *(end-2) < 5 && *(end-3) < 5) {
+    uint32_t i = count + l - 1;
+
+    while(end-3 >= suffix) {
+        if(IsEndOfCharacter(suffix, end, i)) {
             newL -= 3;
             end -= 4;
-        } else
+            i -= 4;
+        } else {
             --end;
+            --i;
+        }
     }
 
     char *new = malloc(newL + 1);
@@ -351,22 +375,28 @@ char *Compress(const char *suffix) {
     char *newEnd = new + newL - 1;
     new[newL] = '\0';
     end = suffix + l - 1;
+    i = count + l - 1;
 
     while(end-3 >= suffix) {
-        DASSERT(*end && *(end-1) && *(end-2) && *(end-3));
-        if((end-3) >= suffix && *end < 5 && *(end-1) < 5 && *(end-2) < 5 && *(end-3) < 5) {
+        if(IsEndOfCharacter(suffix, end, i)) {
             char val = (*(end--) - 1) << 6;
             val     |= (*(end--) - 1) << 4;
             val     |= (*(end--) - 1) << 2;
             val     |= (*(end--) - 1);
             *newEnd-- = val;
-        } else
+            i -= 4;
+        } else {
             *newEnd-- = *end--;
+            --i;
+        }
     }
 
     // Finish it filling in first few characters.
     while(end >= suffix)
         *newEnd-- = *end--;
+
+
+DSPEW("count=%u \"%s\"", count, STRING(new));
 
     return new;
 }
@@ -410,6 +440,11 @@ int qsDictionaryInsert(struct QsDictionary *node,
     return 0;
 #endif
 
+    // It turns out we also need an index character counter in order to
+    // tell when we can compress the likes of \2\2\3\2 to 'h'.  That can
+    // only happen at every 4 characters starting at the top of the tree.
+    // If it compresses across a "boundary" we get trouble decoding it.
+    size_t count = 0;
 
     for(char *c = key; *c;) {
 
@@ -420,13 +455,14 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
             node = node->children + *c - 1;
             ++c;
+            ++count;
 
             if(node->suffix) {
 
                 char *eSuffix = Expand(node->suffix); // gets freed.
                 char *e = eSuffix;
 
-                for(;*e && *c && *e == *c; ++c, ++e );
+                for(;*e && *c && *e == *c; ++c, ++e, ++count);
                 // e and c are at:
                 //
                 // CASES:
@@ -478,7 +514,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     if(*(e+1))
                         // Copy the remains of the old suffix starting at
                         // the next character.
-                        n2->suffix = Compress(e+1);
+                        n2->suffix = Compress(e+1, count+1);
 
                     char *oldSuffix = node->suffix;
                     node->value = value;
@@ -492,7 +528,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                         // char and then dup it.
                         *(char *) e = '\0'; // It's okay we copied it
                         // above.  We have less characters for this node.
-                        node->suffix = Compress(eSuffix);
+                        node->suffix = Compress(eSuffix, count - (e - eSuffix));
                     }
                     node->children = children;
 
@@ -526,11 +562,11 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 node->value = 0;
 
                 if(*(e+1))
-                    n1->suffix = Compress(e+1);
+                    n1->suffix = Compress(e+1, count+1);
 
                 ++c;
                 if(*c)
-                    n2->suffix = Compress(c);
+                    n2->suffix = Compress(c, count+1);
 
                 if(e == eSuffix)
                     node->suffix = 0;
@@ -538,7 +574,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     // No need to worry, we copied this above, so now we
                     // came hack it up.
                     *((char *)(e)) = '\0';
-                    node->suffix = Compress(eSuffix);
+                    node->suffix = Compress(eSuffix, count - (e - eSuffix));
                 }
 
                 free(oldSuffix);
@@ -560,7 +596,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
         if(node->value == 0) {
             DASSERT(node->suffix == 0);
-            node->suffix = Compress(c);
+            node->suffix = Compress(c, count);
             node->value = value;
 
             free(key);
@@ -576,7 +612,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
         node->value = value;
         // add any suffix characters if needed.
         if(*(c+1))
-            node->suffix = Compress(c+1);
+            node->suffix = Compress(c+1, count+1);
 
         free(key);
         return 0; // success
@@ -797,7 +833,7 @@ Print_Str(const char *s, FILE *f) {
         Print_Char(*s++, f);
 }
 
-#if 0
+#if 1
 static void
 PrintStr(const char *s, FILE *f) {
     PrintEscStr(s,f);
@@ -814,11 +850,10 @@ PrintStr(const char *s, FILE *f) {
 
             DASSERT(*(s+1) && *(s+2) && *(s+3));
             DASSERT(*(s+1) < 5, "*(s+1)=%d", *(s+1));
-            DASSERT(*(s+2) < 5, "*(s+1)=%d", *(s+2));
-            DASSERT(*(s+3) < 5, "*(s+1)=%d", *(s+3));
+            DASSERT(*(s+2) < 5, "*(s+2)=%d", *(s+2));
+            DASSERT(*(s+3) < 5, "*(s+3)=%d", *(s+3));
 
-            //                        bits
-            char val = (*s - 1); //   0 1
+            char val = (*s - 1);
             ++s;
             val |= (*s - 1) << 2;
             ++s;
