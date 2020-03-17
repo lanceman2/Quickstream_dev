@@ -76,8 +76,9 @@ int main(int argc, char **argv) {
         "kea", "kea",
         "keb", "keb",
         "healo", "hello",
+        "healo have a great day $%!@$#%%^~~~~", "hello",
 
-#if 1
+#if 0
         "0123", "0123",
         "01234", "0123",
         "0123456", "0123",
@@ -163,7 +164,6 @@ int main(int argc, char **argv) {
         ++key;
     }
 
-#endif
 
 #if 1
     for(const char **key = keys; *key; ++key) {
@@ -177,10 +177,13 @@ int main(int argc, char **argv) {
 
     qsDictionaryPrintDot(d, stdout);
 
-    qsDictionaryDestroy(d);
 
     if((isatty(1)))
         fprintf(stderr, "\nTry running: %s | display\n\n", argv[0]);
+
+#endif
+    
+    qsDictionaryDestroy(d);
 
     fprintf(stderr, "SUCCESS\n");
 
