@@ -15,7 +15,7 @@ void catchSegv(int sig) {
 }
 
 
-int main(void) {
+int main(int argc, const char **argv) {
 
     signal(SIGSEGV, catchSegv);
 
@@ -23,11 +23,30 @@ int main(void) {
 
     const char *keys[] = {
         "kea", "kea",
+        "k1ea  ", "k1ea  ",
         "keb", "keb",
-        "healo", "hello",
-        "heal", "hello",
-        "hea", "hello",
+        "k eb", "k eb",
+        "ke b", "ke b",
+        " keb", " keb",
+        "healo", "healo",
+        "heal", "heal",
+        "hea", "hea",
+        "~kea", "kea",
+        "~k1ea  ", "k1ea  ",
+        "~keb", "keb",
+        "~k eb", "k eb",
+        "~ke b", "ke b",
+        "~ keb", " keb",
+        "~healo", "healo",
+        "~heal", "heal",
+        "~hea~", "hea eat me",
 
+        " 0123", "0123",
+        " 01234", "0123",
+        " 0123456", "0123",
+        " 012345", "0123",
+        " 123", "0123",
+ 
         "0123", "0123",
         "01234", "0123",
         "0123456", "0123",
@@ -126,7 +145,9 @@ int main(void) {
         ++key;
     }
 
-    qsDictionaryDestroy(d); 
+    qsDictionaryDestroy(d);
+
+    fprintf(stderr, "%s SUCCESS\n", argv[0]);
 
     return 0;
 }

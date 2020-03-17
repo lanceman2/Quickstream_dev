@@ -15,7 +15,7 @@ void catchSegv(int sig) {
 }
 
 
-int main(void) {
+int main(int argc, char **argv) {
 
     signal(SIGSEGV, catchSegv);
 
@@ -73,9 +73,9 @@ int main(void) {
         "heal", "hello",
         "hay stack", "needle",
 
-        //"kea", "kea",
-        //"keb", "keb",
-        //"healo", "hello",
+        "kea", "kea",
+        "keb", "keb",
+        "healo", "hello",
 
 #if 1
         "0123", "0123",
@@ -114,6 +114,44 @@ int main(void) {
         "02", "02",
         "012", "012",
         "q", "q",
+
+        "!0123", "0123",
+        "!01234", "0123",
+        "!0123456", "0123",
+        " 012345", "0123",
+        " 123", "0123",
+        " 11", "111111",
+        " 11111", "111111",
+        " 1111x11", "111111",
+        " 1111x111", "111111",
+        " 1111z11", "111111",
+        " 1111g11", "111111",
+        " 1111", "111111",
+        " x00123", "0123",
+        " w00123", "0123",
+        " 00123", "0123",
+        "0 ", "0",
+        " 0124", "0123",
+        " 099", "099",
+        " foo", "fooVal",
+        " bar", "barVal",
+        " boo", "boo",
+        " Bar", "Bar",
+        " Star start3", "Star:start3Val",
+        " Star start", "poo",
+        " Star star", "pooi",
+        " dog", "poo",
+        " cat", "poo",
+        " 00", "0",
+        "~catdog", "poo   from catdog",
+        "~h", "h",
+        "~aa", "aa",
+        "~ab", "ab",
+        "~01", "01",
+        "~02", "02",
+        "~012", "012",
+        "~q", "q",
+
 #  endif
         0, 0
     };
@@ -139,8 +177,10 @@ int main(void) {
 
     qsDictionaryPrintDot(d, stdout);
 
+    qsDictionaryDestroy(d);
 
-    qsDictionaryDestroy(d); 
+    if((isatty(1)))
+        fprintf(stderr, "\nTry running: %s | display\n\n", argv[0]);
 
     fprintf(stderr, "SUCCESS\n");
 

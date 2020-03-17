@@ -18,8 +18,6 @@
 #define START          (32) // start at SPACE
 #define END            (126) // ~
 
-//#define ALPHABET_SIZE  (END + 1 - START) // 95 characters.
-
 
 // A Dictionary via a Trie
 //
@@ -32,7 +30,7 @@
 //
 // https://en.wikipedia.org/wiki/Trie
 //
-// We optimise far more than these references, but they are a nice place
+// We optimise far more than those references, but they are a nice place
 // to start to try to understand this code.
 //
 //
@@ -170,8 +168,8 @@ struct QsDictionary {
     //
     struct QsDictionary *children; // array of 4 when needed and allocated
 
-    // suffix is a string added to the current path traversal
-    // generated string.  It can be 0 if no chars are needed.
+    // suffix is a string added to the current path traversal generated
+    // string.  It can be 0 if no characters are needed.
     //
     // If an insert is done making the suffix become incorrect the node
     // must be broken, this node will loose as much of the extra
@@ -274,11 +272,11 @@ STRING(const char *s) {
 //
 // It's a 4 x 2 bit encoding of each character.  0 is not used to encode
 // because we still need a 0 (Null) terminator to be 0 and not part of the
-// encoding.   So the 2 bits are 00 01 10 11 and than we add one giving
-// 01 10 11 100 = 1 2 3 4 = \1 \2 \3 \4  so we can tell them from '1' '2'
-// '3' and '4'.  See above.
+// encoding.   So the 2 bits are 00 01 10 11 and than we add one giving 01
+// 10 11 100 = 1 2 3 4 = \1 \2 \3 \4  so we can tell them from apart from
+// the regular characters '1' '2' '3' and '4'.  See above.
 //
-// Returns allocated string.
+// Returns malloc() allocated string.
 static inline
 char *Expand(const char *key) {
 
@@ -315,28 +313,29 @@ char *Expand(const char *key) {
     return s;
 }
 
+
 static inline
 bool
-IsEndOfCharacter(const char *suffix, const char *end, uint32_t count) {
+IsCharacter(const char *s, uint32_t count) {
 
-    DASSERT((end-3) >= suffix);
-    DASSERT(*end && *(end-1) && *(end-2) && *(end-3));
+    if(*s == 0 || *(s+1) == 0 || *(s+2) == 0 || *(s+3) == 0)
+        return false;
 
-    return false;
+    //return false;
 
     if(
             count%4 == 0 &&
-            *end < 5 &&
-            *(end-1) < 5 &&
-            *(end-2) < 5 &&
-            *(end-3) < 5
+            *s < 5 &&
+            *(s+1) < 5 &&
+            *(s+2) < 5 &&
+            *(s+3) < 5
             )
         return true;
     return false;
 }
 
 
-// Returns allocated string.
+// Returns malloc() allocated string.
 //
 // Comverts in parts of 4 characters from the end.
 //
@@ -347,60 +346,56 @@ IsEndOfCharacter(const char *suffix, const char *end, uint32_t count) {
 // Output: \3\2ey
 //
 static inline
-char *Compress(const char *suffix, uint32_t count) {
+char *Compress(const char *suffix, size_t count_in) {
 
     DASSERT(suffix);
     DASSERT(*suffix);
 
-    size_t l = strlen(suffix);
-    size_t newL = l;
+    const char *s = suffix;
+    size_t len = 0;
+    size_t count = count_in;
 
-    const char *end = suffix + l - 1;
-
-    uint32_t i = count + l - 1;
-
-    while(end-3 >= suffix) {
-        if(IsEndOfCharacter(suffix, end, i)) {
-            newL -= 3;
-            end -= 4;
-            i -= 4;
+    while(*s++) {
+ 
+        if(IsCharacter(s, count)) {
+            count += 4;
+            s += 4;
         } else {
-            --end;
-            --i;
+            ++s;
+            ++count;
+        }
+
+        ++len;
+    }
+
+    char *str = malloc(len+1);
+    ASSERT(str, "malloc(%zu) failed", len+1);
+    char *mem = str;
+    // Reset count for another run at the input string.
+    count = count_in;
+    s = suffix;
+
+    while(*s) {
+
+        DSPEW("         %s", STRING(s));
+
+        if(IsCharacter(s, count)) {
+            char val = (*(s++) - 1);
+            val     |= (*(s++) - 1) << 2;
+            val     |= (*(s++) - 1) << 4;
+            val     |= (*(s++) - 1) << 6;
+            *(str++) = val;
+            count += 4;
+        } else {
+            *(str++) = *(s++);
+            ++count;
         }
     }
 
-    char *new = malloc(newL + 1);
-    ASSERT(new, "malloc(%zu) failed", newL + 1);
-    char *newEnd = new + newL - 1;
-    new[newL] = '\0';
-    end = suffix + l - 1;
-    i = count + l - 1;
+    *str = '\0';
 
-    while(end-3 >= suffix) {
-        if(IsEndOfCharacter(suffix, end, i)) {
-            char val = (*(end--) - 1) << 6;
-            val     |= (*(end--) - 1) << 4;
-            val     |= (*(end--) - 1) << 2;
-            val     |= (*(end--) - 1);
-            *newEnd-- = val;
-            i -= 4;
-        } else {
-            *newEnd-- = *end--;
-            --i;
-        }
-    }
-
-    // Finish it filling in first few characters.
-    while(end >= suffix)
-        *newEnd-- = *end--;
-
-
-DSPEW("count=%u \"%s\"", count, STRING(new));
-
-    return new;
+    return mem;
 }
-
 
 
 // Speed of Insert is not much of a concern.  It's Find that needs to be
@@ -431,7 +426,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
     // We put the key input the form like: "he" = \1\3\3\2 \2\2\3\2
     char *key = Expand(key_in);
 
-#if 0
+
+#if 0 // Testing encoding.
     for(char *str = key; *str; ++str) {
         fprintf(stderr, "\\%d", *str);
     }
@@ -440,10 +436,14 @@ int qsDictionaryInsert(struct QsDictionary *node,
     return 0;
 #endif
 
+
     // It turns out we also need an index character counter in order to
     // tell when we can compress the likes of \2\2\3\2 to 'h'.  That can
     // only happen at every 4 characters starting at the top of the tree.
-    // If it compresses across a "boundary" we get trouble decoding it.
+    // If it compresses across a 4 character "boundary" we get trouble
+    // decoding it.  We could compress across a 4 character boundaries,
+    // but then we'd add quite a bit more complexity to the code.
+
     size_t count = 0;
 
     for(char *c = key; *c;) {
@@ -796,14 +796,14 @@ PrintEscChar(char c, FILE *f) {
 
     if(c < '0' || ('9' < c && c < 'A') ||
             ('Z' < c && c < 'a') || 'z' < c)
-        fprintf(f, "\\\\%d", c); // like \\2
+        fprintf(f, "\\(%d\\)", c); // like \\2
     else
         // Print like a regular character like 'a' or '5'.
         putc(c, f);
 }
 
 
-static void
+static inline void
 PrintEscStr(const char *s, FILE *f) {
 
     while(*s)
@@ -826,25 +826,19 @@ Print_Char(char c, FILE *f) {
 }
 
 
-static void
+static inline void
 Print_Str(const char *s, FILE *f) {
 
     while(*s)
         Print_Char(*s++, f);
 }
 
+
 #if 1
 static void
 PrintStr(const char *s, FILE *f) {
-    PrintEscStr(s,f);
-}
-#else
-static void
-PrintStr(const char *s, FILE *f) {
-
 
     while(*s) {
-
 
         if(*s < 5) {
 
@@ -867,6 +861,11 @@ PrintStr(const char *s, FILE *f) {
             PrintEscChar(*s, f);
         ++s;
     }
+}
+#else
+static void
+PrintStr(const char *s, FILE *f) {
+    PrintEscStr(s,f);
 }
 #endif
 
@@ -918,9 +917,8 @@ PrintChildren(const struct QsDictionary *node, char *parentPrefix,
             fprintf(f, "\" [label=\"");
             PrintEscChar(c, f);
             if(suffix) {
-                fprintf(f, "\\nsuffix=|");
+                fprintf(f, "\\nsuffix=");
                 PrintEscStr(suffix, f);
-                fprintf(f, "|");
             }
             fprintf(f, "\\ntotal=");
             PrintEscStr(sum, f);
@@ -928,9 +926,8 @@ PrintChildren(const struct QsDictionary *node, char *parentPrefix,
 
             if(child->value) {
 
-                fprintf(f, "\\nkey=\\{ ");
+                fprintf(f, "\\nkey=");
                 PrintStr(sum, f);
-                fprintf(f, " \\}");
             }
 
             fprintf(f, "\"];\n");
