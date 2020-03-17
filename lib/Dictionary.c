@@ -98,7 +98,7 @@ struct QsDictionary {
     // a lot less memory.  Each branch point can only have a 1 2 3 or 4
     // as a starting character.
     //
-    // The example tree looks like;
+    // The example tree looks like:
     //
     //     ROOT
     //       |
