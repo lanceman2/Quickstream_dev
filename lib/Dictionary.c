@@ -377,8 +377,6 @@ char *Compress(const char *suffix, size_t count_in) {
 
     while(*s) {
 
-        DSPEW("         %s", STRING(s));
-
         if(IsCharacter(s, count)) {
             char val = (*(s++) - 1);
             val     |= (*(s++) - 1) << 2;
