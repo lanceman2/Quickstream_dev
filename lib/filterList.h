@@ -9,17 +9,19 @@
 
 
 static inline
-struct QsFilter *FindFilterNamed(struct QsStream *s, const char *name) {
+struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
 
-    struct QsFilter *F = s->filters;
-    // TODO: This could be made quicker, but the quickstream is
-    // not in "run" mode now so speed it not really needed now.
-    //
-    for(F = s->filters; F; F = F->next) {
-        if(!strcmp(F->name, name))
-            return F; // found
+
+    for(struct QsStream *s = app->streams; s; s = s->next) {
+        struct QsFilter *F = s->filters;
+        // TODO: This could be made quicker, but the quickstream is not in
+        // "run" mode now so speed it not really needed now.
+        //
+        for(F = s->filters; F; F = F->next) {
+            if(!strcmp(F->name, name))
+                return F; // found
+        }
     }
-
     return 0; // not found
 }
 
@@ -168,7 +170,7 @@ struct QsFilter *AllocAndAddToFilterList(struct QsStream *s,
 
     // Check for unique name for this loaded module filter.
     //
-    if(FindFilterNamed(s, name)) {
+    if(FindFilterNamed(s->app, name)) {
         uint32_t count = 2;
         size_t sLen = strlen(name) + 7;
         f->name = malloc(sLen);
@@ -176,7 +178,7 @@ struct QsFilter *AllocAndAddToFilterList(struct QsStream *s,
         while(count < 1000000) {
             snprintf(f->name, sLen, "%s-%" PRIu32, name, count);
             ++count;
-            if(!FindFilterNamed(s, f->name))
+            if(!FindFilterNamed(s->app, f->name))
                 break;
         }
         // I can't imagine that there will be ~ 1000000 filters.

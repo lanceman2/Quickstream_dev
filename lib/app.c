@@ -306,21 +306,34 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
         uint32_t s_num = 0;
         for(struct QsStream *s = app->streams; s; s = s->next) {
             uint32_t numConnections;
+            bool gotOne = false;
             for(f = s->filters; f; f = f->next) {
                 numConnections = s->numConnections;
                 for(struct QsConnection *c = s->connections; numConnections;
                         --numConnections, ++c)
                     if(f == c->to || f == c->from)
                         break;
-                if(numConnections == 0)
-                    fprintf(file, "    \"%s\" [label=\"stream %" PRIu32
-                            " \"%s\"];\n",
-                            f->name, s_num, f->name);
+                if(numConnections == 0) {
+                    if(!gotOne) {
+       
+                        // We have at least one unconnected filter in this
+                        // app
+                        fprintf(file, "\n"
+                                "    subgraph cluster_%" PRIu32 " {\n"
+                                "       label=\" stream %" PRIu32 " \";\n\n",
+                                clusterNum++, s_num);
+                        gotOne = true;
+                    }
+                    fprintf(file, "        \"%s\" [label=\"%s\"];\n",
+                            f->name, f->name);
+                }
             }
+            if(gotOne)
+                fprintf(file, "     }\n");
             ++s_num;
         }
 
-        fprintf(file, "  }\n");
+        fprintf(file, "    }\n");
     }
 
     uint32_t sNum = 0; // stream counter

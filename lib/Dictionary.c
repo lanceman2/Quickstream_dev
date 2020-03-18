@@ -469,7 +469,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 if(*e == 0 && *c == 0) {
                     // Prefect match.
                     if(node->value) {
-                        ERROR("Entry for key=\"%s\" exists", key_in);
+                        DSPEW("Entry for key=\"%s\" exists", key_in);
                         free(eSuffix);
                         free(key);
                         return 1;
@@ -619,7 +619,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
     } // for(char *c = key; *c; ++c) {
 
     if(node->value) {
-        ERROR("We have an entry with key=\"%s\"", key);
+        DSPEW("We have an entry with key=\"%s\"", key);
         free(key);
         return 1;
     }

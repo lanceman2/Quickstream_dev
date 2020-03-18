@@ -113,7 +113,7 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
             if(*loadName == DIR_CHAR)
                 ++loadName;
         }
-    } else if(FindFilterNamed(s, _loadName)) {
+    } else if(FindFilterNamed(s->app, _loadName)) {
         //
         // Because they requested a particular name and the name is
         // already taken, we can fail here.

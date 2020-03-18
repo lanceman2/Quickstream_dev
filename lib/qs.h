@@ -144,11 +144,22 @@
 // apps that a program can have.  App is used to create streams.  App may
 // also contain default settings that can be used by the streams.
 //
+// App really need to exist as a top level container/manager for all
+// things quickstream.
+//
 struct QsApp {
+
+
+    // List of controls as a dictionary with lookup using key strings.
+    //
+    // qsDictionary is has a very fast string key lookup to get values.
+    //
+    //struct qsDictionary *controls;
 
     // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
-    // one stream while another stream is running.
+    // one stream while another stream is running.  We can also run more
+    // than one stream at a time.
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
@@ -571,7 +582,6 @@ struct QsFilter {
     // We define source as a filter with no input.  We will feed is zeros
     // when the stream is flowing.
     bool isSource; // startup flag marking filter as a source
-
 };
 
 

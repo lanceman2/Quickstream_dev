@@ -16,6 +16,8 @@ export QS_FILTER_PATH=\
  -f copy { --name foodog }\
  -f copy { --name cow_milker }\
  -f stdout\
+ -f dummy\
+ -f dummy\
  -p "0 1 0 0"\
  -p "0 2 0 0"\
  -p "0 2 0 1"\
