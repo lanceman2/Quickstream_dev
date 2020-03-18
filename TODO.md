@@ -4,12 +4,7 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- hash table ==> Trie instead
-  - next have trie Dictionary use a smaller alphabet 2 bits of char for
-    when it makes branch points, but store the rest of the chars as chars.
-    So it will use 4 * 8 + 2 * 8 + key length + 2 chars needed for the
-    after branch point to encode the fraction of a char as 0,1,2,3 a two
-    bit quads.
+- tests with multiple streams
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used
@@ -59,6 +54,9 @@ given that quickstream is not in an alpha (usable) state yet.
 
   Maybe automatically make all parameters from a given controller or
   filter, be in a group with the name of that controller or filter.
+
+  Can a Controller apply controls across multiple stream.  An App is a
+  manager of a group of Controllers.
 
 - Problem with current class hierarchy.  The App loads filters without
   a stream; but it appears that the filter construct() function needs

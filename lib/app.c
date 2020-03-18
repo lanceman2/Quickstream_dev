@@ -66,15 +66,6 @@ int qsAppDestroy(struct QsApp *app) {
     // Destroy the streams.  We assume they are not flowing.
     while(app->streams) qsStreamDestroy(app->streams);
 
-    // First cleanup filters in this app list
-    struct QsFilter *f = app->filters;
-    while(f) {
-        struct QsFilter *nextF = f->next;
-        // Destroy this filter f.
-        FreeFilter(f);
-        f = nextF;
-    }
-
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif
@@ -286,10 +277,25 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
     uint32_t clusterNum = 0; // Dot cluster counter
  
     // Look for unconnected filters in this app:
-    struct QsFilter *f=app->filters;
-    for(; f; f = f->next)
-        if(!f->stream)
+    struct QsFilter *f = 0;
+
+    for(struct QsStream *s = app->streams; s; s = s->next) {
+        uint32_t numConnections;
+        for(f = s->filters; f; f = f->next) {
+            numConnections = s->numConnections;
+            for(struct QsConnection *c = s->connections; numConnections;
+                    --numConnections, ++c)
+                if(f == c->to || f == c->from)
+                    break;
+            if(numConnections == 0)
+                // We have no connection for filter f.
+                break;
+        }
+        if(f)
+            // We have no connection for filter f.
             break;
+    }
+        
     if(f) {
         // We have at least one unconnected filter in this app
         fprintf(file, "\n"
@@ -297,9 +303,22 @@ int qsAppPrintDotToFile(struct QsApp *app, enum QsAppPrintLevel l,
                 "    label=\" unconnected filters \";\n\n",
                 clusterNum++);
 
-        for(struct QsFilter *f=app->filters; f; f=f->next)
-            if(!f->stream)
-                fprintf(file, "    \"%s\";\n", f->name);
+        uint32_t s_num = 0;
+        for(struct QsStream *s = app->streams; s; s = s->next) {
+            uint32_t numConnections;
+            for(f = s->filters; f; f = f->next) {
+                numConnections = s->numConnections;
+                for(struct QsConnection *c = s->connections; numConnections;
+                        --numConnections, ++c)
+                    if(f == c->to || f == c->from)
+                        break;
+                if(numConnections == 0)
+                    fprintf(file, "    \"%s\" [label=\"stream %" PRIu32
+                            " \"%s\"];\n",
+                            f->name, s_num, f->name);
+            }
+            ++s_num;
+        }
 
         fprintf(file, "  }\n");
     }

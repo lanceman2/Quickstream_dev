@@ -433,7 +433,7 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "}\n");
                 }
 
-                filters[numFilters-1] = qsAppFilterLoad(app,
+                filters[numFilters-1] = qsStreamFilterLoad(stream,
                         arg, name, fargc, (const char **) fargv);
                 if(!filters[numFilters-1]) return 1; // error
 

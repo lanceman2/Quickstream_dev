@@ -9,13 +9,13 @@
 
 
 static inline
-struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
+struct QsFilter *FindFilterNamed(struct QsStream *s, const char *name) {
 
-    struct QsFilter *F = app->filters;
+    struct QsFilter *F = s->filters;
     // TODO: This could be made quicker, but the quickstream is
     // not in "run" mode now so speed it not really needed now.
     //
-    for(F = app->filters; F; F = F->next) {
+    for(F = s->filters; F; F = F->next) {
         if(!strcmp(F->name, name))
             return F; // found
     }
@@ -35,6 +35,7 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->outputs == 0);
     DASSERT(f->numOutputs == 0);
     DASSERT(f->app);
+    DASSERT(f->stream);
 
     DSPEW("Freeing: %s", f->name);
 
@@ -89,7 +90,6 @@ void FreeFilter(struct QsFilter *f) {
         if(dlclose(f->dlhandle))
             WARN("dlclose(%p): %s", f->dlhandle, dlerror());
             // TODO: So what can I do.
-
     }
 
 
@@ -103,11 +103,11 @@ void FreeFilter(struct QsFilter *f) {
 
 
 static inline
-struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
-    DASSERT(app);
+struct QsFilter *FindFilter_viaHandle(struct QsStream *s, void *handle) {
+    DASSERT(s);
     DASSERT(handle);
 
-    for(struct QsFilter *f = app->filters; f; f = f->next)
+    for(struct QsFilter *f = s->filters; f; f = f->next)
         if(f->dlhandle == handle)
             return f;
     return 0;
@@ -121,27 +121,25 @@ struct QsFilter *FindFilter_viaHandle(struct QsApp *app, void *handle) {
 // list.
 //
 static inline
-void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
+void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
 
-    DASSERT(app);
-    DASSERT(app->filters);
+    DASSERT(s);
     DASSERT(f);
+    DASSERT(s->filters);
+    DASSERT(s == f->stream);
 
-    // Remove any stream filter connections that may include this filter.
-    if(f->stream)
-        // This filter should be listed in this stream and only this
-        // stream.
-        qsStreamRemoveFilter(f->stream, f);
+    // This filter should be listed in this stream and only this stream.
+    qsStreamRemoveFilter(s, f);
 
-    // Remove it from the app list.
-    struct QsFilter *F = app->filters;
+    // Remove it from the stream list.
+    struct QsFilter *F = s->filters;
     struct QsFilter *prev = 0;
     while(F) {
         if(F == f) {
             if(prev)
                 prev->next = F->next;
             else
-                app->filters = F->next;
+                s->filters = F->next;
 
             FreeFilter(f);
             break;
@@ -149,20 +147,20 @@ void DestroyFilter(struct QsApp *app, struct QsFilter *f) {
         prev = F;
         F = F->next;
     }
-    DASSERT(F, "Filter was not found in app list");
+    DASSERT(F, "Filter was not found in streams filter list");
 }
 
 
 
-// name must be unique for all filters in app
+// name must be unique for all filters in stream
 //
 // TODO: this is not required to be fast; yet.
 //
 static inline
-struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
+struct QsFilter *AllocAndAddToFilterList(struct QsStream *s,
         const char *name) {
 
-    DASSERT(app);
+    DASSERT(s);
     DASSERT(name);
     DASSERT(name[0]);
     struct QsFilter *f = calloc(1, sizeof(*f));
@@ -170,7 +168,7 @@ struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
 
     // Check for unique name for this loaded module filter.
     //
-    if(FindFilterNamed(app, name)) {
+    if(FindFilterNamed(s, name)) {
         uint32_t count = 2;
         size_t sLen = strlen(name) + 7;
         f->name = malloc(sLen);
@@ -178,7 +176,7 @@ struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         while(count < 1000000) {
             snprintf(f->name, sLen, "%s-%" PRIu32, name, count);
             ++count;
-            if(!FindFilterNamed(app, f->name))
+            if(!FindFilterNamed(s, f->name))
                 break;
         }
         // I can't imagine that there will be ~ 1000000 filters.
@@ -187,14 +185,14 @@ struct QsFilter *AllocAndAddToFilterList(struct QsApp *app,
         f->name = strdup(name);
 
 
-    struct QsFilter *fIt = app->filters; // dummy iterator.
+    struct QsFilter *fIt = s->filters; // dummy iterator.
     if(!fIt)
-        // This is the first filter in this app.
-        return (app->filters = f);
+        // This is the first filter in this stream.
+        return (s->filters = f);
 
     while(fIt->next) fIt = fIt->next;
 
-    // Put it last in the app filter list.
+    // Put it last in the stream filter list.
     fIt->next = f;
 
     return f;

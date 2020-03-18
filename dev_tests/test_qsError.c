@@ -29,18 +29,18 @@ int main(void) {
 
     const int numFilters = 10;
     struct QsFilter *f[numFilters];
-
-    for(int i=0; i<numFilters; ++i)
-        if(!(f[i] = qsAppFilterLoad(app, "stdin.so", 0, 0, 0))) {
-            qsAppDestroy(app);
-            return 1;
-        }
-
     struct QsStream *stream = qsAppStreamCreate(app);
     if(!stream) {
         qsAppDestroy(app);
         return 1;
     }
+
+
+    for(int i=0; i<numFilters; ++i)
+        if(!(f[i] = qsStreamFilterLoad(stream, "stdin.so", 0, 0, 0))) {
+            qsAppDestroy(app);
+            return 1;
+        }
 
     // First clear the Qs error to test this again:
     qsError();

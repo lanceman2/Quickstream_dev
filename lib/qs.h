@@ -139,19 +139,12 @@
 
 
 // App (QsApp) is the top level quickstream object.  It's a container for
-// filters and streams.  Perhaps there should only be one app in a
-// program, but we do not impose that.  There is no compelling reason to
-// limit the number apps that a program can have.  App is used to create
-// filters by loading module plugins.  App is used to create streams.
+// streams.  Perhaps there should only be one app in a program, but we do
+// not impose that.  There is no compelling reason to limit the number
+// apps that a program can have.  App is used to create streams.  App may
+// also contain default settings that can be used by the streams.
 //
 struct QsApp {
-
-    // There's no reason for fast access to these list at this time.
-    // Maybe we'll use a red/black tree for faster access if the need
-    // comes be.
-
-    // List of filters.  Head of a singly linked list.
-    struct QsFilter *filters;
 
     // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
@@ -167,8 +160,9 @@ struct QsApp {
 // not cause a mode switch (system call) each time they are called.  The
 // man page says "Performance and ease-of-use of pthread_getspecific() are
 // critical".  If they do cause a mode switch we need to recode this.  One
-// can't say without looking at the code or running tests; for example
-// look at how slow system 5 semaphores are.
+// can't say without looking at the code or running tests; as an example
+// of how shitty code got into the main Linux, look at system 5 semaphores
+// (they are very slow).
 extern
 pthread_key_t _qsKey;
 
@@ -193,14 +187,21 @@ pthread_t _qsMainThread;
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
-// flow state.  Since streams can add and remove filters when it is not
-// flowing the stream needs app to be a list of loaded filters for it.
+// flow state.
 //
 struct QsStream {
 
     // We can have many streams in an app (QsApp).
     //
     struct QsApp *app;
+
+    // There's no reason for fast access to these list at this time.
+    // Maybe we'll use a red/black tree for faster access if the need
+    // comes be.
+    //
+    // List of all filters that this stream can use.  Head of a singly
+    // linked list.
+    struct QsFilter *filters;
 
     // maxThreads=0 means do not start any.  maxThreads does not change at
     // flow/run time, so we need no mutex to access it.

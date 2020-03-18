@@ -29,9 +29,9 @@ int main(void) {
     struct QsApp *app = qsAppCreate();
     struct QsStream *stream = qsAppStreamCreate(app);
 
-    struct QsFilter *f0 = qsAppFilterLoad(app, "stdin", 0, 0, 0);
-    struct QsFilter *f1 = qsAppFilterLoad(app, "tests/sleep", 0, 0, 0);
-    struct QsFilter *f2 = qsAppFilterLoad(app, "stdout.so", 0, 0, 0);
+    struct QsFilter *f0 = qsStreamFilterLoad(stream, "stdin", 0, 0, 0);
+    struct QsFilter *f1 = qsStreamFilterLoad(stream, "tests/sleep", 0, 0, 0);
+    struct QsFilter *f2 = qsStreamFilterLoad(stream, "stdout.so", 0, 0, 0);
     qsStreamConnectFilters(stream, f0, f1, 0, 0);
     qsStreamConnectFilters(stream, f1, f2, 0, 0);
 

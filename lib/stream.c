@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <dlfcn.h>
 
 // The public installed user interfaces:
 #include "../include/quickstream/app.h"
@@ -9,7 +10,7 @@
 // Private interfaces.
 #include "./debug.h"
 #include "./qs.h"
-
+#include "filterList.h"
 
 
 // TEMPORARY DEBUGGING // TODELETE
@@ -443,6 +444,15 @@ void qsStreamDestroy(struct QsStream *s) {
         s->connections[i].to->stream = 0;
     }
 
+    // Cleanup filters in this list
+    struct QsFilter *f = s->filters;
+    while(f) {
+        struct QsFilter *nextF = f->next;
+        // Destroy this filter f.
+        FreeFilter(f);
+        f = nextF;
+    }
+
     // Find and remove this stream from the app.
     //
     struct QsStream *S = s->app->streams;
@@ -832,7 +842,7 @@ int qsStreamStop(struct QsStream *s) {
      *     Stage: call all stream's filter stop() if present
      *********************************************************************/
 
-    for(struct QsFilter *f = s->app->filters; f; f = f->next)
+    for(struct QsFilter *f = s->filters; f; f = f->next)
         if(f->stream == s && f->stop) {
             CHECK(pthread_setspecific(_qsKey, f));
             f->mark = _QS_IN_STOP;
@@ -999,7 +1009,7 @@ int qsStreamReady(struct QsStream *s) {
     // By using the app list of filters we do not call any filter start()
     // more than once, (TODO) but is the order in which we call them okay?
     //
-    for(struct QsFilter *f = s->app->filters; f; f = f->next) {
+    for(struct QsFilter *f = s->filters; f; f = f->next) {
         if(f->stream == s) {
             if(f->start) {
                 // We mark which filter we are calling the start() for so

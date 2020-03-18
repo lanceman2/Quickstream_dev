@@ -61,15 +61,16 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
 }
 
 
-struct QsFilter *qsAppFilterLoad(struct QsApp *app,
+struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         const char *fileName, const char *_loadName,
         int argc, const char **argv) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    DASSERT(app, "");
-    DASSERT(fileName, "");
-    DASSERT(strlen(fileName) > 0, "");
-    DASSERT(strlen(fileName) < 1024*2, "");
+    DASSERT(s);
+    DASSERT(s->app);
+    DASSERT(fileName);
+    DASSERT(strlen(fileName) > 0);
+    DASSERT(strlen(fileName) < 1024*2);
 
     char *loadName = (char *) _loadName;
 
@@ -112,7 +113,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
             if(*loadName == DIR_CHAR)
                 ++loadName;
         }
-    } else if(FindFilterNamed(app, _loadName)) {
+    } else if(FindFilterNamed(s, _loadName)) {
         //
         // Because they requested a particular name and the name is
         // already taken, we can fail here.
@@ -132,7 +133,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         return 0;
     }
 
-    if(FindFilter_viaHandle(app, handle)) {
+    if(FindFilter_viaHandle(s, handle)) {
         //
         // This DSO (dynamic shared object) file is already loaded.  So we
         // must copy the DSO file to a temp file and load that.  Otherwise
@@ -208,7 +209,7 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
     }
 
 
-    struct QsFilter *f = AllocAndAddToFilterList(app, loadName);
+    struct QsFilter *f = AllocAndAddToFilterList(s, loadName);
 
     // If "construct", "destroy", "start", or "stop"
     // are not present, that's okay, they are optional.
@@ -246,7 +247,8 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
     }
 
 
-    f->app = app;
+    f->app = s->app;
+    f->stream = s;
     f->maxThreads = 1;
     f->dlhandle = handle;
 
@@ -278,11 +280,11 @@ struct QsFilter *qsAppFilterLoad(struct QsApp *app,
         // construct() phase.
         f->mark = _QS_IN_CONSTRUCT;
 
-        // In this construct() call this function, qsAppFilterLoad(), may
-        // be called, so this function must be re-entrant.
+        // In this construct() call this function, qsStreamFilterLoad(),
+        // may be called, so this function must be re-entrant.
 
         // When this construct() is called this filter struct is "all
-        // setup" and in the app object.  Therefore if this filter module
+        // setup" and in the stream object.  Therefore if this filter module
         // is a super-module that loads other filters and adds
         // connections, it will work.
         int ret = construct(argc, argv);
@@ -313,7 +315,7 @@ cleanup:
     // failure mode.
     //
 
-    DestroyFilter(app, f);
+    DestroyFilter(s, f);
     free(path);
     return 0; // failure
 }
@@ -324,7 +326,7 @@ int qsFilterUnload(struct QsFilter *f) {
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(f);
     DASSERT(f->app);
-    DestroyFilter(f->app, f);
+    DestroyFilter(f->stream, f);
 
     return 0; // success
 }

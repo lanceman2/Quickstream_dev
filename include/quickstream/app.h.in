@@ -94,6 +94,8 @@ const char *qsError(void);
 /** Create the highest level quickstream construct,
  * a quickstream app.
  *
+ * The quickstream app is a container that manages squickstream streams.
+ *
  * \return a pointer to an app structure, or 0 on failure*/
 extern
 struct QsApp *qsAppCreate(void);
@@ -113,13 +115,16 @@ extern
 int qsAppDestroy(struct QsApp *app);
 
 
+struct QsStream;
+
+
 /** Add a filter module to the list of filter modules to be loaded.
  *
  * If the filter is successfully loaded and a construct symbol is found
  * the construct will be called as a function with some arguments.  See
  * \ref construct().
  *
- * \param app that was returned from a call to qsAppCreate().
+ * \param stream that was returned from a call to qsAppStreamCreate().
  * \param fileName that refers to the plugin module file.
  * \param loadName a made-up unquie name that was refer to this
  * loaded plugin module.  loadName=0 maybe passed in to have the
@@ -133,7 +138,7 @@ int qsAppDestroy(struct QsApp *app);
  * \see qsFilterUnload().
  */
 extern
-struct QsFilter *qsAppFilterLoad(struct QsApp *app,
+struct QsFilter *qsStreamFilterLoad(struct QsStream *stream,
         const char *fileName,
         const char *loadName,
         int argc, const char **argv);
