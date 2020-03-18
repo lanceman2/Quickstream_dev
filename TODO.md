@@ -52,6 +52,14 @@ given that quickstream is not in an alpha (usable) state yet.
   registered getters.  The getters need to get() all parameters that it
   wishes to stay consistent in one get() call.
 
+  Simple control group solution: have the producers of said groups makes
+  the groups as a composition of the parameters internally.  So a user
+  of a group uses the same interface as the user of a single parameter;
+  the group parameter is just a grouping of smaller parameters.
+
+  Maybe automatically make all parameters from a given controller or
+  filter, be in a group with the name of that controller or filter.
+
 - Problem with current class hierarchy.  The App loads filters without
   a stream; but it appears that the filter construct() function needs
   a stream to put any controls it wants to create in construct() function.
