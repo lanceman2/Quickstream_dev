@@ -576,16 +576,23 @@ void qsRemoveDefaultFilterOptions(void);
 
 
 
-
 extern
 void *qsGet(const char * className, const char *name,
-        int (*callback)(const char * className,
-            const char *name, void *value));
+        int (*callback)(void *value));
 
 extern
-void *qsSet(const char * className, const char *name,
-        int (*callback)(const char * className,
-            const char *name, void *value));
+void *qsSet(const char * className, const char *name, void *value,
+        int (*callback)(void *retValue));
+
+extern
+void **qsGetGroup(const char *classNames[], const char *names[],
+        int (*callback)(void *values[]));
+
+extern
+void *qsSetGroup(const char *classNames[], const char *names[],
+        void *values[],
+        int (*callback)(void *retValues[]));
+
 
 
 #ifdef __cplusplus

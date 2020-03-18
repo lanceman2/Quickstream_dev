@@ -39,6 +39,9 @@ MurmurHash_test_SOURCES := MurmurHash_test.c ../lib/MurmurHash1.c
 Dictionary_test_SOURCES := Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 
 
+Control_test_SOURCES := Control_test.c
+
+
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)
 

@@ -28,9 +28,16 @@ given that quickstream is not in an alpha (usable) state yet.
   get callbacks are not called.  setSync() may not be a good thing to call
   in a filter::input().
 
+  The rate at which get() and set() calls occur must be much slower than
+  the rate at which data flows in the stream.  We mean that as a general
+  principle.  If the control parameters change quickly, you should
+  consider putting them as channels in the stream.
+
   In summary two functions times two variants.  set() and get() with and
   without callbacks.  We can set callback=0 for the non-callback versions.
-  Only the set() with callback=0 is a blocking call.
+  Only the set() with callback=0 is a blocking call.  The get() without a
+  callback is required to be non-blocking, so the get() must keep a
+  current state with it.  The set() does not require state.
 
   But wait there's more: controls may be grouped in sets.  The
   filter/controller makes and serves the so defined groups.  The thing
