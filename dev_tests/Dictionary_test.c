@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include "../lib/Dictionary.h"
-#include "../lib/debug.h"
 
 
 void catchSegv(int sig) {
@@ -25,10 +24,6 @@ int main(int argc, char **argv) {
         "h", "hello",
         "hay stack", "needle",
         "hay stace", "hello2",
-        "hay stace", "hello2",
-        "h", "hello",
-
-
 
         0, 0
     };

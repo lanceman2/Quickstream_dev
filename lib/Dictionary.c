@@ -697,8 +697,9 @@ char GetBits(char **bits, const char **c) {
 
     // Bit diddle with next character, i.e. decompose it into 4 2 bit
     // pieces in bits[].  We store 2 bits in each char in bits[4].  The
-    // value of any one of bits[] is 0, 1, 2, or 3.  We encode 1 8 bit
-    // char as 4 8 byte chars with values only 0, 1, 2, or 3.
+    // value of any one of bits[] is 0, 1, 2, or 3, all plus 1.  We encode
+    // 1 8 bit char as 4 8 byte chars with values only 1, 2, 3, or 4.  We
+    // need to use the 0 value as a terminator.
 
     // Go to the second array element in this null terminate array of 4 +
     // 1 null = *bits[5].
@@ -711,6 +712,9 @@ char GetBits(char **bits, const char **c) {
 
     // We must keep this order when decoding in the Find() function.
 
+    //                                        plus 1 in this byte
+    //                                            |
+    //                                            V
     *val32 =   (((0x00000003) & ret)        + 0x00000001)
             | ((((0x0000000C) & ret) << 6)  + 0x00000100)
             | ((((0x00000030) & ret) << 12) + 0x00010000)
