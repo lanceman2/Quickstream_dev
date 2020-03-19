@@ -21,7 +21,7 @@ given that quickstream is not in an alpha (usable) state yet.
   changes, the get callback is called every time the parameter changes.
   If a set happens and does not cause a change to the get state, then the
   get callbacks are not called.  setSync() may not be a good thing to call
-  in a filter::input().
+  in a filter::input(), given that it blocks.
 
   The rate at which get() and set() calls occur must be much slower than
   the rate at which data flows in the stream.  We mean that as a general
@@ -38,10 +38,10 @@ given that quickstream is not in an alpha (usable) state yet.
   filter/controller makes and serves the so defined groups.  The thing
   (being filter or controller) getting values via get() may need a group
   of parameters all at the same time.  The serving filter/controller must
-  keep the values that are being got consistent but putting up values
-  only in consistent groups.  If a parameter is part of a group, it is
-  assumed that all the values shelved in that group are always consistent;
-  so if not all values in a parameter group change, it is assumed that the
+  keep the values that are being got consistent but putting up values only
+  in consistent groups.  If a parameter is part of a group, it is assumed
+  that all the values shelved in that group are always consistent; so if
+  not all values in a parameter group change, it is assumed that the
   parameters that did not change are consistent with all the parameters
   that did change and all parameters in the group are "pushed" to their
   registered getters.  The getters need to get() all parameters that it
@@ -83,6 +83,19 @@ given that quickstream is not in an alpha (usable) state yet.
 - GNU radio tests
 - run tests with DEBUG off 
 - controls
+
+
+## Future improvements
+
+- See if making the branches in the dictionary with a 1 bit selector at
+  and near each branch, making it a binary tree and not a quad tree that
+  it currently is.  Would the extra bit diddling slow it down?  The bit
+  diddling may get more straight forward.  Chars with the highest bit
+  set could be defined as the 1 bit encoded sections, but that does not
+  work unless the bit series is always 7 bits long and it's not and it
+  can't be.  We need to study fast small data size compression theory.  At
+  least we could maybe prove that the quad tree trie dictionary is
+  optimal.
 
 
 ## References
