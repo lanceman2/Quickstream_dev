@@ -241,8 +241,8 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app);
  * in.
  *
  * \param doAllow Pass the doAllow value of true to set allowing loops in
- * the stream graph.  Pass in doAllow value of false to not allow loops in the
- * stream graph.
+ * the stream graph.  Pass in doAllow value of false to not allow loops in
+ * the stream graph.
  */
 extern
 void qsStreamAllowLoops(struct QsStream *stream, bool doAllow);
@@ -282,8 +282,8 @@ int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
  *
  * \param to filter module that we connect to.
  *
- * \param fromPortNum is the output port number that the "from" filter will
- * see for this connection.
+ * \param fromPortNum is the output port number that the "from" filter
+ * will see for this connection.
  *
  * \param toPortNum is the input port number that the "to" filter will
  * see for this connection.

@@ -581,7 +581,7 @@ void *qsGet(const char * Class, const char *name,
         int (*callback)(void *retValue));
 
 extern
-void *qsSet(const char * Class, const char *name, void *value,
+int qsSet(const char * Class, const char *name, void *value,
         int (*callback)(void *retValue));
 
 

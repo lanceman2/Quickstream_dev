@@ -39,7 +39,8 @@ MurmurHash_test_SOURCES := MurmurHash_test.c ../lib/MurmurHash1.c
 Dictionary_test_SOURCES := Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 
 
-Control_test_SOURCES := Control_test.c
+control_test_SOURCES := control_test.c
+control_test_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 
 # Add extra clean files for this directory.
