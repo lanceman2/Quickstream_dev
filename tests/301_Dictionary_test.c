@@ -6,7 +6,7 @@
 #include "../lib/Dictionary.h"
 #include "../lib/debug.h"
 
-
+static
 void catchSegv(int sig) {
     fprintf(stderr, "\nCaught signal %d\n"
             "\nsleeping:  gdb -pid %u\n",
@@ -14,12 +14,26 @@ void catchSegv(int sig) {
     while(true) usleep(100000);
 }
 
+static size_t num2 = 0;
+static struct QsDictionary *d;
+
+int callback(const char *key, const void *value) {
+
+    ++num2;
+
+    fprintf(stderr, " ----- key=\"%s\" value=\"%s\"\n", key,
+            (const char *) value);
+
+    ASSERT(value == qsDictionaryFind(d, key));
+    return 0;
+}
+
 
 int main(int argc, const char **argv) {
 
     signal(SIGSEGV, catchSegv);
 
-    struct QsDictionary *d = qsDictionaryCreate();
+    d = qsDictionaryCreate();
 
     const char *keys[] = {
         "kea", "kea",
@@ -83,7 +97,12 @@ int main(int argc, const char **argv) {
         "01", "01",
         "02", "02",
         "012", "012",
-
+        "a", "a",
+        "b", "b",
+        "c", "c",
+        "d", "d",
+        "e", "e",
+        "f", "f",
         "x40123", "0123",
         "x01234", "0123",
         "x0123456", "0123",
@@ -125,13 +144,15 @@ int main(int argc, const char **argv) {
         0, 0
     };
 
+    size_t num1 = 0;
+    
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
         ASSERT(qsDictionaryInsert(d, *key, val) == 0);
+        ++num1;
         fprintf(stderr, "added %s, %s\n", *key, val);
         ++key;
     }
-
 
     qsDictionaryPrintDot(d, stdout);
 
@@ -144,6 +165,10 @@ int main(int argc, const char **argv) {
         fprintf(stderr, "key=\"%s\", val=\"%s\"\n", *key, val);
         ++key;
     }
+
+    qsDictionaryForEach(d, callback);
+
+    ASSERT(num1 == num2);
 
     qsDictionaryDestroy(d);
 

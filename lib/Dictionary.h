@@ -31,20 +31,15 @@ void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 
 // Searches through the whole data structure.
 //
-// When key is non-zero, each call to callback() it calls with realloc()
-// allocated memory, and the memory is reused.  After the last call to
-// callback() the user must free() the last returned key memory.  If the
-// user needs more than one key, then the user must copy the key to their
-// own memory.
+// Do not screw with the key memory that is passed to callback().
 //
-// If callback() returns non-zero than the search will stop and callback
-// will not be called again.  The user owns the last returned key and must
-// free() it some time.
+// If callback returns non-zero the callback stops being called and the
+// call to qsDictionaryForEach() returns.
 //
 // Searches the entire data structure starting at dict.  Calls callback
-// with key set (if non-zero) and value 
+// with key set (if non-zero) and value.
 //
 extern 
 void
 qsDictionaryForEach(const struct QsDictionary *dict,
-        int (*callback) (const char **key, void *value));
+        int (*callback) (const char *key, const void *value));

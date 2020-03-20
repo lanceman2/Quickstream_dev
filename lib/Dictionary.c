@@ -52,10 +52,12 @@ struct QsDictionary {
     // constant like Pi in our use case.  Hiding the 4 would just obscure
     // the code.
     //
-    // We use a reduced alphabet of size 4 to index this array, otherwise
-    // it's 0.  We add a little complexity by having Null children to
-    // start with.  We reduce the alphabet to needing 2 bits (2^2=4) as we
-    // traverse through the branch points in the tree.
+    // We use a reduced alphabet of size 4 to index this children array,
+    // otherwise it's 0.  We add a little complexity by having Null
+    // children to start with.  We reduce the alphabet to needing 2 bits
+    // (2^2=4) as we traverse through the branch points in the tree.  So
+    // for the cost of a little bit diddling we use lots less memory than
+    // a regular Trie Tree data structure.
     //
     // Traversing the tree graph example:
     //
@@ -187,6 +189,13 @@ struct QsDictionary {
     // and optional suffix (if present) at each node in the traversal.
     // Sometimes this node is just a branch point with no value.
     const void *value;
+
+    // We only need the key to make the case for iterating through all the
+    // key/value pairs.  This is not needed for the Find() function.  You
+    // could remove this if you're not iterating through all the key/value
+    // pairs; example qsDictionaryForEach().
+    //
+    char *key; // strdup() the key.
 };
 
 
@@ -206,14 +215,24 @@ struct QsDictionary *qsDictionaryCreate(void) {
 static
 void FreeChildren(struct QsDictionary *children) {
 
-    for(struct QsDictionary *i = children + 4 - 1;
-            i >= children; --i)
-        if(i->children)
+    for(struct QsDictionary *child = children + 4 - 1;
+            child >= children; --child) {
+        if(child->children)
             // Recurse
-            FreeChildren(i->children);
+            FreeChildren(child->children);
 
-    if(children->suffix)
-        free(children->suffix);
+        // Clean up this child's struct QsDictionary
+        //
+        if(child->value) {
+            DASSERT(child->key);
+            free(child->key);
+        }
+        //
+        if(child->suffix)
+            free(child->suffix);
+    }
+
+    // Cleanup the children array.
 
 #if DEBUG
     memset(children, 0, 4*sizeof(*children));
@@ -231,6 +250,11 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
 
     if(dict->suffix)
         free(dict->suffix);
+
+    if(dict->value) {
+        DASSERT(dict->key);
+        free(dict->key);
+    }
 
 #if DEBUG
     memset(dict, 0, sizeof(*dict));
@@ -396,6 +420,15 @@ char *Compress(const char *suffix, size_t count_in) {
 }
 
 
+static inline
+char *Strdup(const char *str) {
+
+    char *s = strdup(str);
+    ASSERT(s, "strdup(%p) failed", str);
+    return s;
+}
+
+
 // Speed of Insert is not much of a concern.  It's Find that needs to be
 // fast.
 //
@@ -469,12 +502,14 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 if(*e == 0 && *c == 0) {
                     // Prefect match.
                     if(node->value) {
+                        DASSERT(node->key);
                         DSPEW("Entry for key=\"%s\" exists", key_in);
                         free(eSuffix);
                         free(key);
                         return 1;
                     }
                     node->value = value;
+                    node->key = Strdup(key_in);
                     free(eSuffix);
                     free(key);
                     return 0;
@@ -508,6 +543,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                     struct QsDictionary *n2 = children + (*e) - 1;
                     n2->children = node->children;
                     n2->value = node->value;
+                    n2->key = node->key;
 
                     if(*(e+1))
                         // Copy the remains of the old suffix starting at
@@ -516,6 +552,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                     char *oldSuffix = node->suffix;
                     node->value = value;
+                    node->key = Strdup(key_in);
                     if(e == eSuffix) {
                         // There where no matching chars in suffix and the
                         // char pointers never advanced.
@@ -526,7 +563,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
                         // char and then dup it.
                         *(char *) e = '\0'; // It's okay we copied it
                         // above.  We have less characters for this node.
-                        node->suffix = Compress(eSuffix, count - (e - eSuffix));
+                        node->suffix = Compress(eSuffix,
+                                count - (e - eSuffix));
                     }
                     node->children = children;
 
@@ -554,10 +592,13 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 struct QsDictionary *n1 = children + (*e) - 1;
                 struct QsDictionary *n2 = children + (*c) - 1;
                 n1->value = node->value;
+                n1->key = node->key;
                 n1->children = node->children;
                 n2->value = value;
+                n2->key = Strdup(key_in);
                 node->children = children;
                 node->value = 0;
+                node->key = 0;
 
                 if(*(e+1))
                     n1->suffix = Compress(e+1, count+1);
@@ -596,6 +637,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
             DASSERT(node->suffix == 0);
             node->suffix = Compress(c, count);
             node->value = value;
+            DASSERT(node->key == 0);
+            node->key = Strdup(key_in);
 
             free(key);
             return 0; // success
@@ -608,6 +651,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
         // go to this character (*c) node.
         node = children + (*c) - 1;
         node->value = value;
+        node->key = Strdup(key_in);
         // add any suffix characters if needed.
         if(*(c+1))
             node->suffix = Compress(c+1, count+1);
@@ -626,6 +670,8 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
     // node->value == 0
     node->value = value;
+    DASSERT(node->key == 0);
+    node->key = Strdup(key_in);
     free(key);
     return 0; // success done
 }
@@ -784,10 +830,39 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
         return 0;
     }
 
+    DASSERT(node->key);
+    DASSERT(strcmp(key, node->key) == 0);
+
     // Hooray!  We got it.
     return (void *) node->value;
 }
 
+
+void
+qsDictionaryForEach(const struct QsDictionary *node,
+        int (*callback) (const char *key, const void *value)) {
+
+    DASSERT(node);
+    DASSERT(callback);
+
+    if(node->children) {
+        struct QsDictionary *end = node->children + 3;
+        for(struct QsDictionary *child = node->children;
+                child <= end; ++child)
+            qsDictionaryForEach(child, callback);
+    }
+
+    if(node->value) {
+        DASSERT(node->key);
+        if(callback(node->key, node->value))
+            return;
+    }
+#ifdef DEBUG
+    else {
+        DASSERT(node->key == 0);
+    }
+#endif
+}
 
 
 static void

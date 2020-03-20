@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include "../lib/Dictionary.h"
+#include "../lib/debug.h"
 
 
 void catchSegv(int sig) {
@@ -13,28 +14,57 @@ void catchSegv(int sig) {
     while(true) usleep(100000);
 }
 
+static
+size_t num_check = 0;
+static
+struct QsDictionary *d;
+
+int callback(const char *key, const void *value) {
+
+    fprintf(stderr, "--- key=\"%s\" value=\"%s\"\n",
+            key, (char *) value);
+
+    ASSERT(value == qsDictionaryFind(d, key));
+
+    ++num_check;
+
+    return 0; // keep going.
+}
+
 
 int main(int argc, char **argv) {
 
     signal(SIGSEGV, catchSegv);
 
-    struct QsDictionary *d = qsDictionaryCreate();
+    d = qsDictionaryCreate();
+
+    ASSERT(d);
 
     const char *keys[] = {
-        "h", "hello",
+        "h", "h",
         "hay stack", "needle",
-        "hay stace", "hello2",
+        "hay stace", "hay stace",
+        "h2", "h2",
+        "hay stack2", "hay stack2",
+        "hay stace2", "hay stace2",
 
         0, 0
     };
+
+    size_t num = 0;
 
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
         fprintf(stderr, "key=\"%s\", value=\"%s\"\n", *key, val);
         qsDictionaryInsert(d, *key, val);
+        ++num;
         ++key;
     }
 
+
+    qsDictionaryForEach(d, callback);
+
+    ASSERT(num == num_check);
 
     qsDictionaryPrintDot(d, stdout);
 
