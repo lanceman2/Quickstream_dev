@@ -574,15 +574,19 @@ void qsRemoveDefaultFilterOptions(void);
 
 //////////////////////////// Control/Parameter Stuff /////////////////////
 
-
-
-extern
-void *qsGet(const char * Class, const char *name,
-        int (*callback)(void *retValue));
+struct QsStream;
 
 extern
-int qsSet(const char * Class, const char *name, void *value,
-        int (*callback)(void *retValue));
+int qsParameterCreate(struct QsStream *s, const char * Class,
+        const char *name, void *value);
+
+extern
+void *qsParameterGet(struct QsStream *s, const char * Class,
+        const char *name, int (*callback)(void *retValue));
+
+extern
+int qsParameterSet(struct QsStream *s, const char * Class,
+        const char *name, void *value, int (*callback)(void *retValue));
 
 
 

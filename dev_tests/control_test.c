@@ -22,7 +22,7 @@ int main(void) {
 
     signal(SIGSEGV, catcher);
 
-    qsSet(0, 0, 0, 0);
+    qsParameterSet(0, 0, 0, 0, 0);
 
     fprintf(stderr, "SUCCESS\n");
     

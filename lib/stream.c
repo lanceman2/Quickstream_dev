@@ -431,18 +431,6 @@ void qsStreamDestroy(struct QsStream *s) {
 
     FreeRunResources(s);
 
-    // Remove this stream from all the filters in the listed connections.
-    for(uint32_t i=0; i<s->numConnections; ++i) {
-        DASSERT(s->connections[i].from);
-        DASSERT(s->connections[i].to);
-        DASSERT(s->connections[i].from->stream == s ||
-                s->connections[i].from->stream == 0);
-        DASSERT(s->connections[i].to->stream == s ||
-                s->connections[i].to->stream == 0);
-
-        s->connections[i].from->stream = 0;
-        s->connections[i].to->stream = 0;
-    }
 
     // Cleanup filters in this list
     struct QsFilter *f = s->filters;

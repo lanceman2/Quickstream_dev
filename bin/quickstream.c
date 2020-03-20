@@ -524,5 +524,8 @@ int main(int argc, const char * const *argv) {
 
     DSPEW("Done parsing command-line arguments");
 
+    if(app)
+        return qsAppDestroy(app);
+
     return 0;
 }

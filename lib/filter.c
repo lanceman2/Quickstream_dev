@@ -79,8 +79,8 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         // Derive a filter name from the fileName.
         //
         size_t len = strlen(fileName) + 1;
-        char *s = loadName = alloca(len);
-        strncpy(s, fileName, len);
+        char *st = loadName = alloca(len);
+        strncpy(st, fileName, len);
         // loadName = "foo/filter/test/filename.so"
         // loadName[0] => '/'
         if(len > 4) {
@@ -94,19 +94,19 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
             }
             // now we are at the end of the name
             //
-            while(loadName != s && *loadName != DIR_CHAR)
+            while(loadName != st && *loadName != DIR_CHAR)
                 loadName--;
             // loadName = "/filename"
 
             // If the next directory in the path is not named
             // "/filter/" we add it to the loadName.
             const size_t flen = strlen(DIR_STR "filters");
-            while(!(loadName - s > flen &&
+            while(!(loadName - st > flen &&
                     strncmp(loadName-flen, DIR_STR "filters", flen)
                     == 0) &&
-                    loadName > s + 2) {
+                    loadName > st + 2) {
                 --loadName;
-                while(loadName != s && *loadName != DIR_CHAR)
+                while(loadName != st && *loadName != DIR_CHAR)
                     loadName--;
                 // loadName = "/test/filename"
             }
