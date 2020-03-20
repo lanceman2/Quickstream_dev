@@ -15,13 +15,46 @@ void catchSegv(int sig) {
 }
 
 static size_t num2 = 0;
+static size_t num_checkstop = 17;
+
 static struct QsDictionary *d;
+
 
 int callback(const char *key, const void *value) {
 
     ++num2;
 
-    fprintf(stderr, " ----- key=\"%s\" value=\"%s\"\n", key,
+    fprintf(stderr, " --(%zu)-- key=\"%s\" value=\"%s\"\n",
+            num2,
+            key,
+            (const char *) value);
+
+    ASSERT(value == qsDictionaryFind(d, key));
+
+    ASSERT(num2 <= num_checkstop, "This callback did not stop as requested");
+
+    if(num2 == num_checkstop) {
+        // Testing that this callback is stopped if we return non-zero.
+        //
+        // reset num2 counter.
+        num2 = 0;
+
+        return 1; // stop calling this.
+    }
+
+    return 0;
+}
+
+
+
+
+int callback2(const char *key, const void *value) {
+
+    ++num2;
+
+    fprintf(stderr, " (%zu) key=\"%s\" value=\"%s\"\n",
+            num2,
+            key,
             (const char *) value);
 
     ASSERT(value == qsDictionaryFind(d, key));
@@ -167,6 +200,8 @@ int main(int argc, const char **argv) {
     }
 
     qsDictionaryForEach(d, callback);
+    qsDictionaryForEach(d, callback2);
+
 
     ASSERT(num1 == num2);
 

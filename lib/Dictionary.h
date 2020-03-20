@@ -39,7 +39,9 @@ void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 // Searches the entire data structure starting at dict.  Calls callback
 // with key set (if non-zero) and value.
 //
+// Returns the number of keys and callbacks called.
+//
 extern 
-void
+size_t
 qsDictionaryForEach(const struct QsDictionary *dict,
         int (*callback) (const char *key, const void *value));

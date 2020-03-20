@@ -838,30 +838,50 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
 }
 
 
-void
-qsDictionaryForEach(const struct QsDictionary *node,
-        int (*callback) (const char *key, const void *value)) {
+static
+bool ForEach(const struct QsDictionary *node,
+        int (*callback) (const char *key, const void *value),
+        size_t *count) {
 
     DASSERT(node);
     DASSERT(callback);
 
-    if(node->children) {
-        struct QsDictionary *end = node->children + 3;
-        for(struct QsDictionary *child = node->children;
-                child <= end; ++child)
-            qsDictionaryForEach(child, callback);
-    }
-
     if(node->value) {
         DASSERT(node->key);
+        ++(*count);
         if(callback(node->key, node->value))
-            return;
+            // The user is telling us we are done, so now we stop
+            // recurring.
+            return true; // We are done.
     }
 #ifdef DEBUG
     else {
         DASSERT(node->key == 0);
     }
 #endif
+
+    if(node->children) {
+        struct QsDictionary *end = node->children + 3;
+        for(struct QsDictionary *child = node->children;
+                child <= end; ++child)
+            if(ForEach(child, callback, count))
+                return true; // We are done.
+    }
+
+    return false; // keep going.
+}
+
+
+size_t
+qsDictionaryForEach(const struct QsDictionary *node,
+        int (*callback) (const char *key, const void *value)) {
+
+    DASSERT(node);
+    DASSERT(callback);
+    size_t ret_count = 0;
+
+    ForEach(node, callback, &ret_count);
+    return ret_count;
 }
 
 

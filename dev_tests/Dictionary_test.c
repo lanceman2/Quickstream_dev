@@ -19,14 +19,16 @@ size_t num_check = 0;
 static
 struct QsDictionary *d;
 
+
 int callback(const char *key, const void *value) {
 
-    fprintf(stderr, "--- key=\"%s\" value=\"%s\"\n",
+    ++num_check;
+    
+    fprintf(stderr, "%zu --- key=\"%s\" value=\"%s\"\n",
+            num_check,
             key, (char *) value);
 
     ASSERT(value == qsDictionaryFind(d, key));
-
-    ++num_check;
 
     return 0; // keep going.
 }
@@ -47,6 +49,10 @@ int main(int argc, char **argv) {
         "h2", "h2",
         "hay stack2", "hay stack2",
         "hay stace2", "hay stace2",
+        "h21", "h2",
+        "hay1 stack2", "hay stack2",
+        "hay1 stace2", "hay stace2",
+
 
         0, 0
     };
@@ -64,7 +70,8 @@ int main(int argc, char **argv) {
 
     qsDictionaryForEach(d, callback);
 
-    ASSERT(num == num_check);
+    ASSERT(num == num_check, "num=%zu  num_check=%zu",
+            num, num_check);
 
     qsDictionaryPrintDot(d, stdout);
 
