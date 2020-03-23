@@ -58,6 +58,13 @@ static void gdb_catcher(int signum) {
 static
 int usage(int fd) {
 
+    // This usage() is a little odd.  It launches another program to
+    // display the program Usage.  Why?  We put the --help, man pages,
+    // together in one program that is also used to generate some of the
+    // code that are this program.  This keeps the documentation of the
+    // program and it's options consistent.  Really most of the code of
+    // this program is in the library libquickstream.so.
+
     const char *run = "lib/quickstream/misc/quickstreamHelp";
     ssize_t postLen = strlen(run);
     ssize_t bufLen = 128;
@@ -95,7 +102,7 @@ int usage(int fd) {
     // add the "lib/quickstream/misc/quickstreamHelp"
     strcpy(&buf[l+1], run);
 
-    //printf("running: %s\n", buf);
+    //fprintf(stderr, "running: %s\n", buf);
 
     if(fd != STDOUT_FILENO)
         // Make the quickstreamHelp write to stderr.
@@ -105,29 +112,30 @@ int usage(int fd) {
 
     fprintf(stderr, "execl(\"%s\",,) failed\n", buf);
 
-    return 1; // non-zero error code
+    return 1; // non-zero error code, fail.
 }
 
 
 
 int main(int argc, const char * const *argv) {
 
+    // Hang the program for debugging, if we segfault.
     signal(SIGSEGV, gdb_catcher);
 
-    // This program will only construct one QsApp and one QsStream.
 
-    struct QsApp *app = 0;
+    // This program will only construct one QsApp, but can make an number
+    // of QsStream, streams.
 
-    int numStreams = 1;
-    // This is the last stream created.
-    struct QsStream *stream = 0;
+    struct QsApp *app = 0; // The one and other for this program.
+
+    int numStreams = 0;
     // array of streams pointers of length numStreams.
-    struct QsStream **streams = calloc(numStreams, sizeof(*streams));
-    ASSERT(streams, "calloc(%d,%zu) failed",
-            numStreams, sizeof(*streams));
+    struct QsStream **streams = 0; 
+    struct QsStream *stream = 0; // The last stream created.
 
     int numMaxThreads = 1;
     // array of maxThreads of length numStreams.
+    // There can be one maxThreads for each stream in the stream array.
     uint32_t *maxThreads = malloc(numMaxThreads * sizeof(*maxThreads));
     ASSERT(maxThreads, "malloc(%zu) failed",
             numMaxThreads * sizeof(*maxThreads));
@@ -196,13 +204,12 @@ int main(int argc, const char * const *argv) {
                         // NONE 0 with a error string.
                         level = 0;
 
-                    if(level >= 3/*notice*/) {
-                        fprintf(stderr, "quickstream spew level set to %d\n",
-                                level);
-                        fprintf(stderr, "The highest libquickstream "
+                    if(level >= 3/*notice*/)
+                        fprintf(stderr, "quickstream spew level "
+                                "set to %d\n"
+                                "The highest libquickstream "
                                 "spew level is %d\n",
-                                qsGetLibSpewLevel());
-                    }
+                                level, qsGetLibSpewLevel());
 
                     qsSetSpewLevel(level);
 
@@ -398,14 +405,21 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "Bad --filter option\n\n");
                     return usage(STDERR_FILENO);
                 }
+
                 filters = realloc(filters, sizeof(*filters)*(++numFilters));
                 ASSERT(filters, "realloc(,%zu) failed",
                         sizeof(*filters)*numFilters);
+
                 if(!app) {
                     app = qsAppCreate();
                     ASSERT(app, "");
                     stream = qsAppStreamCreate(app);
                     ASSERT(stream, "");
+                    ++numStreams;
+                    streams = realloc(streams, numStreams * sizeof(*streams));
+                    ASSERT(streams, "realloc(, %zu) failed",
+                            numStreams * sizeof(*streams));
+                    streams[numStreams-1] = stream;
                 }
                 const char *name = 0;
 
@@ -465,7 +479,6 @@ int main(int argc, const char * const *argv) {
                 }
                 return qsFilterPrintHelp(arg, stdout);
 
-
             case 'R':
 
                 if(ready) {
@@ -476,6 +489,15 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "--ready with no filters loaded\n");
                     return 1;
                 }
+
+                if(level >= 4/*info*/)
+                    fprintf(stderr, "Readying %d streams\n", numStreams);
+
+                for(int j=0; j<numStreams; ++j)
+                    if(qsStreamReady(streams[j]))
+                        // error
+                        return 1;
+
 
                 if(qsStreamReady(stream)) {
                     // error
