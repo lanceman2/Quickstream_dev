@@ -117,12 +117,26 @@ int main(int argc, const char * const *argv) {
     // This program will only construct one QsApp and one QsStream.
 
     struct QsApp *app = 0;
+
+    int numStreams = 1;
+    // This is the last stream created.
     struct QsStream *stream = 0;
+    // array of streams pointers of length numStreams.
+    struct QsStream **streams = calloc(numStreams, sizeof(*streams));
+    ASSERT(streams, "calloc(%d,%zu) failed",
+            numStreams, sizeof(*streams));
+
+    int numMaxThreads = 1;
+    // array of maxThreads of length numStreams.
+    uint32_t *maxThreads = malloc(numMaxThreads * sizeof(*maxThreads));
+    ASSERT(maxThreads, "malloc(%zu) failed",
+            numMaxThreads * sizeof(*maxThreads));
+    maxThreads[0] = DEFAULT_MAXTHREADS;
+
     int numFilters = 0;
     struct QsFilter **filters = 0;
     bool ready = false;
     // TODO: option to change maxThreads.
-    uint32_t maxThreads = DEFAULT_MAXTHREADS;
     char *endptr = 0;
     int spewLevel = DEFAULT_SPEW_LEVEL;
 
@@ -185,7 +199,8 @@ int main(int argc, const char * const *argv) {
                     if(level >= 3/*notice*/) {
                         fprintf(stderr, "quickstream spew level set to %d\n",
                                 level);
-                        fprintf(stderr, "The highest libquickstream spew level is %d\n",
+                        fprintf(stderr, "The highest libquickstream "
+                                "spew level is %d\n",
                                 qsGetLibSpewLevel());
                     }
 
@@ -477,10 +492,50 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "Bad --threads option\n\n");
                     return usage(STDERR_FILENO);
                 }
-                errno = 0;
-                maxThreads = strtoul(arg, 0, 10);
+                
+                {
+                    int num = 0;
+                    errno = 0;
+                    endptr = 0;
+                    for(const char *str = arg; *str && endptr != str;) {
+                        long val = strtol(str, &endptr, 10);
+                        if(endptr == str) break;
+                        ++num;
+                        if(num > numMaxThreads) {
+                            ++numMaxThreads;
+                            maxThreads = realloc(maxThreads,
+                                    numMaxThreads * sizeof(*maxThreads));
+                            ASSERT(maxThreads, "realloc(%zu) failed",
+                                    numMaxThreads * sizeof(*maxThreads));
+                        }
+                        maxThreads[num-1] = val;
+                    }
+                }
+
                 ++i;
                 arg = 0;
+
+                break;
+
+            case 's':
+
+                ++numStreams;
+
+                if(!app)
+                    app = qsAppCreate();
+                ASSERT(app);
+
+                if(numStreams > 1) {
+                    streams = realloc(streams,
+                            numStreams * sizeof(*streams));
+                    ASSERT(streams, "realloc(%zu) failed",
+                            numStreams * sizeof(*streams));
+                }
+                if(stream && numStreams == 2)
+                    streams[numStreams-2] = stream;
+
+                stream = streams[numStreams-1] = qsAppStreamCreate(app);
+                ASSERT(stream);
 
                 break;
 
@@ -493,12 +548,16 @@ int main(int argc, const char * const *argv) {
                 }
 
                 if(!ready) {
+
+                    if(numStreams
+
+
                     if(qsStreamReady(stream))
                         // error
                         return 1;
                 }
 
-                if(qsStreamLaunch(stream, maxThreads)) {
+                if(qsStreamLaunch(stream, maxThreads[numMaxThreads-1])) {
                     // error
                     return 1;
                 }
@@ -525,6 +584,7 @@ int main(int argc, const char * const *argv) {
     DSPEW("Done parsing command-line arguments");
 
     if(app)
+        // This will destroy all streams.
         return qsAppDestroy(app);
 
     return 0;
