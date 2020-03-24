@@ -212,6 +212,13 @@ static struct QsOption
         "run the stream.  This readies the stream and runs it."
     },
 /*----------------------------------------------------------------------*/
+    { "--stream", 's', 0,               false,
+
+        "create another stream.  Each time this option is given another "
+        "stream is created, and all subsequent filters are loaded into "
+        "this last stream that is created."
+    },
+/*----------------------------------------------------------------------*/
     { "--threads", 't', "NUM",          false,
 
         "when and if the stream is launched, run at most NUM worker"

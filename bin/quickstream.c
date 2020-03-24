@@ -34,7 +34,6 @@ quickstream --filter stdin --filter stdout --connect --display
 */
 
 
-
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
@@ -51,6 +50,7 @@ quickstream --filter stdin --filter stdout --connect --display
 
 static void gdb_catcher(int signum) {
 
+    // The action of ASSERT() depends on how this is compiled.
     ASSERT(0, "Caught signal %d\n", signum);
 }
 
@@ -63,7 +63,10 @@ int usage(int fd) {
     // together in one program that is also used to generate some of the
     // code that are this program.  This keeps the documentation of the
     // program and it's options consistent.  Really most of the code of
-    // this program is in the library libquickstream.so.
+    // this program is in the library libquickstream.so.  The program
+    // quickstream should be just a command-line wrapper of
+    // libquickstream.so, if that is not the case than we are doing
+    // something wrong.
 
     const char *run = "lib/quickstream/misc/quickstreamHelp";
     ssize_t postLen = strlen(run);
@@ -122,6 +125,8 @@ int main(int argc, const char * const *argv) {
     // Hang the program for debugging, if we segfault.
     signal(SIGSEGV, gdb_catcher);
 
+    // The spew level.
+    int level = 1; // 0 == no spew, 1 == error, ...
 
     // This program will only construct one QsApp, but can make an number
     // of QsStream, streams.
@@ -181,7 +186,6 @@ int main(int argc, const char * const *argv) {
                     return usage(STDERR_FILENO);
                 }
                 {
-                    int level = 0;
                     // LEVEL maybe debug, info, notice, warn, error, and
                     // off which translates to: 5, 4, 3, 2, 1, and 0
                     // as this program (and not the API) define it.
@@ -498,12 +502,6 @@ int main(int argc, const char * const *argv) {
                         // error
                         return 1;
 
-
-                if(qsStreamReady(stream)) {
-                    // error
-                    return 1;
-                }
-
                 // success
                 ready = true;
                 break;
@@ -553,15 +551,13 @@ int main(int argc, const char * const *argv) {
                     ASSERT(streams, "realloc(%zu) failed",
                             numStreams * sizeof(*streams));
                 }
-                if(stream && numStreams == 2)
-                    streams[numStreams-2] = stream;
 
                 stream = streams[numStreams-1] = qsAppStreamCreate(app);
                 ASSERT(stream);
 
                 break;
 
-            case 'r':
+            case 'r': // --run
 
                 if(!app) {
                     fprintf(stderr, "option --ready with no"
@@ -569,28 +565,35 @@ int main(int argc, const char * const *argv) {
                     return 1;
                 }
 
-                if(!ready) {
+                if(!ready)
+                    for(int j=0; j<numStreams; ++j)
+                        if(qsStreamReady(stream))
+                            // error
+                            return 1;
+                ready = true;
 
-                    if(numStreams
-
-
-                    if(qsStreamReady(stream))
+                int max_threads = maxThreads[0];
+                for(int j=0; j<numStreams; ++j) {
+                    if(j < numMaxThreads)
+                        max_threads = maxThreads[j];
+                    if(qsStreamLaunch(streams[j], max_threads))
                         // error
                         return 1;
                 }
 
-                if(qsStreamLaunch(stream, maxThreads[numMaxThreads-1])) {
-                    // error
-                    return 1;
-                }
-
+                max_threads = maxThreads[0];
                 // We do not wait if there where no worker threads, that
                 // is maxThreads == 0.
-                if(maxThreads && qsStreamWait(stream))
-                    return 1;
+                for(int j=0; j<numStreams; ++j) {
+                    if(j < numMaxThreads)
+                        max_threads = maxThreads[j];
+                    if(max_threads && qsStreamWait(streams[j]))
+                        return 1; // error
+                }
 
-                if(qsStreamStop(stream))
-                    return 1;
+                for(int j=0; j<numStreams; ++j)
+                    if(qsStreamStop(streams[j]))
+                        return 1; // error
 
                 ready = false;
 

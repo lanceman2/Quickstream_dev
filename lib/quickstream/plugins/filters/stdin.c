@@ -13,7 +13,13 @@ void help(FILE *f) {
 "This filter must have 0 inputs.\n"
 "This filter will read stdin and write it to 1 output.\n"
 "\n"
-"  The default value for LEN is %zu.\n"
+"\n"
+"                 OPTIONS\n"
+"\n"
+"\n"
+"  --maxWrite LEN  Set the maximum write promise to LEN bytes.\n"
+"                  The default value for LEN is %zu.\n"
+"\n"
 "\n",
 QS_DEFAULTMAXWRITE
         );
