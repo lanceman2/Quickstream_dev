@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <alloca.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "./debug.h"
 #include "./qs.h"

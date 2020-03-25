@@ -2,6 +2,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <dlfcn.h>
+#include <stdatomic.h>
 
 // The public installed user interfaces:
 #include "../include/quickstream/app.h"

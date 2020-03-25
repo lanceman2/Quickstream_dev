@@ -4,7 +4,6 @@
 #include <pthread.h>
 
 #include "debug.h"
-#include "qs.h"
 
 // Cut from: 
 // https://raw.githubusercontent.com/aappleby/smhasher/master/src/MurmurHash1.cpp

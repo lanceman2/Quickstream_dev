@@ -206,6 +206,15 @@ struct QsStream {
     //
     struct QsApp *app;
 
+    // Used to signal to stop source input() calls.
+    // We need a stream mutex to access isRunning or we need to make this
+    // atomic_int via #include <stdatomic.h>
+    //
+    // We want the use to be able to set this in a signal handler so to
+    // not deadlock a mutex we really need atomic setting and getting.
+    atomic_int isSourcing;
+
+
     // There's no reason for fast access to these list at this time.
     // Maybe we'll use a red/black tree for faster access if the need
     // comes be.

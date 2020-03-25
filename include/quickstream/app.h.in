@@ -366,6 +366,22 @@ extern
 int qsStreamStop(struct QsStream *stream);
 
 
+/** Stop feeding the source filters in the stream
+ *
+ * After this is called the stream should quickly finish flowing, that is
+ * if this is a well behaved quickstream stream.
+ *
+ * This can be called in the users signal handler to stop the flow in a
+ * nice way, letting all the non-source filters finish flushing whatever
+ * data is left in the stream after the sources stop feeding it.
+ *
+ *  \param stream the stream object that has the filters that are
+ *  connected.
+ */
+extern
+void qsStreamStopSources(struct QsStream *s);
+
+
 /** Set a level of verbosity for libquickstream.so
  *
  * A well conditioned library should not write to standard error output.

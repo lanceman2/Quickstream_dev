@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "./debug.h"
 #include "./qs.h"

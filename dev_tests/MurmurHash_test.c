@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "../lib/debug.h"
-#include "../lib/qs.h"
 
 // From: https://github.com/aappleby/smhasher
 // MurmurHash1.cpp

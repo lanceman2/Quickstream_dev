@@ -40,18 +40,40 @@ quickstream --filter stdin --filter stdout --connect --display
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 #include "../include/quickstream/app.h"
 #include "../lib/debug.h"
 #include "getOpt.h"
 #include "../lib/quickstream/misc/qsOptions.h"
 
+    
+// The spew level.
+static int level = 1; // 0 == no spew, 1 == error, ...
+
+
+static int numStreams = 0;
+// array of streams pointers of length numStreams.
+static struct QsStream **streams = 0; 
 
 
 static void gdb_catcher(int signum) {
 
     // The action of ASSERT() depends on how this is compiled.
     ASSERT(0, "Caught signal %d\n", signum);
+}
+
+static void term_catcher(int signum) {
+
+    if(level >= 3) // notice
+        fprintf(stderr, "Caught signal %d, stopping source feeds\n",
+                signum);
+    for(int i=0; i<numStreams; ++i)
+        qsStreamStopSources(streams[i]);
+
+    // Let the user kill the program if it's not rerunning.
+    signal(SIGTERM, SIG_DFL);
+    signal(SIGINT, SIG_DFL);
 }
 
 
@@ -125,17 +147,11 @@ int main(int argc, const char * const *argv) {
     // Hang the program for debugging, if we segfault.
     signal(SIGSEGV, gdb_catcher);
 
-    // The spew level.
-    int level = 1; // 0 == no spew, 1 == error, ...
-
     // This program will only construct one QsApp, but can make an number
     // of QsStream, streams.
 
     struct QsApp *app = 0; // The one and other for this program.
 
-    int numStreams = 0;
-    // array of streams pointers of length numStreams.
-    struct QsStream **streams = 0; 
     struct QsStream *stream = 0; // The last stream created.
 
     int numMaxThreads = 1;
@@ -529,6 +545,7 @@ int main(int argc, const char * const *argv) {
                                     numMaxThreads * sizeof(*maxThreads));
                         }
                         maxThreads[num-1] = val;
+                        str = endptr;
                     }
                 }
 
@@ -570,7 +587,11 @@ int main(int argc, const char * const *argv) {
                         if(qsStreamReady(stream))
                             // error
                             return 1;
+
                 ready = true;
+                signal(SIGTERM, term_catcher);
+                signal(SIGINT, term_catcher);
+
 
                 int max_threads = maxThreads[0];
                 for(int j=0; j<numStreams; ++j) {
@@ -594,6 +615,9 @@ int main(int argc, const char * const *argv) {
                 for(int j=0; j<numStreams; ++j)
                     if(qsStreamStop(streams[j]))
                         return 1; // error
+
+                if(level >= 4)
+                    fprintf(stderr, "Finished running\n");
 
                 ready = false;
 

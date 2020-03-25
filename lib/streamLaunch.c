@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "./debug.h"
 #include "./qs.h"
@@ -39,7 +40,11 @@ uint32_t nThreadFlow(struct QsStream *s) {
     // LOCK stream mutex
     CHECK(pthread_mutex_lock(&s->mutex));
 
-    // 1. First add source filter jobs to the stream queue.
+    // 0. set isSourcing
+    //
+    s->isSourcing = 1;
+
+    // 1. Now add source filter jobs to the stream queue.
     //
     // TODO: We need to consider adding a functionality that wraps
     // epoll_wait(2) to add a different way to add jobs for filters that
@@ -290,4 +295,19 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
         AllocateFilterJobsAndMutex(s, s->sources[i]);
 
     return s->flow(s);
+}
+
+
+void qsStreamStopSources(struct QsStream *s) {
+
+    DASSERT(s);
+    // We assuming with is not called 2 billion times so this atomic
+    // counter does not wrap through zero in a single flow cycle.
+    //
+    // Note we do not use a mutex to change this atomic variable so that
+    // this can be used in a signal handler.
+    //
+    // atomic variable change:
+    DSPEW();
+    --s->isSourcing;
 }

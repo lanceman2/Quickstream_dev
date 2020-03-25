@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "./debug.h"
 #include "./qs.h"

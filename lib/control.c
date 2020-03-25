@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "../include/quickstream/filter.h"
 #include "debug.h"

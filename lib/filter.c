@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 // The public installed user interfaces:
 #include "../include/quickstream/app.h"

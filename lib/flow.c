@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #include "./debug.h"
 #include "./qs.h"
@@ -144,7 +145,7 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
         if(f->readers[i]->readLength >= f->readers[i]->threshold)
             return true;
 
-    if(f->numInputs == 0)
+    if(f->numInputs == 0 && f->stream->isSourcing > 0)
         // We have no inputs so the inputs are not a restriction.
         return true;
 
@@ -373,8 +374,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         }
 
 
-    //  Add jobs to the stream job queue for source filters if there are
-    //  extra threads or no jobs in the stream job queue.
+    //  Add jobs to the stream job queue for source filters if there
+    //  are extra threads or no jobs in the stream job queue.
     if(numAddedWorkers < s->maxThreads - s->numThreads + s->numIdleThreads +
             ((ret == false)?1:0) ||
             (s->jobFirst == 0 && ret)
