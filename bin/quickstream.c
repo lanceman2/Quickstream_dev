@@ -162,6 +162,7 @@ int main(int argc, const char * const *argv) {
             numMaxThreads * sizeof(*maxThreads));
     maxThreads[0] = DEFAULT_MAXTHREADS;
 
+    int lastFilterConnected = 0;
     int numFilters = 0;
     struct QsFilter **filters = 0;
     bool ready = false;
@@ -255,14 +256,16 @@ int main(int argc, const char * const *argv) {
                 //
 
                 if(!arg || arg[0] < '0' || arg[0] > '9') {
-                    // There is no connection list, so by default we
-                    // connect filters in the order they are loaded.
-                    for(int i=1; i<numFilters; ++i) {
+                    // There is no connection argument list, so by
+                    // default we connect filters in the order they are
+                    // loaded.
+                    for(int i = lastFilterConnected + 1; i<numFilters; ++i) {
                         if(level >= 4)
                             fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
                         qsFiltersConnect(filters[i-1],
                                 filters[i], QS_NEXTPORT, QS_NEXTPORT);
                     }
+                    lastFilterConnected = numFilters - 1;
                     break;
                 }
 
@@ -297,6 +300,11 @@ int main(int argc, const char * const *argv) {
                     if(level >= 4)
                         fprintf(stderr, "connecting: %ld -> %ld\n",
                                 from, to);
+
+                    if(to > lastFilterConnected)
+                        lastFilterConnected = to;
+                    if(from > lastFilterConnected)
+                        lastFilterConnected = from;
 
                     qsFiltersConnect(filters[from],
                                 filters[to], 0, QS_NEXTPORT);
@@ -379,6 +387,13 @@ int main(int argc, const char * const *argv) {
 
                 qsFiltersConnect(filters[fromF],
                             filters[toF], fromPort, toPort);
+
+
+                if(toF > lastFilterConnected)
+                    lastFilterConnected = toF;
+                if(fromF > lastFilterConnected)
+                    lastFilterConnected = fromF;
+
 
                 DSPEW("option %c = %s", c, arg);
 
@@ -556,6 +571,18 @@ int main(int argc, const char * const *argv) {
 
             case 's':
 
+                // Since this mark the point at which we create a
+                // different stream, we connect filters in the order they
+                // are loaded if they are not connected yet, since they
+                // will not be connected otherwise.
+                for(int i = lastFilterConnected + 1; i<numFilters; ++i) {
+                    if(level >= 4)
+                        fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
+                    qsFiltersConnect(filters[i-1],
+                            filters[i], QS_NEXTPORT, QS_NEXTPORT);
+                }
+                lastFilterConnected = numFilters;
+
                 ++numStreams;
 
                 if(!app)
@@ -584,7 +611,7 @@ int main(int argc, const char * const *argv) {
 
                 if(!ready)
                     for(int j=0; j<numStreams; ++j)
-                        if(qsStreamReady(stream))
+                        if(qsStreamReady(streams[j]))
                             // error
                             return 1;
 
@@ -593,7 +620,7 @@ int main(int argc, const char * const *argv) {
                 signal(SIGINT, term_catcher);
 
                 if(level >= 4)
-                    fprintf(stderr, "Running stream\n");
+                    fprintf(stderr, "Running %d stream(s)\n", numStreams);
 
                 int max_threads = maxThreads[0];
                 for(int j=0; j<numStreams; ++j) {
@@ -610,8 +637,8 @@ int main(int argc, const char * const *argv) {
                 for(int j=0; j<numStreams; ++j) {
                     if(j < numMaxThreads)
                         max_threads = maxThreads[j];
-                    if(max_threads && qsStreamWait(streams[j]))
-                        return 1; // error
+                    if(max_threads)
+                        qsStreamWait(streams[j]);
                 }
 
                 for(int j=0; j<numStreams; ++j)
@@ -619,7 +646,8 @@ int main(int argc, const char * const *argv) {
                         return 1; // error
 
                 if(level >= 4)
-                    fprintf(stderr, "Finished running stream\n");
+                    fprintf(stderr, "Finished running %d stream(s)\n",
+                            numStreams);
 
                 ready = false;
 
@@ -632,7 +660,8 @@ int main(int argc, const char * const *argv) {
         }
     }
 
-    DSPEW("Done parsing command-line arguments");
+    if(level >= 4) // info
+        fprintf(stderr, "Done parsing command-line arguments\n");
 
     if(app)
         // This will destroy all streams.

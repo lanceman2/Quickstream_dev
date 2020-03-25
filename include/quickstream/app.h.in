@@ -315,6 +315,7 @@ extern
 int qsStreamLaunch(struct QsStream *stream, uint32_t maxThreads);
 
 
+
 /** Wait for worker threads to signal the main thread.
  *
  * This should be called after qsStreamLaunch().

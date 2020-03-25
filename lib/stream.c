@@ -849,9 +849,7 @@ int qsStreamStop(struct QsStream *s) {
 
     FreeRunResources(s);
 
-
     s->flow = 0;
-
 
     return 0; // success
 }
