@@ -1,8 +1,8 @@
 #include <unistd.h>
 #include <signal.h>
-#include <stdlib.h>
 
 #include "../include/quickstream/app.h"
+
 
 // Turn on spew macros for this file.
 #ifndef SPEW_LEVEL_DEBUG
@@ -11,15 +11,13 @@
 #include "../lib/debug.h"
 
 
-
 static void catcher(int signum) {
 
     WARN("Caught signal %d\n", signum);
-    fprintf(stderr, "\n Try:  gdb -pid %u\n\n", getpid());
+    fprintf(stderr, "Try running:\n\n"
+            "    gdb -pid %u\n\n", getpid());
     while(1) usleep(10000);
 }
-
-
 
 
 int main(void) {
@@ -29,54 +27,28 @@ int main(void) {
     INFO("hello quickstream version %s", QS_VERSION);
 
     struct QsApp *app = qsAppCreate();
-    if(!app)
-        return 1;
+    struct QsStream *stream = qsAppStreamCreate(app);
+
+    struct QsFilter *f0 = qsStreamFilterLoad(stream, "stdin", 0, 0, 0);
+    struct QsFilter *f1 = qsStreamFilterLoad(stream, "tests/copy", 0, 0, 0);
+    struct QsFilter *f2 = qsStreamFilterLoad(stream, "stdout.so", 0, 0, 0);
+    qsFiltersConnect(f0, f1, 0, 0);
+    qsFiltersConnect(f1, f2, 0, 0);
 
 
+    qsStreamReady(stream);
 
-    struct QsStream *s = qsAppStreamCreate(app);
+    qsAppDisplayFlowImage(app, 3, false);
 
-    const char *fn[] = { "stdin.so", "tests/sleep.so", "stdout.so", 0 };
-    struct QsFilter *f[10];
-    struct QsFilter *prevF = 0;
-    if(!s) goto fail;
-    int i=0;
+    qsStreamLaunch(stream, 1/*maxThreads*/);
 
-    for(const char **n=fn; *n; ++n) {
-        f[i] = qsStreamFilterLoad(s, *n, 0, 0, 0);
-        if(!f[i]) goto fail;
+    qsStreamWait(stream);
 
-        if(prevF)
-            qsStreamConnectFilters(s, prevF, f[i], 0, QS_NEXTPORT);
-
-        prevF = f[i];
-        ++i;
-    }
-
-    f[i] = qsStreamFilterLoad(s, "tests/sleep", 0, 0, 0);
-    qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
-    qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
-    qsStreamConnectFilters(s, f[0], f[i], 0, QS_NEXTPORT);
-    qsStreamConnectFilters(s, f[i], f[2], 0, QS_NEXTPORT);
-
-
-    i++;
-
-    qsStreamReady(s);
-
-    qsAppPrintDotToFile(app, QSPrintDebug, stdout);
-    qsAppDisplayFlowImage(app, 0, false);
-    qsAppDisplayFlowImage(app, QSPrintDebug, false);
-
+    qsStreamStop(stream);
 
     qsAppDestroy(app);
 
     WARN("SUCCESS");
+
     return 0;
-
-fail:
-
-    qsAppDestroy(app);
-    WARN("FAILURE");
-    return 1;
 }

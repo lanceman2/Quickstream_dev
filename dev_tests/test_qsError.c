@@ -46,13 +46,13 @@ int main(void) {
     qsError();
 
     for(int i=0; i<numFilters-1; ++i)
-        qsStreamConnectFilters(stream, f[i], f[i+1], 0, 0);
+        qsFiltersConnect(f[i], f[i+1], 0, 0);
 
    // Clear the Qs error to test this again:
     qsError();
 
     // This should cause a recoverable error.
-    qsStreamConnectFilters(stream, f[0], f[0], 0, 0);
+    qsFiltersConnect(f[0], f[0], 0, 0);
 
     printf("DONE\n");
 

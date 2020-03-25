@@ -289,7 +289,7 @@ int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
  * see for this connection.
  */
 extern
-void qsStreamConnectFilters(struct QsStream *stream,
+void qsFiltersConnect(
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum);
 

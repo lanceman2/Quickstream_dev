@@ -167,7 +167,6 @@ int main(int argc, const char * const *argv) {
     bool ready = false;
     // TODO: option to change maxThreads.
     char *endptr = 0;
-    int spewLevel = DEFAULT_SPEW_LEVEL;
 
     int i = 1;
     const char *arg = 0;
@@ -259,13 +258,14 @@ int main(int argc, const char * const *argv) {
                     // There is no connection list, so by default we
                     // connect filters in the order they are loaded.
                     for(int i=1; i<numFilters; ++i) {
-                        if(spewLevel >= 4)
+                        if(level >= 4)
                             fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
-                        qsStreamConnectFilters(stream, filters[i-1],
+                        qsFiltersConnect(filters[i-1],
                                 filters[i], QS_NEXTPORT, QS_NEXTPORT);
                     }
                     break;
                 }
+
                 endptr = 0;
                 for(const char *str = arg; *str && endptr != str;
                         endptr = 0) {
@@ -294,11 +294,11 @@ int main(int argc, const char * const *argv) {
                         return usage(STDERR_FILENO);
                     }
 
-                    if(spewLevel >= 4)
+                    if(level >= 4)
                         fprintf(stderr, "connecting: %ld -> %ld\n",
                                 from, to);
 
-                    qsStreamConnectFilters(stream, filters[from],
+                    qsFiltersConnect(filters[from],
                                 filters[to], 0, QS_NEXTPORT);
                 }
 
@@ -373,11 +373,11 @@ int main(int argc, const char * const *argv) {
                     return usage(STDERR_FILENO);
                 }
 
-                if(spewLevel >= 4)
+                if(level >= 4)
                     fprintf(stderr, "connecting: %ld:%ld -> %ld:%ld\n",
                             fromF, fromPort, toF, toPort);
 
-                qsStreamConnectFilters(stream, filters[fromF],
+                qsFiltersConnect(filters[fromF],
                             filters[toF], fromPort, toPort);
 
                 DSPEW("option %c = %s", c, arg);
@@ -475,7 +475,7 @@ int main(int argc, const char * const *argv) {
                     if(strcmp(argv[i], "}") == 0) ++i;
                 }
 
-                if(spewLevel >= 5 && fargc) {
+                if(level >= 5 && fargc) {
                     fprintf(stderr, "Got filter args[%d]= {", fargc);
                     for(int j=0; j<fargc; ++j)
                         fprintf(stderr, "%s ", fargv[j]);
@@ -592,6 +592,8 @@ int main(int argc, const char * const *argv) {
                 signal(SIGTERM, term_catcher);
                 signal(SIGINT, term_catcher);
 
+                if(level >= 4)
+                    fprintf(stderr, "Running stream\n");
 
                 int max_threads = maxThreads[0];
                 for(int j=0; j<numStreams; ++j) {
@@ -617,7 +619,7 @@ int main(int argc, const char * const *argv) {
                         return 1; // error
 
                 if(level >= 4)
-                    fprintf(stderr, "Finished running\n");
+                    fprintf(stderr, "Finished running stream\n");
 
                 ready = false;
 

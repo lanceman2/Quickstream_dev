@@ -5,6 +5,7 @@ set -e
 
 # A complex flow graph being run by one thread.
 ../../bin/quickstream\
+ -v 5\
  -f tests/sequenceGen { --length 102000 }\
  -f tests/sequenceCheck { --maxWrite=8001 }\
  -f tests/sequenceCheck { --seedStart 1 --maxWrite=13 }\
@@ -26,6 +27,6 @@ set -e
  -p "3 7 0 2"\
  -p "4 7 0 3"\
  -R\
- -d -r
+ -d -r -t 0 -r -t 3 -r
 
 echo "$0 SUCCESS"

@@ -103,23 +103,23 @@ static inline void CleanupStream(struct QsStream *s) {
 
 
 
-void qsStreamConnectFilters(struct QsStream *s,
+void qsFiltersConnect(
         struct QsFilter *from, struct QsFilter *to,
         uint32_t fromPortNum, uint32_t toPortNum) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
+    DASSERT(from);
+
+    struct QsStream *s = from->stream;
     DASSERT(s);
     DASSERT(s->app);
     ASSERT(from != to, "a filter cannot connect to itself");
-    DASSERT(from);
     DASSERT(to);
     DASSERT(to->app);
     DASSERT(from->app == s->app, "wrong app");
     DASSERT(to->app == s->app, "wrong app");
-    ASSERT(to->stream == s || !to->stream,
-            "filter cannot be part of another stream");
-    ASSERT(from->stream == s || !from->stream,
+    ASSERT(to->stream == s,
             "filter cannot be part of another stream");
     DASSERT(!(s->flags & _QS_STREAM_START), "We are starting");
     ASSERT(!(s->flags & _QS_STREAM_STOP), "We are stopping");
