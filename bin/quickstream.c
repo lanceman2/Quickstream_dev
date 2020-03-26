@@ -581,7 +581,10 @@ int main(int argc, const char * const *argv) {
                     qsFiltersConnect(filters[i-1],
                             filters[i], QS_NEXTPORT, QS_NEXTPORT);
                 }
+                // We over mark by one, so that we do not connect filters
+                // across different streams.
                 lastFilterConnected = numFilters;
+
 
                 ++numStreams;
 
