@@ -13,6 +13,9 @@
 #include "./flowJobLists.h"
 #include "../include/quickstream/filter.h"
 
+// GetJob() is boiler plate code in filterAPI.h
+#include "filterAPI.h"
+
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -21,36 +24,6 @@
 // interface).
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
-
-
-// GetJob() is boiler plate code
-// (https://en.wikipedia.org/wiki/Boilerplate_code) that is at the top of
-// the API functions that can be called from the filter's input()
-// function.
-static inline
-struct QsJob *GetJob(void) {
-
-    struct QsJob *j = pthread_getspecific(_qsKey);
-    // If job, j, was not in thread specific data than this could
-    // be due to a user calling this function while not in a filter module
-    // input() call.
-    ASSERT(j, "Not from code in a filter module input() function");
-    // Double check with a magic number if DEBUG
-    DASSERT(j->magic == _QS_IS_JOB);
-
-#ifdef DEBUG
-    struct QsFilter *f = j->filter;
-    DASSERT(f);
-    struct QsStream *s = f->stream;
-    DASSERT(s);
-    DASSERT(!(s->flags & _QS_STREAM_START), "Stream is starting");
-    DASSERT(!(s->flags & _QS_STREAM_STOP), "Stream is stopping");
-    DASSERT(f->mark == 0, "This finished filter \"%s\" "
-            "should not be calling input()", f->name);
-#endif
-
-    return j;
-}
 
 
 // This function could be just a very short 1 or 2 line function if not

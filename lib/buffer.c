@@ -241,7 +241,6 @@ void MapRingBuffers(struct QsFilter *f) {
         }
     }
 
-
     for(uint32_t i=0; i<f->numOutputs; ++i) {
         struct QsOutput *output = f->outputs + i;
         DASSERT(output->readers);

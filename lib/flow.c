@@ -601,6 +601,13 @@ void *RunningWorkerThread(struct QsStream *s) {
         // input data or any output is clogged.
         while(RunInput(s, f, j));
 
+        // All the thread here do not call any other functions except the
+        // filter input() functions so we don't need to 0 the thread
+        // specific data.  If additional code makes this necessary than we
+        // do this:
+        //CHECK(pthread_setspecific(_qsKey, 0));
+
+
 
         // STREAM LOCK -- from last RunInput()
 

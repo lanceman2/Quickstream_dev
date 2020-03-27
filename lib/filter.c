@@ -293,6 +293,8 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         // Filter f is not in construct() phase anymore.
         f->mark = 0;
 
+        // This will set the thread specific data to 0 for the
+        // case when it needs to.
         CHECK(pthread_setspecific(_qsKey, oldFilter));
 
 

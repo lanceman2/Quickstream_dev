@@ -5,11 +5,20 @@
 #include "../include/quickstream/filter.h"
 #include "debug.h"
 #include "qs.h"
+#include "filterAPI.h" // struct QsJob *GetJob(void){}
+
 
 
 
 int qsParameterCreate(struct QsStream *s, const char * Class,
         const char *name, void *value) {
+
+    if(s == 0) {
+        // This may be a filter request.
+        s = GetStream();
+        DASSERT(s);
+    }
+
 
     return 0; // success
 }

@@ -300,6 +300,9 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
 
 void qsStreamStopSources(struct QsStream *s) {
 
+    // I guess we could have any thread (worker or not)  call this.
+    //DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+
     DASSERT(s);
     // We assuming with is not called 2 billion times so this atomic
     // counter does not wrap through zero in a single flow cycle.
