@@ -8,8 +8,10 @@ struct QsDictionary;
 extern
 struct QsDictionary *qsDictionaryCreate(void);
 
+
 extern
 void qsDictionaryDestroy(struct QsDictionary *dict);
+
 
 // Insert key/value if not present.
 // 
@@ -19,11 +21,43 @@ extern
 int qsDictionaryInsert(struct QsDictionary *dict,
         const char *key, const void *value);
 
+
 // This is the fast Find() function.
 //
 // Returns element value for key or 0 if not found.
 extern
 void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
+
+
+// This is the another fast Find() function.
+//
+// value if not 0 is set to the value found.
+//
+// Returns a struct QsDictionary for key or 0 if not found.
+// This is used to concatenate a series of finds to get to
+// a series of values or just the last leaf value in the series.
+//
+// For example:
+//
+//    you need the value at the key string "1:2:foo"
+//    and you know there are values at "1:" and "1:2:",
+//    so you can get the node (1) at "1:" and then from that
+//    node get the node (2) at "2:" that is in node 1, and lastly
+//    get the value at "1:2:foo" from node 2.  Like so:
+//
+//  struct QsDictionary *d = qsDictionaryFindDict(dict, "1:", 0);
+//  d = qsDictionaryFindDict(d, "2:", 0);
+//  void * value = qsDictionaryFind(d, "foo");
+//
+//  So in this process we concatenated the search like so: "1:2:foo" by
+//  breaking it into 3 searches  "1:", "2:", and "foo" and the crazy thing
+//  is, is that this is faster than 1 search method because we do not have
+//  to concatenate to build the 1 string we are searching for.
+//
+extern
+struct QsDictionary
+*qsDictionaryFindDict(const struct QsDictionary *dict,
+        const char *key, void **value);
 
 extern
 void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);

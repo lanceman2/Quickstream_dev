@@ -772,12 +772,9 @@ char GetBits(char **bits, const char **c) {
     return *(*bits -1); // Return the first set of 2 bits.
 }
 
-
-// Returns element ptr.
-void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
-
-    DASSERT(key);
-    DASSERT(key[0]);
+static inline
+struct QsDictionary
+*_qsDictionaryFindDict(struct QsDictionary *node, const char *key) {
 
     // Setup pointers to an array of chars that null terminates.
     char b[5];
@@ -831,10 +828,41 @@ void *qsDictionaryFind(const struct QsDictionary *node, const char *key) {
     }
 
     DASSERT(node->key);
-    DASSERT(strcmp(key, node->key) == 0);
+
+    // This DASSERT() will not be true for *qsDictionaryFindDict():
+    //DASSERT(strcmp(key, node->key) == 0);
 
     // Hooray!  We got it.
-    return (void *) node->value;
+    return (struct QsDictionary *) node;
+}
+
+
+struct QsDictionary
+*qsDictionaryFindDict(const struct QsDictionary *dict,
+        const char *key, void **value) {
+
+    DASSERT(key);
+    DASSERT(key[0]);
+
+    dict = _qsDictionaryFindDict((struct QsDictionary *)dict, key);
+
+    if(value && dict) *value = (void *) dict->value;
+
+    return (struct QsDictionary *) dict;
+}
+
+
+// Returns element ptr.
+void *qsDictionaryFind(const struct QsDictionary *dict, const char *key) {
+
+    DASSERT(key);
+    DASSERT(key[0]);
+
+    dict = _qsDictionaryFindDict((struct QsDictionary *) dict, key);
+
+    if(dict) return (void *) dict->value;
+
+    return 0;
 }
 
 

@@ -4,6 +4,7 @@
 
 #include "../include/quickstream/filter.h"
 #include "debug.h"
+#include "Dictionary.h"
 #include "qs.h"
 #include "filterAPI.h" // struct QsJob *GetJob(void){}
 
@@ -16,9 +17,17 @@ int qsParameterCreate(struct QsStream *s, const char * Class,
     if(s == 0) {
         // This may be a filter request.
         s = GetStream();
-        DASSERT(s);
+        ASSERT(s);
     }
+#ifdef DEBUG
+    else
+        DASSERT(GetStream() == 0,
+                "only filter input() call should "
+                "be able to do this");
+#endif
 
+    DASSERT(s);
+    DASSERT(s->app);
 
     return 0; // success
 }

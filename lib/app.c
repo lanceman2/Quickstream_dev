@@ -21,8 +21,12 @@
 
 // Private interfaces.
 #include "./debug.h"
+#include "Dictionary.h"
 #include "./qs.h"
 #include "./filterList.h"
+
+
+uint32_t _qsAppCount = 0;
 
 
 #ifdef DEBUG
@@ -46,6 +50,7 @@ struct QsApp *qsAppCreate(void) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
+
     struct QsApp *app = calloc(1, sizeof(*app));
     ASSERT(app, "calloc(1,%zu) failed", sizeof(*app));
 
@@ -54,6 +59,11 @@ struct QsApp *qsAppCreate(void) {
     // flow/run case.  We don't know if we are multi-threaded until
     // flow start.
     CHECK(pthread_once(&key_once, make_key));
+
+    app->id = _qsAppCount++;
+
+    app->dict = qsDictionaryCreate();
+    ASSERT(app->dict);
 
     return app;
 }

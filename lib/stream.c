@@ -10,6 +10,7 @@
 
 // Private interfaces.
 #include "./debug.h"
+#include "Dictionary.h"
 #include "./qs.h"
 #include "filterList.h"
 
@@ -46,6 +47,13 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     s->app = app;
     s->flags = _QS_STREAM_DEFAULTFLAGS;
+    s->id = app->streamCount++;
+
+    {
+        char id[16];
+        snprintf(id, 16, "%" PRIu32 ":", s->id);
+        ASSERT(qsDictionaryInsert(app->dict, id, s) == 0);
+    }
 
     return s;
 }

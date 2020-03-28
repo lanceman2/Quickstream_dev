@@ -136,6 +136,7 @@
 // hash table is slower than accessing an array, so long as the array is
 // not changing size, like it is not at flow-time.
 
+extern uint32_t _qsAppCount; // always increasing.
 
 
 // App (QsApp) is the top level quickstream object.  It's a container for
@@ -150,11 +151,27 @@
 struct QsApp {
 
 
-    // List of controls as a dictionary with lookup using key strings.
+    // We get id from _qsAppCount just before this app is created.
+    uint32_t id; // The app ID.  Unique to a given process.
+
+    // streamCount is always increasing.  streamCount is used to get
+    // stream IDs and controller IDs.
+    uint32_t streamCount;
+
+    // qsDictionary is has a very fast string key lookup to find values.
+    // At the cost of using more memory, it's faster than a hash table.
+    // Currently (2020-04) it's a modified Trie Tree, but it may have
+    // changed.
     //
-    // qsDictionary is has a very fast string key lookup to get values.
+    // "dist" has a list of many kinds of things in a tree hierarchy.  The
+    // leafs are the set and get values of parameters.  The node that is
+    // the parent of the set and get values are the parameter names.  The
+    // parent of the parameter names are stream id or controller id,
+    // depending on which is managing the parameter.  The parent of the
+    // stream id or controller id is the root node here: "dict" below.
     //
-    //struct qsDictionary *controls;
+    struct QsDictionary *dict;
+
 
     // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
@@ -170,10 +187,15 @@ struct QsApp {
 // pthread_getspecific() and pthread_setspecific() are very fast and do
 // not cause a mode switch (system call) each time they are called.  The
 // man page says "Performance and ease-of-use of pthread_getspecific() are
-// critical".  If they do cause a mode switch we need to recode this.  One
-// can't say without looking at the code or running tests; as an example
-// of how shitty code got into the main Linux, look at system 5 semaphores
-// (they are very slow).
+// critical".  If they do cause a mode switch we need to recode this.
+// One can't say without looking at the code or running tests; as an
+// example of how shitty code got into the main Linux, look at system 5
+// semaphores: they are very slow and every call in the API incurs a
+// system call.
+//
+// We use _qsKey for passing data to calls to the filter API from filter
+// input() functions.
+//
 extern
 pthread_key_t _qsKey;
 
@@ -205,6 +227,9 @@ struct QsStream {
     // We can have many streams in an app (QsApp).
     //
     struct QsApp *app;
+
+    // id from app streamCount.
+    uint32_t id;
 
     // Used to signal to stop source input() calls.
     // We need a stream mutex to access isRunning or we need to make this
@@ -324,6 +349,8 @@ struct QsStream {
 
     uint32_t numConnections;// length of connections array
 
+    // TODO: We may not need next; we could use app::dict instead.
+    //
     struct QsStream *next; // next stream in app list of streams
 };
 
