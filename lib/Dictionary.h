@@ -29,6 +29,8 @@ extern
 void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
 
 
+// Subtree Searching
+//
 // This is the another fast Find() function.
 //
 // value if not 0 is set to the value found.
