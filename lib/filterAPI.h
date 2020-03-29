@@ -33,7 +33,7 @@ struct QsJob *GetJob(void) {
 // filter input() function, so this may return 0 if we are not in a
 // filter input() function.
 static inline
-struct QsStream *GetStream(void) {
+struct QsFilter *GetFilter(void) {
 
     struct QsJob *j = pthread_getspecific(_qsKey);
     // If job, j, was not in thread specific data than this could be due
@@ -46,8 +46,7 @@ struct QsStream *GetStream(void) {
 
     struct QsFilter *f = j->filter;
     DASSERT(f);
-    struct QsStream *s = f->stream;
-    DASSERT(s);
+    DASSERT(f->stream);
 
-    return s;
+    return f;
 }

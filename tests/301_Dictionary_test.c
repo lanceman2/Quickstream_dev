@@ -181,7 +181,7 @@ int main(int argc, const char **argv) {
     
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
-        ASSERT(qsDictionaryInsert(d, *key, val) == 0);
+        ASSERT(qsDictionaryInsert(d, *key, val, 0) == 0);
         ++num1;
         fprintf(stderr, "added %s, %s\n", *key, val);
         ++key;

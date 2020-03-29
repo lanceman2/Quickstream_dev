@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     for(const char **key = keys; *key; ++key) {
         const char *val = *(key + 1);
         fprintf(stderr, "key=\"%s\", value=\"%s\"\n", *key, val);
-        qsDictionaryInsert(d, *key, val);
+        qsDictionaryInsert(d, *key, val, 0);
         ++num;
         ++key;
     }

@@ -435,7 +435,8 @@ char *Strdup(const char *str) {
 // Returns 0 on success or 1 if already present and -1 if it is not added
 // and have an invalid character.
 int qsDictionaryInsert(struct QsDictionary *node,
-        const char *key_in, const void *value) {
+        const char *key_in, const void *value,
+        struct QsDictionary **idict) {
 
     DASSERT(node);
     DASSERT(key_in);
@@ -501,6 +502,9 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 //
                 if(*e == 0 && *c == 0) {
                     // Prefect match.
+                    //
+                    if(idict) *idict = node;
+
                     if(node->value) {
                         DASSERT(node->key);
                         DSPEW("Entry for key=\"%s\" exists", key_in);
@@ -552,6 +556,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                     char *oldSuffix = node->suffix;
                     node->value = value;
+                    if(idict) *idict = node;
                     node->key = Strdup(key_in);
                     if(e == eSuffix) {
                         // There where no matching chars in suffix and the
@@ -567,7 +572,6 @@ int qsDictionaryInsert(struct QsDictionary *node,
                                 count - (e - eSuffix));
                     }
                     node->children = children;
-
                     free(oldSuffix);
                     free(eSuffix);
                     free(key);
@@ -595,6 +599,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
                 n1->key = node->key;
                 n1->children = node->children;
                 n2->value = value;
+                if(idict) *idict = n2;
                 n2->key = Strdup(key_in);
                 node->children = children;
                 node->value = 0;
@@ -636,6 +641,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
         if(node->value == 0) {
             DASSERT(node->suffix == 0);
             node->suffix = Compress(c, count);
+            if(idict) *idict = node;
             node->value = value;
             DASSERT(node->key == 0);
             node->key = Strdup(key_in);
@@ -650,6 +656,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
         // go to this character (*c) node.
         node = children + (*c) - 1;
+        if(idict) *idict = node;
         node->value = value;
         node->key = Strdup(key_in);
         // add any suffix characters if needed.
@@ -663,6 +670,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
     } // for(char *c = key; *c; ++c) {
 
     if(node->value) {
+        if(idict) *idict = node;
         DSPEW("We have an entry with key=\"%s\"", key);
         free(key);
         return 1;
@@ -670,6 +678,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
     // node->value == 0
     node->value = value;
+    if(idict) *idict = node;
     DASSERT(node->key == 0);
     node->key = Strdup(key_in);
     free(key);

@@ -15,11 +15,16 @@ void qsDictionaryDestroy(struct QsDictionary *dict);
 
 // Insert key/value if not present.
 // 
+// optional parameter "idict" is a pointer to the dictionary node where
+// the value entry was inserted.  "idict" can then be used as a
+// sub-dictionary to insert and find with.
+//
 // Returns 0 on success or 1 if already present and -1 if it is not added
 // and have an invalid character.
 extern
 int qsDictionaryInsert(struct QsDictionary *dict,
-        const char *key, const void *value);
+        const char *key, const void *value,
+        struct QsDictionary **idict);
 
 
 // This is the fast Find() function.
@@ -33,7 +38,7 @@ void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
 //
 // This is the another fast Find() function.
 //
-// value if not 0 is set to the value found.
+// Parameter "value", if not 0, is set to the value found.
 //
 // Returns a struct QsDictionary for key or 0 if not found.
 // This is used to concatenate a series of finds to get to
