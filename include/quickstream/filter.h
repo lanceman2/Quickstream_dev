@@ -578,7 +578,7 @@ struct QsStream;
 
 extern
 int qsParameterCreate(struct QsStream *s, const char * Class,
-        const char *name, void *value);
+        const char *name, void *value, bool exclusive);
 
 extern
 void *qsParameterGet(struct QsStream *s, const char * Class,
