@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
@@ -19,8 +20,8 @@ void help(FILE *f) {
 "   --maxWrite BYTES  default value %zu.  This is the number of\n"
 "                     bytes read and written for each input() call.\n"
 "\n"
-"      --sleep SECS       sleep SECS seconds in each input() call.\n"
-"                         By default it does not sleep.\n"   
+"   --sleep SECS      sleep SECS seconds in each input() call.\n"
+"                     By default it does not sleep.\n"   
 "\n"
 "\n",
         QS_DEFAULTMAXWRITE);
@@ -29,7 +30,24 @@ void help(FILE *f) {
 
 static size_t maxWrite;
 static struct timespec t = { 0, 0 };
-static bool doSleep = false;
+const char *filterName = 0;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+double _sleepT = 0;
+
+double sleepT = 0;
+
+
+int setSleepCallback(void *value) {
+
+    DSPEW("sleep time set to %lg seconds", *(double *) value);
+
+    ASSERT(pthread_mutex_lock(&mutex) == 0);
+    _sleepT = *(double *) value;
+    ASSERT(pthread_mutex_unlock(&mutex) == 0);
+
+    return 0;
+}
 
 
 
@@ -40,21 +58,24 @@ int construct(int argc, const char **argv) {
     maxWrite = qsOptsGetSizeT(argc, argv,
             "maxWrite", QS_DEFAULTMAXWRITE);
 
+    filterName = qsGetFilterName();
+
     ASSERT(maxWrite);
 
-    double sleepT = qsOptsGetDouble(argc, argv,
+    _sleepT = sleepT = qsOptsGetDouble(argc, argv,
             "sleep", 0);
 
     if(sleepT) {
 
         t.tv_sec = sleepT;
         t.tv_nsec = (sleepT - t.tv_sec) * 1000000000;
-        doSleep = true;
 
         DSPEW("Filter \"%s\" will sleep %lg "
                 "seconds in every input() call.",
-                qsGetFilterName(), sleepT);
+                filterName, sleepT);
     }
+
+    qsParameterCreate("sleep", QsDouble, setSleepCallback);
 
     return 0; // success
 }
@@ -82,7 +103,17 @@ int input(void *buffers[], const size_t lens[],
 
     //DSPEW("lens[0]=%zu", lens[0]);
 
-    if(doSleep)
+
+    if(sleepT != _sleepT) {
+
+        ASSERT(pthread_mutex_lock(&mutex) == 0);
+        sleepT = _sleepT;
+        t.tv_sec = sleepT;
+        t.tv_nsec = (sleepT - t.tv_sec) * 1000000000;
+        ASSERT(pthread_mutex_unlock(&mutex) == 0);
+    }
+
+    if(sleepT)
         nanosleep(&t, 0);
 
     for(uint32_t i=0; i<numInputs; ++i) {

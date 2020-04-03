@@ -123,6 +123,12 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         return 0;
     }
 
+    if(strlen(loadName) > _QS_FILTER_MAXNAMELEN) {
+        ERROR("Filter name \"%s\" is too long", loadName);
+        return 0;
+    }
+
+
     char *path = GetPluginPath("filters/", fileName);
 
 

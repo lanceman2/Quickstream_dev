@@ -574,20 +574,225 @@ void qsRemoveDefaultFilterOptions(void);
 
 //////////////////////////// Control/Parameter Stuff /////////////////////
 
+
+// Parameters are owned by the filter that creates them.
+//
+// The value pointer is owned by the filter's thread.  If the filter is
+// multi-threaded the filter insure that the value pointer stays valid.
+//
+//
+//
+// Parameter values are must be copied in the callbacks.
+
+/** \defgroup parameters Filter Module Parameters
+ *
+ * quickstream manages two kinds of data:
+ *
+ *   1. stream data that is quickly flowing between filters in the stream,
+ *      and the rate at which data flows is relatively large compared to
+ *   2. control parameter data that is changing relatively slowly.  The
+ *      size of the data in the parameter must be small, so that it may be
+ *      copied to be passed to other threads to be used.
+ *
+ *  We generally avoid directly copying stream data, and we usually copy
+ *  parameters.  If a parameter changes at the rate of stream data than it
+ *  should not be a parameter, and it should be stream data, and the
+ *  filter flow graph should be re-engineered.
+ *
+ *  The parameter data is shared between filters and external entities
+ *  called controllers.  An obvious example control parameter would be a
+ *  sound volume level on a sound channel.  The parameter could just be a
+ *  single number factor that multiples an input stream channel to
+ *  give an output stream channel.  For such a volume filter, using a
+ *  "pass-through" buffer would be best and so no copying of the stream
+ *  data would be required, it would just multiple it as it was passed
+ *  through from the input port to the output port using the same ring
+ *  buffer for input and output.
+ *
+ *  Of course the use of the quickstream control parameter thingy is not
+ *  required, and a user can make their own "control parameter" thingy.
+ *  But the benefit of using it is that you take advantage of controller
+ *  modules that can extend parameters to addition interfaces like for
+ *  example making the parameters readable and writable from a web app
+ *  page, without the filter writer needing to write any browser client or
+ *  server code.  So if a filter has implemented a quickstream parameter,
+ *  that parameter can then be controlled from all the quickstream
+ *  controllers that are available without knowing about said controllers.
+ *
+ *  The cost is this butt ugly parameter interface, these 5 functions, and
+ *  the benefit is seamlessly extending the controlling of parameters to a
+ *  library of widgets.  Such a paradigm is helpful in constructing the
+ *  Internet of Things (IoT).
+ *
+ *  The parameters are small and copied between threads that are running
+ *  different codes, so copying them in callback functions is straight
+ *  forward and acceptable way to pass they between these independent
+ *  computations.
+ *
+ *  Past parameter values are not queued, or stored by quickstream.  They
+ *  are not time stamped.  They do not have a sample rate.  It's up to the
+ *  filter or controller module write to add that kind of thing, if it is
+ *  needed.
+ *
+ *  Parameters cannot be added or removed while the stream is flowing.
+ *
+ *  \todo examples linked here.
+ *
+ * @{
+ */
+
+/** parameter type
+ *
+ */
+enum QsParameterType {
+
+    None = 0,
+    QsDouble = 1
+};
+
+/** qsParameterCreate() is called in a filter module construct() to create
+ * a parameter
+ *
+ * \param pName is the name of the parameter.  This name only needs to be
+ * unique to the filter module.
+ *
+ * \param setCallback is a function that is called when qsParameterSet()
+ * is called in by another entity possibly in a different thread than one
+ * used to call the filter input().  setCallback() will most likely be
+ * called in a different thread than the filter's input() function thread.
+ * So steps must be taken by the user to keep data consistent between
+ * these different threads.  In the simplest case just atomically copying
+ * the data to another variable in the setCallback.
+ *
+ * Calling setCallback() should not block.  If there is a blocking call
+ * required it should queue up the request, and act later.  If
+ * setCallback() does block quickstream will not brake, but it may become
+ * slowstream.
+ *
+ * \param type is the parameter type.
+ *
+ * The \p value pointer will point to memory that is not owned by the
+ * filter that is calling this function.  The memory should likely be
+ * copied.
+ *
+ * The stream and filter name are not needed as parameters because the
+ * filter module knows it's stream and filter name.
+ *
+ * \return 0 on success and 1 if the parameter already exists, and -1 if
+ * there is an error like running out of memory and crap like that.
+ */
+extern
+int qsParameterCreate(const char *pName, enum QsParameterType type,
+        int (*setCallback)(void *value));
+
+
+
+/** Destroy a filter module parameter
+ *
+ * \param pName is the name of the parameter.  This name only needs to be
+ * unique to the filter module.
+ *
+ * \todo do we need this.
+ */
+extern
+int qsParameterDestroy(const char *pName);
+
+
 struct QsStream;
 
+/** Register a callback to get a parameter value from outside the filter
+ * module
+ *
+ * This function sets up a callback to be called every time the value of
+ * the parameter changes as the filter that owns the parameter defines it.
+ * The user must know what \p value is and how to use it.  The memory
+ * pointed to by value should be copied if it is to be used after this
+ * getCallback() returns.  The user must assume that getCallback will be
+ * called in another thread, the owning filter module thread, so
+ * getCallback() must be thread-safe.
+ *
+ * \param stream is the stream that the filter is in.
+ *
+ * \param filterName is the unique name that the filter has.  The filter
+ * name is assigned to the filter when the filter module is loaded.  If
+ * filterName is 0 than all filters will be considered.
+ *
+ * \param pName is the name of the parameter in that filter if pName is 0
+ * all parameters will be considered.
+ *
+ * \param type is the type of parameter.  The \p getCallback() needs to
+ * know what to do with the \p value.
+ *
+ * \param getCallback is the callback function.  This callback function
+ * must understand the nature and size of what the parameter value is.  \p
+ * getCallback() is called any time the parameter changes, which is when
+ * qsParameterSet() is called.  getCallback() maybe called in a thread
+ * that may be different than the thread being used by the caller.
+ *
+ * Calling getCallback() should not block.
+ *
+ * If the getCallback returns non-zero the callback will be removed.
+ *
+ * \return 0 on success and non-zero otherwise.
+ */
 extern
-int qsParameterCreate(struct QsStream *s, const char * Class,
-        const char *name, void *value, bool exclusive);
+int qsParameterGet(const struct QsStream *stream, const char *filterName,
+        const char *pName, enum QsParameterType type,
+        int (*getCallback)(
+            void *value, const struct QsStream *stream,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type));
 
+
+/** Set a parameter by calling the filter's callback, called from outside
+ * the owning filter module
+ *
+ * This is called by an entity that is not the filter module that created
+ * the parameter.  The filter can act however it chooses to, and may even
+ * ignore the request.  In order for the user of this function to know the
+ * real state of the parameter they must call qsParameterGet().
+ * qsParameterSet() is just a request and may not really set the
+ * parameter, it's up to the filter modules qsParameterCreate() callback
+ * what really happens.
+ *
+ * The alternative of having a cross-thread queue may have had a simpler
+ * owner filter interface, but would have added complexity and decreased
+ * performance due to thread synchronization.  This code is much simpler.
+ *
+ * \param stream that owns the filter.
+ *
+ * \param filterName is the filter name that the filter was given at load
+ * time.
+ *
+ * \param pName is the parameter name.
+ *
+ * \param value is a value from the calling entity.
+ *
+ * \return 0 on success and non-zero otherwise.
+ */
 extern
-void *qsParameterGet(struct QsStream *s, const char * Class,
-        const char *name, int (*callback)(void *retValue));
+int qsParameterSet(const struct QsStream *stream,
+        const char *filterName, const char *pName,
+        enum QsParameterType type, void *value);
 
-extern
-int qsParameterSet(struct QsStream *s, const char * Class,
-        const char *name, void *value, int (*callback)(void *retValue));
 
+/** Push the value to the qsParameterGet() callbacks
+ *
+ * qsParameterPush() is used when the filter modules that owns the
+ * parameter has set the parameter without a request from an external
+ * qsParameterSet() call.
+ *
+ * \param pName is the parameter name.
+ *
+ * \param value is the value to set.
+ *
+ * \return 0 on success and non-zero otherwise.
+ */
+int qsParameterPush(const char *pName, void *value);
+
+
+/** @}
+ */
 
 
 #ifdef __cplusplus

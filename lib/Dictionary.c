@@ -15,7 +15,7 @@
 // hard enough without thinking about UTF-8.
 
 
-#define START          (32) // start at SPACE
+#define START          (7) // Start at bell
 #define END            (126) // ~
 
 
@@ -507,7 +507,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
                     if(node->value) {
                         DASSERT(node->key);
-                        DSPEW("Entry for key=\"%s\" exists", key_in);
+                        DSPEW("Entry with key=\"%s\" exists", key_in);
                         free(eSuffix);
                         free(key);
                         return 1;
@@ -671,7 +671,7 @@ int qsDictionaryInsert(struct QsDictionary *node,
 
     if(node->value) {
         if(idict) *idict = node;
-        DSPEW("We have an entry with key=\"%s\"", key);
+        DSPEW("Entry with key=\"%s\" exists", key_in);
         free(key);
         return 1;
     }
@@ -824,7 +824,7 @@ struct QsDictionary
                 else {
                     // The suffix has more characters that we did not
                     // match.
-                    ERROR("No key=\"%s\" found", key);
+                    DSPEW("No key=\"%s\" found", key);
                     return 0;
                 }
             }
@@ -832,7 +832,7 @@ struct QsDictionary
         }
 
         // No more children, but we have unmatch key characters.
-        ERROR("No key=\"%s\" found", key);
+        DSPEW("No key=\"%s\" found", key);
         return 0;
     }
 
@@ -877,8 +877,9 @@ void *qsDictionaryFind(const struct QsDictionary *dict, const char *key) {
 
 static
 bool ForEach(const struct QsDictionary *node,
-        int (*callback) (const char *key, const void *value),
-        size_t *count) {
+        int (*callback) (const char *key, const void *value,
+            void *userData),
+        size_t *count, void *userData) {
 
     DASSERT(node);
     DASSERT(callback);
@@ -886,7 +887,7 @@ bool ForEach(const struct QsDictionary *node,
     if(node->value) {
         DASSERT(node->key);
         ++(*count);
-        if(callback(node->key, node->value))
+        if(callback(node->key, node->value, userData))
             // The user is telling us we are done, so now we stop
             // recurring.
             return true; // We are done.
@@ -901,7 +902,7 @@ bool ForEach(const struct QsDictionary *node,
         struct QsDictionary *end = node->children + 3;
         for(struct QsDictionary *child = node->children;
                 child <= end; ++child)
-            if(ForEach(child, callback, count))
+            if(ForEach(child, callback, count, userData))
                 return true; // We are done.
     }
 
@@ -911,13 +912,14 @@ bool ForEach(const struct QsDictionary *node,
 
 size_t
 qsDictionaryForEach(const struct QsDictionary *node,
-        int (*callback) (const char *key, const void *value)) {
+        int (*callback) (const char *key, const void *value,
+            void *userData), void *userData) {
 
     DASSERT(node);
     DASSERT(callback);
     size_t ret_count = 0;
 
-    ForEach(node, callback, &ret_count);
+    ForEach(node, callback, &ret_count, userData);
     return ret_count;
 }
 
@@ -1062,6 +1064,7 @@ PrintChildren(const struct QsDictionary *node, char *parentPrefix,
 
                 fprintf(f, "\\nkey=");
                 PrintStr(sum, f);
+                fprintf(f, "\\nvalue=%p", child->value);
             }
 
             fprintf(f, "\"];\n");
@@ -1085,4 +1088,18 @@ void qsDictionaryPrintDot(const struct QsDictionary *node, FILE *f) {
     PrintChildren(node, "", "", f);
 
     fprintf(f, "}\n");
+}
+
+
+void qsDictionarySetValue(struct QsDictionary *dict, void *value) {
+
+    DASSERT(dict);
+    dict->value = value;
+}
+
+
+void *qsDictionaryGetValue(const struct QsDictionary *dict) {
+
+    DASSERT(dict);
+    return (void *) dict->value;
 }

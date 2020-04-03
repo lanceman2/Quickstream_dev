@@ -14,6 +14,9 @@ void qsDictionaryDestroy(struct QsDictionary *dict);
 
 
 // Insert key/value if not present.
+//
+// If the entry exists, the value is not changed and "idict" is set to the
+// node that contains the entry.
 // 
 // optional parameter "idict" is a pointer to the dictionary node where
 // the value entry was inserted.  "idict" can then be used as a
@@ -41,6 +44,7 @@ void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
 // Parameter "value", if not 0, is set to the value found.
 //
 // Returns a struct QsDictionary for key or 0 if not found.
+//
 // This is used to concatenate a series of finds to get to
 // a series of values or just the last leaf value in the series.
 //
@@ -66,6 +70,7 @@ struct QsDictionary
 *qsDictionaryFindDict(const struct QsDictionary *dict,
         const char *key, void **value);
 
+
 extern
 void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 
@@ -85,4 +90,16 @@ void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 extern 
 size_t
 qsDictionaryForEach(const struct QsDictionary *dict,
-        int (*callback) (const char *key, const void *value));
+        int (*callback) (const char *key, const void *value,
+            void *userData), void *userData);
+
+
+
+// Set the value for the node at "dict".
+extern
+void qsDictionarySetValue(struct QsDictionary *dict, void *value);
+
+
+// Get the value for the node at "dict".
+extern
+void *qsDictionaryGetValue(const struct QsDictionary *dict);

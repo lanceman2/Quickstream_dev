@@ -4,7 +4,7 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- tests with multiple streams
+- Parameter cleanup via Dictionary removal, and free struct QsParameter.
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used

@@ -20,7 +20,7 @@ static
 struct QsDictionary *d;
 
 
-int callback(const char *key, const void *value) {
+int callback(const char *key, const void *value, void *userData) {
 
     ++num_check;
     
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     }
 
 
-    qsDictionaryForEach(d, callback);
+    qsDictionaryForEach(d, callback, 0);
 
     ASSERT(num == num_check, "num=%zu  num_check=%zu",
             num, num_check);

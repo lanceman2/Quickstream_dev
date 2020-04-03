@@ -41,12 +41,22 @@ struct QsFilter *GetFilter(void) {
     // input() call.
     if(!j) return 0;
 
-    // Double check with a magic number if DEBUG
-    DASSERT(j->magic == _QS_IS_JOB);
+    if(j->magic == _QS_IS_JOB) {
+        // This is a job.
+        struct QsFilter *f = j->filter;
+        DASSERT(f);
+        DASSERT(f->stream);
+        return f;
+    }
 
-    struct QsFilter *f = j->filter;
+    DASSERT(j->magic == _QS_IN_CONSTRUCT ||
+         j->magic == _QS_IN_DESTROY ||
+         j->magic == _QS_IN_START   ||
+         j->magic == _QS_IN_STOP);
+
+    // thread specific data is really a filter.
+    struct QsFilter *f = (struct QsFilter *) j;
     DASSERT(f);
     DASSERT(f->stream);
-
     return f;
 }

@@ -27,16 +27,20 @@
 struct QsFilter *_qsCurrentFilter = 0;
 
 
-struct QsDictionary *GetStreamDictionary(struct QsStream *s) {
+static inline
+void GetStreamString(const struct QsStream *s, char str[16]) {
+    snprintf(str, 16, "s%" PRIu32 "%c", s->id, '\a');
+}
+
+
+struct QsDictionary *GetStreamDictionary(const struct QsStream *s) {
 
     DASSERT(s);
     DASSERT(s->app);
     DASSERT(s->app->dict);
-
     // This must be consistent with qsAppStreamCreate() below:
     char id[16];
-    snprintf(id, 16, "s%" PRIu32 ":", s->id);
-
+    GetStreamString(s, id);
     return qsDictionaryFindDict(s->app->dict, id, 0);
 }
 
@@ -65,7 +69,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     { // This must be consistent with GetStreamDictionary() above:
         char id[16];
-        snprintf(id, 16, "s%" PRIu32 ":", s->id);
+        GetStreamString(s, id);
         ASSERT(qsDictionaryInsert(app->dict, id, s, 0) == 0);
     }
 

@@ -20,7 +20,7 @@ static size_t num_checkstop = 17;
 static struct QsDictionary *d;
 
 
-int callback(const char *key, const void *value) {
+int callback(const char *key, const void *value, void *userData) {
 
     ++num2;
 
@@ -48,7 +48,7 @@ int callback(const char *key, const void *value) {
 
 
 
-int callback2(const char *key, const void *value) {
+int callback2(const char *key, const void *value, void *userData) {
 
     ++num2;
 
@@ -199,8 +199,8 @@ int main(int argc, const char **argv) {
         ++key;
     }
 
-    qsDictionaryForEach(d, callback);
-    qsDictionaryForEach(d, callback2);
+    qsDictionaryForEach(d, callback, 0);
+    qsDictionaryForEach(d, callback2, 0);
 
 
     ASSERT(num1 == num2);

@@ -66,6 +66,13 @@
 #define _QS_STREAM_MODE_MASK   (_QS_STREAM_START | _QS_STREAM_STOP)
 
 
+// We must limit the length of the filter name, so that we can use it in
+// the code without too much memory.
+//
+#define _QS_FILTER_MAXNAMELEN     ((size_t) 125)
+
+
+
 // We cannot use the filter's stream when in the construct() and destroy()
 // calls, so reuse the filter mark as a flag when we are in the
 // construct() and destroy() calls.  So long as the values unique that
@@ -864,9 +871,21 @@ void CheckUnlockFilter(struct QsFilter *f) {
 }
 
 extern
-struct QsDictionary *GetStreamDictionary(struct QsStream *s);
+struct QsDictionary *GetStreamDictionary(const struct QsStream *s);
 
 
+
+extern
+int _qsParameterCreate(struct QsStream *s, const char * Class,
+        const char *name, void *value, bool exclusive);
+
+extern
+void *_qsParameterGet(struct QsStream *s, const char * Class,
+        const char *name, int (*callback)(void *retValue));
+
+extern
+int _qsParameterSet(struct QsStream *s, const char * Class,
+        const char *name, void *value, int (*callback)(void *retValue));
 
 
 
