@@ -27,18 +27,18 @@ void catcher(int sig) {
 
 
 double t = 2.32435;
- 
+
 static
 int getCallback(
-        void *value, const struct QsStream *stream,
+        const void *value, struct QsStream *stream,
         const char *filterName, const char *pName, 
-        enum QsParameterType type) {
+        enum QsParameterType type, void *userData) {
 
     fprintf(stderr, "control_test getCallback(value=%lg,"
             " stream=%p, \"%s\","
-            "\"%s\", type=%" PRIu32 ")\n",
+            "\"%s\", type=%" PRIu32 ", userData=%zu)\n",
             *(double *) value, stream, filterName, pName,
-            type);
+            type, (uintptr_t) userData);
 
     ASSERT(t == *(double *) value);
 
@@ -59,13 +59,13 @@ int main(int argc, char **argv) {
     qsStreamFilterLoad(s, "tests/passThrough", "passThrough", 0, 0);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback) == 0);
+                QsDouble, getCallback, 0) == 0);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback) == 0);
+                QsDouble, getCallback, (void *) 1) == 0);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback) == 0);
+                QsDouble, getCallback, (void *) 2) == 0);
 
     ASSERT(qsParameterSet(s, "passThrough",
                 "sleep", QsDouble, &t) == 0);

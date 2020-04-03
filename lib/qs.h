@@ -874,19 +874,13 @@ extern
 struct QsDictionary *GetStreamDictionary(const struct QsStream *s);
 
 
-
+// Just Frees the malloc allocated memory that is pointer to from the
+// Parameter Dictionary.  The Parameter Dictionary is not destroyed with
+// this.
+//
 extern
-int _qsParameterCreate(struct QsStream *s, const char * Class,
-        const char *name, void *value, bool exclusive);
-
-extern
-void *_qsParameterGet(struct QsStream *s, const char * Class,
-        const char *name, int (*callback)(void *retValue));
-
-extern
-int _qsParameterSet(struct QsStream *s, const char * Class,
-        const char *name, void *value, int (*callback)(void *retValue));
-
+void
+_qsParametersFree(struct QsStream *s);
 
 
 struct QsController {

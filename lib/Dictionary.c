@@ -196,6 +196,8 @@ struct QsDictionary {
     // pairs; example qsDictionaryForEach().
     //
     char *key; // strdup() the key.
+
+    bool freeValueOnDestroy;
 };
 
 
@@ -226,6 +228,8 @@ void FreeChildren(struct QsDictionary *children) {
         if(child->value) {
             DASSERT(child->key);
             free(child->key);
+            if(child->freeValueOnDestroy)
+                free((void *) child->value);
         }
         //
         if(child->suffix)
@@ -238,6 +242,14 @@ void FreeChildren(struct QsDictionary *children) {
     memset(children, 0, 4*sizeof(*children));
 #endif
     free(children);
+}
+
+
+void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict) {
+
+    DASSERT(dict);
+    DASSERT(dict->value);
+    dict->freeValueOnDestroy = true;
 }
 
 
@@ -254,6 +266,8 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
     if(dict->value) {
         DASSERT(dict->key);
         free(dict->key);
+        if(dict->freeValueOnDestroy)
+            free((void *) dict->value);
     }
 
 #if DEBUG
@@ -1102,4 +1116,122 @@ void *qsDictionaryGetValue(const struct QsDictionary *dict) {
 
     DASSERT(dict);
     return (void *) dict->value;
+}
+
+
+static inline
+struct QsDictionary
+*FindDictAndParent(struct QsDictionary *node, const char *key,
+        struct QsDictionary **parent) {
+
+    DASSERT(node);
+    DASSERT(key);
+    DASSERT(key[0]);
+
+    // Setup pointers to an array of chars that null terminates.
+    char b[5];
+    char *bits = b + 4;
+    b[0] = 1;
+    b[1] = 1;
+    b[2] = 1;
+    b[3] = 1;
+    b[4] = 0; // null terminate.
+    // We'll use bits to swim through this "bit" character array.
+
+    for(const char *c = key; *c; ) {
+
+        if(node->children) {
+
+            *parent = node;
+            node = node->children + GetBits(&bits, &c)  - 1;
+
+            if(node->suffix) {
+
+                const char *e = node->suffix;
+
+                // Find the point where key and suffix do not match.
+                for(;*e && *c;) {
+                    // Consider iterating over 2 bit chars
+                    if(*e < START) {
+                        if((*e) != GetBits(&bits, &c))
+                            break;
+                    } else
+                    // Else iterate over regular characters.
+                    if(*e != GetChar(&bits, &c))
+                        break;
+                    ++e;
+                }
+
+                if(*e == 0)
+                    // Matched so far
+                    continue;
+                else {
+                    // The suffix has more characters that we did not
+                    // match.
+                    DSPEW("No key=\"%s\" found", key);
+                    return 0;
+                }
+            }
+            continue;
+        }
+
+        // No more children, but we have unmatch key characters.
+        DSPEW("No key=\"%s\" found", key);
+        return 0;
+    }
+
+    DASSERT(node->key);
+
+    // Hooray!  We got it.
+    return (struct QsDictionary *) node;
+}
+
+
+// TODO:
+// This does not go back up the tree and prune nodes that have no values
+// in them or their descendants.
+//
+// But it works for the use in qsStreamDestroy().
+//
+int qsDictionaryDestroySubTree(struct QsDictionary *dict,
+        const char *key) {
+
+    struct QsDictionary *parent = 0;
+    struct QsDictionary *node = FindDictAndParent(dict, key, &parent);
+
+    if(!node) return 1;
+
+    DASSERT(parent);
+
+    struct QsDictionary *sibling = 0;
+    size_t i = 0;
+    for(; i<4; ++i) {
+        sibling = parent->children + i;
+        if(sibling != node && sibling->key)
+            break;
+    }
+
+    if(i == 4) {
+        // We do not have any other children
+        FreeChildren(parent->children);
+        parent->children = 0;
+        return 0;
+    } // else 
+        // We have other children, so we leave the parent to keep them.
+
+    if(node->children)
+        FreeChildren(node->children);
+
+    free(node->key);
+    free(node->suffix);
+    if(node->freeValueOnDestroy)
+        free((void *) node->value);
+
+    node->key = 0;
+    node->suffix = 0;
+    node->freeValueOnDestroy = 0;
+    node->value = 0;
+    node->children = 0;
+
+    return 0;
 }

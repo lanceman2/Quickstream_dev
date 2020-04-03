@@ -115,7 +115,8 @@ static inline void CleanupStream(struct QsStream *s) {
 
         DASSERT(s->connections);
 #ifdef DEBUG
-        memset(s->connections, 0, sizeof(*s->connections)*s->numConnections);
+        memset(s->connections, 0,
+                sizeof(*s->connections)*s->numConnections);
 #endif
         free(s->connections);
         s->connections = 0;
@@ -458,6 +459,13 @@ void qsStreamDestroy(struct QsStream *s) {
 
     FreeRunResources(s);
 
+
+    if(s->app->dict) {
+        char id[16];
+        GetStreamString(s, id);
+WARN("FUCK");
+        ASSERT(qsDictionaryDestroySubTree(s->app->dict, id) == 0);
+    }
 
     // Cleanup filters in this list
     struct QsFilter *f = s->filters;

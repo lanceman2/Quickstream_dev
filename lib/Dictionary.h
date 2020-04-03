@@ -37,6 +37,14 @@ extern
 void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
 
 
+// Returns 0 if found and entry removed destroying all children too.
+//         1 if not found
+//        -1 on error
+extern
+int qsDictionaryDestroySubTree(struct QsDictionary *dict,
+        const char *key);
+
+
 // Subtree Searching
 //
 // This is the another fast Find() function.
@@ -69,6 +77,10 @@ extern
 struct QsDictionary
 *qsDictionaryFindDict(const struct QsDictionary *dict,
         const char *key, void **value);
+
+
+extern
+void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict);
 
 
 extern

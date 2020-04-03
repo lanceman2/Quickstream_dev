@@ -671,6 +671,9 @@ enum QsParameterType {
  *
  * \param type is the parameter type.
  *
+ * \param userData is passed to the setCallback() function every time it
+ * is called.
+ *
  * The \p value pointer will point to memory that is not owned by the
  * filter that is calling this function.  The memory should likely be
  * copied.
@@ -683,19 +686,10 @@ enum QsParameterType {
  */
 extern
 int qsParameterCreate(const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value));
+        int (*setCallback)(void *value, void *userData),
+        void *userData);
 
 
-
-/** Destroy a filter module parameter
- *
- * \param pName is the name of the parameter.  This name only needs to be
- * unique to the filter module.
- *
- * \todo do we need this.
- */
-extern
-int qsParameterDestroy(const char *pName);
 
 
 struct QsStream;
@@ -729,6 +723,8 @@ struct QsStream;
  * qsParameterSet() is called.  getCallback() maybe called in a thread
  * that may be different than the thread being used by the caller.
  *
+ * \param userData is passed to the getCallback() every time it is called.
+ *
  * Calling getCallback() should not block.
  *
  * If the getCallback returns non-zero the callback will be removed.
@@ -736,12 +732,12 @@ struct QsStream;
  * \return 0 on success and non-zero otherwise.
  */
 extern
-int qsParameterGet(const struct QsStream *stream, const char *filterName,
+int qsParameterGet(struct QsStream *stream, const char *filterName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
-            void *value, const struct QsStream *stream,
+            const void *value, struct QsStream *stream,
             const char *filterName, const char *pName, 
-            enum QsParameterType type));
+            enum QsParameterType type, void *userData), void *userData);
 
 
 /** Set a parameter by calling the filter's callback, called from outside
@@ -771,7 +767,7 @@ int qsParameterGet(const struct QsStream *stream, const char *filterName,
  * \return 0 on success and non-zero otherwise.
  */
 extern
-int qsParameterSet(const struct QsStream *stream,
+int qsParameterSet(struct QsStream *stream,
         const char *filterName, const char *pName,
         enum QsParameterType type, void *value);
 

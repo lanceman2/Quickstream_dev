@@ -42,7 +42,7 @@ double sleepT = 0;
 // This may be called by any thread hence we use a mutex to protect
 // _sleepT.
 //
-int setSleepCallback(void *value) {
+int setSleepCallback(void *value, void *userData) {
 
     DSPEW("sleep time set to %lg seconds", *(double *) value);
 
@@ -93,7 +93,7 @@ int construct(int argc, const char **argv) {
                 filterName, sleepT);
     }
 
-    qsParameterCreate("sleep", QsDouble, setSleepCallback);
+    qsParameterCreate("sleep", QsDouble, setSleepCallback, 0);
 
     return 0; // success
 }
