@@ -4,7 +4,8 @@ given that quickstream is not in an alpha (usable) state yet.
 
 # Next
 
-- Parameter cleanup via Dictionary removal, and free struct QsParameter.
+- Parameter cleanup via Dictionary removal, and free struct QsParameter
+  stuff.
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used
@@ -58,14 +59,6 @@ given that quickstream is not in an alpha (usable) state yet.
   Can a Controller apply controls across multiple stream.  An App is a
   manager of a group of Controllers.
 
-- Problem with current class hierarchy.  The App loads filters without
-  a stream; but it appears that the filter construct() function needs
-  a stream to put any controls it wants to create in construct() function.
-  This makes the filter a holder of controls before it's added to a
-  stream.  Maybe that's okay...  Q: Does the filter own the controls it
-  creates, or do be need reference counts for users of particular
-  controls.  Or is it just the setter of the parameters in controls that
-  own them; nope, that can't be for input knobs.
 
 - Stream (or App) has a list of all controls in a hash table.
   - All filters can create and access controls

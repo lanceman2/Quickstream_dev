@@ -111,7 +111,6 @@ char *GetFilterLeafName(const char *filterName,
 int qsParameterCreate(const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value)) {
 
-    
     struct QsFilter *f = GetFilter();
     DASSERT(f);
     DASSERT(f->stream);
@@ -125,7 +124,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     char leafName[LEAFNAMELEN];
     int ret = qsDictionaryInsert(d,
             GetFilterLeafName(f->name, leafName), f, &d);
-    ASSERT(ret != 0 || ret != 1);
+    ASSERT(ret == 0 || ret == 1);
 
     // Create parameter dict:
     ret = qsDictionaryInsert(d, pName, "p", &d);
@@ -242,8 +241,6 @@ void ParameterPushGets(const struct QsStream *s,
         const char *pName, void *value,
         struct QsParameter *p, struct QsDictionary *d) {
 
-    DSPEW();
-
     struct CallbackArgs args = {
         value,
         s,
@@ -255,6 +252,14 @@ void ParameterPushGets(const struct QsStream *s,
     qsDictionaryForEach(d,
             (int (*) (const char *, const void *, void *))
             GetCallbackWapper, &args);
+}
+
+
+static pthread_once_t keyOnce = PTHREAD_ONCE_INIT;
+static pthread_key_t parameterKey;
+
+static void MakeKey(void) {
+    CHECK(pthread_key_create(&parameterKey, 0));
 }
 
 
@@ -276,11 +281,14 @@ int qsParameterSet(const struct QsStream *s,
 
     // Get filter dict:
     char leaf[LEAFNAMELEN];
+    struct QsFilter *f = 0;
     d = qsDictionaryFindDict(d, GetFilterLeafName(filterName, leaf), 0);
     if(!d) {
         ERROR("Filter \"%s\" not found in parameter tree", filterName);
         return -1; // error
     }
+    f = qsDictionaryGetValue(d);
+    DASSERT(f);
 
     // Get parameter dict:
     struct QsParameter *p = 0;
@@ -297,20 +305,77 @@ int qsParameterSet(const struct QsStream *s,
         return -1; // error
     }
 
+    // We need thread specific data to tell what filter this is when
+    // setCallback() is called below.  
+    CHECK(pthread_once(&keyOnce, MakeKey));
+
+    // This needs to be re-entrant code.
+    void *oldFilter = pthread_getspecific(parameterKey);
+    CHECK(pthread_setspecific(parameterKey, f));
+
+    // This may call qsParameterPush() or it may not, or qsParameterPush()
+    // may be called later, after this call.  It's up to the filter module
+    // when and if to call qsParameterPush();
     p->setCallback(value);
 
-    d = qsDictionaryFindDict(d, "\a", 0);
+    CHECK(pthread_setspecific(parameterKey, oldFilter));
 
-    if(d)
-        ParameterPushGets(s, filterName, pName, value, p, d);
+    // Now we wait for this to have an effect.
 
     return 0;
 }
 
 
 
-
+// This is call inside the filter setCallback()
+//
+// This is the effect we where waiting for from the filter module
+// the owns the parameter.
+//
 int qsParameterPush(const char *pName, void *value) {
+
+    // First get the filter pointer some how.
+
+    // This function must be called from the filter module somewhere:
+    //
+    // So it may be called from the filter setCallback() from a
+    // qsParameterSet() and if so this will get the filter object:
+    
+    CHECK(pthread_once(&keyOnce, MakeKey));
+    
+    struct QsFilter *f = pthread_getspecific(parameterKey);
+
+    if(!f)
+        // Or it may be called after the filter setCallback() in one of
+        // the filter module functions start() stop() or input().
+        // GetFilter() is a small wrapper that uses a different pthread
+        // specific variable.
+        f = GetFilter();
+
+    // We must have the filter pointer now.
+    DASSERT(f);
+    DASSERT(f->stream);
+    DASSERT(f->name);
+
+    // Get stream dict:
+    struct QsDictionary *d = GetStreamDictionary(f->stream);
+    DASSERT(d);
+    DASSERT(qsDictionaryGetValue(d) == f->stream);
+
+    // Get the filter dict:
+    char leafName[LEAFNAMELEN];
+    d = qsDictionaryFindDict(d,
+            GetFilterLeafName(f->name, leafName), 0);
+    ASSERT(d);
+
+    // Get parameter dict:
+    struct QsParameter *p;
+    d = qsDictionaryFindDict(d, pName, (void **) &p);
+    ASSERT(d);
+    DASSERT(p);
+
+    if((d = qsDictionaryFindDict(d, "\a", 0)))
+        ParameterPushGets(f->stream, f->name, pName, value, p, d);
 
     return 0;
 }

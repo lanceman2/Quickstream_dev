@@ -18,6 +18,8 @@ BUILD_NO_INSTALL := tests/tests 301_Dictionary_test
 # without linking with libquickstream.so
 301_Dictionary_test_SOURCES := 301_Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 320_DictionaryDict_test_SOURCES := 320_DictionaryDict_test.c ../lib/Dictionary.c ../lib/debug.c
+330_control_test_SOURCES := 330_control_test.c
+330_control_test_LDFLAGS := -L../lib -lquickstream -Wl,-rpath=\$$ORIGIN/../lib
 
 
 

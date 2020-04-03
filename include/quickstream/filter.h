@@ -776,11 +776,17 @@ int qsParameterSet(const struct QsStream *stream,
         enum QsParameterType type, void *value);
 
 
-/** Push the value to the qsParameterGet() callbacks
+/** Push the value to the qsParameterGet() callbacks in other modules
  *
  * qsParameterPush() is used when the filter modules that owns the
- * parameter has set the parameter without a request from an external
- * qsParameterSet() call.
+ * parameter has set the parameter to push the value via the registered
+ * getCallbacks from qsParameterGet().
+ *
+ * By having the filter modules call this in where setCallback the values
+ * can just point to variables on the stack, and this makes the
+ * getCallbacks from qsParameterGet() thread safe.  The data passed as
+ * arguments to getCallbacks needs to be copied in the getCallbacks in
+ * over to be used in a later call in that module.
  *
  * \param pName is the parameter name.
  *

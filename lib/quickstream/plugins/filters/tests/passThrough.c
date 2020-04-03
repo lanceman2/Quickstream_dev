@@ -38,13 +38,31 @@ double _sleepT = 0;
 double sleepT = 0;
 
 
+
+// This may be called by any thread hence we use a mutex to protect
+// _sleepT.
+//
 int setSleepCallback(void *value) {
 
     DSPEW("sleep time set to %lg seconds", *(double *) value);
 
+    double val = -1.0;
+
     ASSERT(pthread_mutex_lock(&mutex) == 0);
-    _sleepT = *(double *) value;
+    if(_sleepT != (*(double *) value)) {
+        _sleepT = *(double *) value;
+        val = _sleepT;
+    }
+    // We need a save local stack variable to use to hold
+    // the value so we can qsParameterPush() with it in a
+    // thread safe way.
     ASSERT(pthread_mutex_unlock(&mutex) == 0);
+
+    if(val > 0)
+        // Now we can't access _sleepT but we can access local stack
+        // variable val.  We could not call this while holding a mutex
+        // lock.
+        qsParameterPush("sleep", &val);
 
     return 0;
 }
@@ -111,6 +129,7 @@ int input(void *buffers[], const size_t lens[],
         t.tv_sec = sleepT;
         t.tv_nsec = (sleepT - t.tv_sec) * 1000000000;
         ASSERT(pthread_mutex_unlock(&mutex) == 0);
+        //qsParameterPush("sleep", &sleepT);
     }
 
     if(sleepT)
