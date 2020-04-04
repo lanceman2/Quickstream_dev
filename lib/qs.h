@@ -880,7 +880,7 @@ struct QsDictionary *GetStreamDictionary(const struct QsStream *s);
 //
 extern
 void
-_qsParametersFree(struct QsStream *s);
+_qsParametersDictionaryDestory(struct QsStream *s);
 
 
 struct QsController {

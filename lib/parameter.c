@@ -408,7 +408,8 @@ int qsParameterPush(const char *pName, void *value) {
 }
 
 
-size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
+static size_t
+ForEachStream(struct QsStream *s,
         const char *filterName, const char *pName,
         enum QsParameterType type,
         int (*callback)(
@@ -417,8 +418,31 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
             enum QsParameterType type, void *userData),
         void *userData) {
 
-
     ASSERT(0, "Write this code!!!!!");
 
     return 0;
+}
+
+
+size_t qsParameterForEach(struct QsApp *app, struct QsStream *s,
+        const char *filterName, const char *pName,
+        enum QsParameterType type,
+        int (*callback)(
+            const void *value, struct QsStream *stream,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData),
+        void *userData) {
+
+    size_t ret = 0;
+
+
+    if(!s) {
+        ASSERT(app, "app must be set to call qsParameterForEach() "
+                "if stream is not set");
+        for(s = app->streams; s; s = s->next)
+            ret += ForEachStream(s, filterName, pName, type,
+                    callback, userData);
+        return ret;
+    }
+    return ForEachStream(s, filterName, pName, type, callback, userData);
 }
