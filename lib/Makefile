@@ -12,8 +12,8 @@ libquickstream.so_SOURCES :=\
  flow.c\
  makeRingBuffer.c\
  streamLaunch.c\
- Dictionary.c\
- control.c
+ parameter.c\
+ Dictionary.c
 
 
 libqsu.so_SOURCES :=\

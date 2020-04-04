@@ -665,9 +665,12 @@ enum QsParameterType {
  * the data to another variable in the setCallback.
  *
  * Calling setCallback() should not block.  If there is a blocking call
- * required it should queue up the request, and act later.  If
- * setCallback() does block quickstream will not brake, but it may become
- * slowstream.
+ * required it should queue up the request, and act later. This
+ * qsParameter class does not provide queuing of set requests, all the
+ * functions just call the callbacks while keeping it ordered and
+ * synchronous, and if the user needs queuing the user can add it on top
+ * of this interface without much work.   If setCallback() does block
+ * quickstream will not brake, but it may become slowstream.
  *
  * \param type is the parameter type.
  *
@@ -792,6 +795,53 @@ int qsParameterSet(struct QsStream *stream,
  */
 int qsParameterPush(const char *pName, void *value);
 
+
+
+struct QsApp; // Pre-define for below.
+
+/** Iterate through the parameters via a callback function
+ *
+ * This function has a butt load of argument parameters but lots of them
+ * can be 0.  The argument parameters \p app and/or \p stream must be
+ * non-zero.
+ *
+ * \param app is ignored unless \p stream is 0, then all parameters in all
+ * filters, in all streams in the app are iterated through.
+ *
+ * \param stream if not 0, restrict the range of the parameters to iterate
+ * through to just parameters in this stream.
+ *
+ * \param filterName if not 0, restrict the range of the parameters to
+ * iterate through to just parameters in the filter with this name.
+ *
+ * \param pName if not 0, restrict the range of the parameters to iterate
+ * through to just parameters with this name.
+ *
+ * \param type if not 0, restrict the range of the parameters to iterate
+ * through to just parameters with this type.
+ *
+ * \param callback is the callback function that is called with each
+ * parameter and with all the butt load of arguments set.  If \p
+ * callback() returns non-zero than the iteration will stop, and that will
+ * be the last time \p callback() is called for this call to \p
+ * qsParameterForEach().
+ *
+ * \param userData is user data that is passed to the callback every
+ * time
+ * it is called.
+ *
+ * \return the number of parameters that have been iterated through; or
+ * the same as, the number of times \p callback() is called.
+ */
+extern
+size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
+        const char *filterName, const char *pName,
+        enum QsParameterType type,
+        int (*callback)(
+            const void *value, struct QsStream *stream,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData),
+        void *userData);
 
 /** @}
  */

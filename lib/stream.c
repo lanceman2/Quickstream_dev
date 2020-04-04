@@ -463,7 +463,6 @@ void qsStreamDestroy(struct QsStream *s) {
     if(s->app->dict) {
         char id[16];
         GetStreamString(s, id);
-WARN("FUCK");
         ASSERT(qsDictionaryDestroySubTree(s->app->dict, id) == 0);
     }
 

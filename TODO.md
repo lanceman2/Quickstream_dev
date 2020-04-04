@@ -6,6 +6,7 @@ given that quickstream is not in an alpha (usable) state yet.
 
 - Parameter cleanup via Dictionary removal, and free struct QsParameter
   stuff.
+    - Do we want to be able to remove individual parameters?
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used

@@ -340,12 +340,14 @@ int qsParameterSet(struct QsStream *s,
 
     // This may call qsParameterPush() or it may not, or qsParameterPush()
     // may be called later, after this call.  It's up to the filter module
-    // when and if to call qsParameterPush();
+    // when and if to call qsParameterPush().  It may not call it if the
+    // parameter does not change due to this call.
     p->setCallback(value, p->userData);
 
     CHECK(pthread_setspecific(parameterKey, oldFilter));
 
-    // Now we wait for this to have an effect.
+    // Now we wait for this to have an effect.  The effect does not have
+    // to be soon.
 
     return 0;
 }
@@ -401,6 +403,22 @@ int qsParameterPush(const char *pName, void *value) {
 
     if((d = qsDictionaryFindDict(d, "\a", 0)))
         ParameterPushGets(f->stream, f->name, pName, value, p, d);
+
+    return 0;
+}
+
+
+size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
+        const char *filterName, const char *pName,
+        enum QsParameterType type,
+        int (*callback)(
+            const void *value, struct QsStream *stream,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData),
+        void *userData) {
+
+
+    ASSERT(0, "Write this code!!!!!");
 
     return 0;
 }
