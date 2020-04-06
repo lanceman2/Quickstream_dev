@@ -431,6 +431,27 @@ extern
 const char* qsGetFilterName(void);
 
 
+struct QsApp;
+struct QsStream;
+
+
+/** Get a filter pointer for the filters loaded name
+ *
+ * \param stream is the stream that the filter was loaded with.
+ *
+ * \param filterName is the name of the filter.
+ *
+ * \return a pointer to the struct QsFilter object, or 0 if the
+ * filter with that name was not found in that stream.
+ */
+
+extern
+struct QsFilter *qsFilterGetFromName(struct QsStream *stream,
+        const char *filterName);
+
+
+
+
 /** Tell quickstream that the filters input() function is thread safe.
  *
  * This must be called in the filter construct() function.
@@ -625,7 +646,7 @@ void qsRemoveDefaultFilterOptions(void);
  * controllers that are available without knowing about said
  * controllers.
  *
- * The cost is this butt ugly parameter interface, these 5 functions; and
+ * The cost is this butt ugly parameter interface, these 6 functions; and
  * the benefit is seamlessly extending the controlling of parameters to a
  * library of widgets.  Such a paradigm is helpful in constructing the
  * Internet of Things (IoT).
@@ -701,7 +722,23 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
 
 
-struct QsStream;
+/** qsParameterCreateForEach() is called from outside the filter module
+ * construct() to create one or more parameters
+ *
+ *
+ *
+ */
+extern
+size_t qsParameterCreateForEach(struct QsApp *app, struct QsStream *stream,
+        const char *filterName, const char *pName,
+        enum QsParameterType type,
+        int (*setCallback)(
+            struct QsStream *stream,
+            const char *filterName, const char *pName,
+            enum QsParameterType type, void *userData),
+        void *userData);
+
+
 
 /** Register a callback to get a parameter value from outside the filter
  * module
@@ -805,7 +842,6 @@ int qsParameterPush(const char *pName, void *value);
 
 
 
-struct QsApp; // Pre-define for below.
 
 /** Iterate through the parameters via a callback function
  *

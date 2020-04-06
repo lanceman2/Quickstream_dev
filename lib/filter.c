@@ -345,6 +345,24 @@ cleanup:
 }
 
 
+
+struct QsFilter *qsFilterGetFromName(struct QsStream *stream,
+        const char *filterName) {
+
+    DASSERT(stream);
+
+    // Get stream dictionary:
+    struct QsDictionary *d = GetStreamDictionary(stream);
+    DASSERT(qsDictionaryGetValue(d) == stream);
+
+    // Get filter, or 0:
+    char leafName[LEAFNAMELEN];
+    return (struct QsFilter *) qsDictionaryFind(d,
+            GetFilterLeafName(filterName, leafName));
+}
+
+
+
 int qsFilterUnload(struct QsFilter *f) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
