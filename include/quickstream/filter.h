@@ -602,39 +602,45 @@ void qsRemoveDefaultFilterOptions(void);
  *  The parameter data is shared between filters and external entities
  *  called controllers.  An obvious example control parameter would be a
  *  sound volume level on a sound channel.  The parameter could just be a
- *  single number factor that multiples an input stream channel to
- *  give an output stream channel.  For such a volume filter, using a
+ *  single number factor that multiples an input stream channel to give an
+ *  output stream channel.  For such a volume filter, using a
  *  "pass-through" buffer would be best and so no copying of the stream
  *  data would be required, it would just multiple it as it was passed
  *  through from the input port to the output port using the same ring
  *  buffer for input and output.
  *
- *  Of course the use of the quickstream control parameter thingy is not
- *  required, and a user can make their own "control parameter" thingy.
- *  But the benefit of using it is that you take advantage of controller
- *  modules that can extend parameters to addition interfaces like for
- *  example making the parameters readable and writable from a web app
- *  page, without the filter writer needing to write any browser client or
- *  server code.  So if a filter has implemented a quickstream parameter,
- *  that parameter can then be controlled from all the quickstream
- *  controllers that are available without knowing about said controllers.
+ * This parameter API is an asynchronous API that enables non-blocking
+ * inter-filter and controller-filter communication, so long as the user
+ * does not use callback functions that block.  A controller is a code
+ * that can access this API and is not part of a filter module.
+
+ * Of course the use of the quickstream control parameter thingy is not
+ * required, and a user can make their own "control parameter" thingy.
+ * But the benefit of using it is that you take advantage of controller
+ * modules that can extend parameters to addition interfaces like for
+ * example making the parameters readable and writable from a web app
+ * page, without the filter writer needing to write any browser client or
+ * server code.  So if a filter has implemented a quickstream parameter,
+ * that parameter can then be controlled from all the quickstream
+ * controllers that are available without knowing about said
+ * controllers.
  *
- *  The cost is this butt ugly parameter interface, these 5 functions, and
- *  the benefit is seamlessly extending the controlling of parameters to a
- *  library of widgets.  Such a paradigm is helpful in constructing the
- *  Internet of Things (IoT).
+ * The cost is this butt ugly parameter interface, these 5 functions; and
+ * the benefit is seamlessly extending the controlling of parameters to a
+ * library of widgets.  Such a paradigm is helpful in constructing the
+ * Internet of Things (IoT).
  *
- *  The parameters are small and copied between threads that are running
- *  different codes, so copying them in callback functions is straight
- *  forward and acceptable way to pass they between these independent
- *  computations.
+ * The parameters are small and copied between threads that are running
+ * different codes, so copying them in callback functions is straight
+ * forward and acceptable way to pass they between these independent
+ * computations.
  *
- *  Past parameter values are not queued, or stored by quickstream.  They
- *  are not time stamped.  They do not have a sample rate.  It's up to the
- *  filter or controller module write to add that kind of thing, if it is
- *  needed.
+ * Past parameter values are not queued, or stored by quickstream.  They
+ * are not time stamped.  They do not have a sample rate.  It's up to the
+ * filter or controller module writer to add that kind of thing, if it is
+ * needed.
  *
- *  Parameters cannot be added or removed while the stream is flowing.
+ * Parameters cannot be added or removed while the stream is flowing.
  *
  *  \todo examples linked here.
  *

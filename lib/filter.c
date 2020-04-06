@@ -20,10 +20,13 @@
 
 
 // Private interfaces.
-#include "./debug.h"
-#include "./qs.h"
-#include "./filterList.h"
-#include "./GetPath.h"
+#include "debug.h"
+#include "Dictionary.h"
+#include "qs.h"
+#include "filterList.h"
+#include "GetPath.h"
+#include "filterAPI.h"
+#include "parameter.h"
 
 
 
@@ -311,6 +314,18 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
             goto cleanup;
         }
         //else Success.
+
+        // Get stream dictionary:
+        struct QsDictionary *d = GetStreamDictionary(f->stream);
+        DASSERT(qsDictionaryGetValue(d) == f->stream);
+
+        // Create or get filter dictionary:
+        char leafName[LEAFNAMELEN];
+        ret = qsDictionaryInsert(d,
+            GetFilterLeafName(f->name, leafName), f, 0);
+        // It may have been made in construct() with qsParameterCreate(),
+        // but it may not have too.
+        DASSERT(ret == 0 || ret == 1);
     }
 
     INFO("Successfully loaded module Filter %s with name \"%s\"",

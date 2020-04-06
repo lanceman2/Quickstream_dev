@@ -9,6 +9,7 @@
 #include "Dictionary.h"
 #include "qs.h"
 #include "filterAPI.h" // struct QsJob *GetJob(void){}
+#include "parameter.h"
 
 
 
@@ -90,16 +91,6 @@ const char *GetTypeString(enum QsParameterType type) {
     }
 }
 
-#define LEAFNAMELEN  (_QS_FILTER_MAXNAMELEN + 2)
-
-
-static inline
-char *GetFilterLeafName(const char *filterName,
-        char leafName[LEAFNAMELEN]) {
-    snprintf(leafName, LEAFNAMELEN, "%s\a", filterName);
-    return leafName;
-}
-
 
 struct GetCallback {
 
@@ -162,7 +153,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     struct QsDictionary *d = GetStreamDictionary(f->stream);
     DASSERT(qsDictionaryGetValue(d) == f->stream);
 
-    // Create of get filter dict:
+    // Create or get a filter dict:
     char leafName[LEAFNAMELEN];
     int ret = qsDictionaryInsert(d,
             GetFilterLeafName(f->name, leafName), f, &d);
