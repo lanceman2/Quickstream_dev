@@ -689,8 +689,8 @@ enum QsParameterType {
  */
 extern
 int qsParameterCreate(const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value, void *userData),
-        void *userData);
+        int (*setCallback)(void *value, const char *pName,
+            void *userData), void *userData);
 
 
 
@@ -789,7 +789,9 @@ int qsParameterSet(struct QsStream *stream,
  *
  * \param pName is the parameter name.
  *
- * \param value is the value to set.
+ * \param value is the value to set.  This value can be a pointer to a
+ * stack allocated variable.  The getter callbacks are called in this
+ * function.
  *
  * \return 0 on success and non-zero otherwise.
  */

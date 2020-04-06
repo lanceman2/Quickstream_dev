@@ -34,7 +34,7 @@ int getCallback(
         const char *filterName, const char *pName, 
         enum QsParameterType type, void *userData) {
 
-    fprintf(stderr, "control_test getCallback(value=%lg,"
+    WARN("getCallback(value=%lg,"
             " stream=%p, \"%s\","
             "\"%s\", type=%" PRIu32 ", userData=%zu)\n",
             *(double *) value, stream, filterName, pName,
@@ -51,7 +51,7 @@ int findParameter(struct QsStream *stream,
         const char *filterName, const char *pName,
         enum QsParameterType type, void *userData) {
 
-    fprintf(stderr, "stream-%" PRIu32 " (type=%d) parameter \"%s:%s\"\n",
+    WARN("stream-%" PRIu32 " (type=%d) parameter \"%s:%s\"",
             stream->id, type, filterName, pName);
     return 0;
 }
@@ -67,24 +67,29 @@ int main(int argc, char **argv) {
     struct QsStream *s = qsAppStreamCreate(app);
     ASSERT(s);
 
-    qsStreamFilterLoad(s, "tests/passThrough", "passThrough", 0, 0);
+    qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
+    qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
+    qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
 
-    ASSERT(qsParameterGet(s, "passThrough", "sleep",
+    ASSERT(qsParameterGet(s, "tests/parameter", "par 0",
                 QsDouble, getCallback, 0) == 0);
 
-    ASSERT(qsParameterGet(s, "passThrough", "sleep",
+    ASSERT(qsParameterGet(s, "tests/parameter", "par 1",
                 QsDouble, getCallback, (void *) 1) == 0);
 
-    ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback, (void *) 2) == 0);
+    qsParameterForEach(app, s, 0, 0, 0, findParameter, 0);
 
-    ASSERT(qsParameterSet(s, "passThrough",
-                "sleep", QsDouble, &t) == 0);
+    ASSERT(qsParameterSet(s, "tests/parameter",
+                "par 0", QsDouble, &t) == 0);
+
+    t = 3434.8913;
+    ASSERT(qsParameterSet(s, "tests/parameter",
+                "par 0", QsDouble, &t) == 0);
+
 
 
     qsDictionaryPrintDot(app->dict, stdout);
 
-    qsParameterForEach(app, s, 0, 0, 0, findParameter, 0);
 
     ASSERT(qsAppDestroy(app) == 0);
     

@@ -42,9 +42,9 @@ double sleepT = 0;
 // This may be called by any thread hence we use a mutex to protect
 // _sleepT.
 //
-int setSleepCallback(void *value, void *userData) {
+int setSleepCallback(void *value, const char *pName, void *userData) {
 
-    DSPEW("sleep time set to %lg seconds", *(double *) value);
+    DSPEW("\"%s\" time set to %lg seconds", pName, *(double *) value);
 
     double val = -1.0;
 
