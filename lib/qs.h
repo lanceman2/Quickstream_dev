@@ -412,7 +412,7 @@ struct QsFilter {
             uint32_t numInputs, uint32_t numOutputs);
 
 
-    struct QsFilter *next; // next loaded filter in app list
+    struct QsFilter *next; // next loaded filter in the stream filter list
 
 
     ///////////////////////////////////////////////////////////////////////

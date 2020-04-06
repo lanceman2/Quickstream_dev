@@ -802,11 +802,12 @@ struct QsApp; // Pre-define for below.
 /** Iterate through the parameters via a callback function
  *
  * This function has a butt load of argument parameters but lots of them
- * can be 0.  The argument parameters \p app and/or \p stream must be
+ * can be 0.  One of argument parameters \p app or \p stream must be
  * non-zero.
  *
- * \param app is ignored unless \p stream is 0, then all parameters in all
- * filters, in all streams in the app are iterated through.
+ * \param app is ignored unless \p stream is 0.  If \p app is non-zero and
+ * \p stream is zero iterated through all selected parameters in all
+ * streams in  this \p app.
  *
  * \param stream if not 0, restrict the range of the parameters to iterate
  * through to just parameters in this stream.
@@ -838,8 +839,8 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
         const char *filterName, const char *pName,
         enum QsParameterType type,
         int (*callback)(
-            const void *value, struct QsStream *stream,
-            const char *filterName, const char *pName, 
+            struct QsStream *stream,
+            const char *filterName, const char *pName,
             enum QsParameterType type, void *userData),
         void *userData);
 

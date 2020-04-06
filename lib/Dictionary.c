@@ -197,7 +197,7 @@ struct QsDictionary {
     //
     char *key; // strdup() the key.
 
-    bool freeValueOnDestroy;
+    void (*freeValueOnDestroy)(void *);
 };
 
 
@@ -226,10 +226,10 @@ void FreeChildren(struct QsDictionary *children) {
         // Clean up this child's struct QsDictionary
         //
         if(child->value) {
+            if(child->freeValueOnDestroy)
+                child->freeValueOnDestroy((void *) child->value);
             DASSERT(child->key);
             free(child->key);
-            if(child->freeValueOnDestroy)
-                free((void *) child->value);
         }
         //
         if(child->suffix)
@@ -245,11 +245,12 @@ void FreeChildren(struct QsDictionary *children) {
 }
 
 
-void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict) {
+void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict,
+        void (*freeValueOnDestroy)(void *)) {
 
     DASSERT(dict);
     DASSERT(dict->value);
-    dict->freeValueOnDestroy = true;
+    dict->freeValueOnDestroy = freeValueOnDestroy;
 }
 
 
@@ -264,10 +265,10 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
         free(dict->suffix);
 
     if(dict->value) {
+        if(dict->freeValueOnDestroy)
+            dict->freeValueOnDestroy((void *) dict->value);
         DASSERT(dict->key);
         free(dict->key);
-        if(dict->freeValueOnDestroy)
-            free((void *) dict->value);
     }
 
 #if DEBUG
@@ -1222,10 +1223,10 @@ int qsDictionaryDestroySubTree(struct QsDictionary *dict,
     if(node->children)
         FreeChildren(node->children);
 
+    if(node->freeValueOnDestroy)
+        node->freeValueOnDestroy((void *) node->value);
     free(node->key);
     free(node->suffix);
-    if(node->freeValueOnDestroy)
-        free((void *) node->value);
 
     node->key = 0;
     node->suffix = 0;

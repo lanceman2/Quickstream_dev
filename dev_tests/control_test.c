@@ -46,6 +46,17 @@ int getCallback(
 }
 
 
+static
+int findParameter(struct QsStream *stream,
+        const char *filterName, const char *pName,
+        enum QsParameterType type, void *userData) {
+
+    fprintf(stderr, "stream-%" PRIu32 " (type=%d) parameter \"%s:%s\"\n",
+            stream->id, type, filterName, pName);
+    return 0;
+}
+
+
 
 int main(int argc, char **argv) {
 
@@ -73,6 +84,7 @@ int main(int argc, char **argv) {
 
     qsDictionaryPrintDot(app->dict, stdout);
 
+    qsParameterForEach(app, s, 0, 0, 0, findParameter, 0);
 
     ASSERT(qsAppDestroy(app) == 0);
     

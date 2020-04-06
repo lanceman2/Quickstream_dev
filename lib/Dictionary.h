@@ -80,7 +80,8 @@ struct QsDictionary
 
 
 extern
-void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict);
+void qsDictionarySetFreeValueOnDestroy(struct QsDictionary *dict,
+        void (*freeValueOnDestroy)(void *));
 
 
 extern
