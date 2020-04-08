@@ -18,7 +18,7 @@ void qsDictionaryDestroy(struct QsDictionary *dict);
 // If the entry exists, the value is not changed and "idict" is set to the
 // node that contains the entry.
 // 
-// optional parameter "idict" is a pointer to the dictionary node where
+// Optional parameter "idict" is a pointer to the dictionary node where
 // the value entry was inserted.  "idict" can then be used as a
 // sub-dictionary to insert and find with.
 //
@@ -32,7 +32,7 @@ int qsDictionaryInsert(struct QsDictionary *dict,
 
 // If found, cleans up the value calling freeValueOnDestroy if it was set.
 //
-// Returns 0 if it was found and removed, 1 if not found, -1 on error.
+// Returns 0 if it was found and removed, 1 if not found.
 extern
 int qsDictionaryRemove(struct QsDictionary *dict, const char *key);
 

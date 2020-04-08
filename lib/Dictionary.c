@@ -1240,6 +1240,42 @@ int qsDictionaryDestroySubTree(struct QsDictionary *dict,
 }
 
 
+static void
+AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
+        int childIndex) {
+
+    DASSERT(parent->key == 0);
+    // Absorb this one child up to this parent.
+    struct QsDictionary *nodeChildren = parent->children;
+
+    parent->value = child->value;
+    parent->children = child->children;
+    parent->freeValueOnDestroy = child->freeValueOnDestroy;
+    parent->key = child->key;
+    
+    size_t len = ((parent->suffix)?strlen(parent->suffix):0) +
+        ((child->suffix)?strlen(child->suffix):0) + 2;
+    char *suffix = malloc(len);
+    ASSERT(suffix, "malloc(%zu) failed", len);
+    sprintf(suffix, "%s%c%s",
+            (parent->suffix)?(parent->suffix):"",
+            childIndex+1,
+            (child->suffix)?(child->suffix):"");
+
+    if(parent->suffix)
+        free(parent->suffix);
+    if(child->suffix)
+        free(child->suffix);
+
+    char *esuffix = Expand(suffix);
+    size_t l = strlen(esuffix);
+    parent->suffix = Compress(esuffix, l%4 + 2);
+    free(esuffix);
+    free(suffix);
+    free(nodeChildren);
+}
+
+
 // Because we can remove a node from between upper and lower generations;
 // anywhere in the tree.
 //
@@ -1296,31 +1332,8 @@ void PruneNodeDown(struct QsDictionary *node) {
         return; // stop pruning down, we may prune up.
 
     DASSERT(numChildren == 1);
-    // Absorb this one child up to this node.
-    struct QsDictionary *nodeChildren = node->children;
 
-    node->value = oneChild->value;
-    node->children = oneChild->children;
-    node->freeValueOnDestroy = oneChild->freeValueOnDestroy;
-    node->key = oneChild->key;
-    
-    size_t len = ((node->suffix)?strlen(node->suffix):0) +
-        ((oneChild->suffix)?strlen(oneChild->suffix):0) + 2;
-    char *suffix = malloc(len);
-    ASSERT(suffix, "malloc(%zu) failed", len);
-    sprintf(suffix, "%s%c%s",
-            (node->suffix)?(node->suffix):"",
-            childIndex+1,
-            (oneChild->suffix)?(oneChild->suffix):"");
-
-    if(node->suffix)
-        free(node->suffix);
-    if(oneChild->suffix)
-        free(oneChild->suffix);
-
-    node->suffix = Compress(suffix, len+1);
-    free(suffix);
-    free(nodeChildren);
+    AbsorbChild(node, oneChild, childIndex);
 }
 
 
@@ -1328,11 +1341,32 @@ void PruneNodeDown(struct QsDictionary *node) {
 //
 // Returns false to keep pruning up the tree.
 //
-static bool
-PruneUp(struct QsDictionary *parent, struct QsDictionary *node) {
+static void
+PruneUp(struct QsDictionary *parent) {
 
+    if(parent->key)
+        return; // done
 
-    return true;
+    DASSERT(parent->value == 0);
+    DASSERT(parent->freeValueOnDestroy == 0);
+    DASSERT(parent->children);
+
+    int numChildren = 0;
+    int childIndex = 0;
+    struct QsDictionary *oneChild = 0;
+
+    for(int i=0;i<4;++i) {
+        struct QsDictionary *child = parent->children + i;
+        if(child->key) {
+            oneChild = child;
+            ++numChildren;
+            childIndex = i;
+        }
+    }
+
+    if(numChildren == 1)
+        // Absorb this one child up to this parent.
+        AbsorbChild(parent, oneChild, childIndex);
 }
 
 
@@ -1345,6 +1379,10 @@ bool TraverseChildrenAndPrumeBack(struct QsDictionary *node,
         char **bits, const char **c, bool *done) {
 
     if(!**c) {
+        if(!node->key) {
+            DSPEW("No key=\"%s\" found", key);
+            return false;
+        }
         PruneNodeDown(node);
         return true; // It's found.
     }
@@ -1387,10 +1425,9 @@ bool TraverseChildrenAndPrumeBack(struct QsDictionary *node,
 
         if(*done) return true; // found and done pruning.
 
-        if(PruneUp(node, n)) {
-            *done = true; // stop pruning.
-            return true;
-        }
+        PruneUp(node);
+        *done = true; // stop pruning.
+        return true;
     }
 
     if(**c) {
@@ -1399,6 +1436,11 @@ bool TraverseChildrenAndPrumeBack(struct QsDictionary *node,
         // Therefore we failed to find the key.
         DSPEW("No key=\"%s\" found", key);
         return false; // not found.
+    }
+
+    if(!node->key) {
+        DSPEW("No key=\"%s\" found", key);
+        return false;
     }
 
     PruneNodeDown(node);

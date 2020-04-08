@@ -17,6 +17,7 @@ BUILD_NO_INSTALL := tests/tests 301_Dictionary_test
 # This also tests that ../lib/Dictionary.c can be used
 # without linking with libquickstream.so
 301_Dictionary_test_SOURCES := 301_Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
+310_DictionaryRemove_test_SOURCES := 310_DictionaryRemove_test.c ../lib/Dictionary.c ../lib/debug.c
 320_DictionaryDict_test_SOURCES := 320_DictionaryDict_test.c ../lib/Dictionary.c ../lib/debug.c
 
 330_control_test_SOURCES := 330_control_test.c
