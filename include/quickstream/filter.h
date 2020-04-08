@@ -739,7 +739,6 @@ size_t qsParameterCreateForEach(struct QsApp *app, struct QsStream *stream,
         void *userData);
 
 
-
 /** Register a callback to get a parameter value from outside the filter
  * module
  *
@@ -842,7 +841,6 @@ int qsParameterPush(const char *pName, void *value);
 
 
 
-
 /** Iterate through the parameters via a callback function
  *
  * This function has a butt load of argument parameters but lots of them
@@ -866,10 +864,9 @@ int qsParameterPush(const char *pName, void *value);
  * through to just parameters with this type.
  *
  * \param callback is the callback function that is called with each
- * parameter and with all the butt load of arguments set.  If \p
- * callback() returns non-zero than the iteration will stop, and that will
- * be the last time \p callback() is called for this call to \p
- * qsParameterForEach().
+ * parameter and with all of the arguments set.  If \p callback() returns
+ * non-zero than the iteration will stop, and that will be the last time
+ * \p callback() is called for this call to \p qsParameterForEach().
  *
  * \param userData is user data that is passed to the callback every
  * time

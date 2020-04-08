@@ -351,14 +351,9 @@ struct QsFilter *qsFilterGetFromName(struct QsStream *stream,
 
     DASSERT(stream);
 
-    // Get stream dictionary:
-    struct QsDictionary *d = GetStreamDictionary(stream);
-    DASSERT(qsDictionaryGetValue(d) == stream);
+    ASSERT(0, "Write this code");
 
-    // Get filter, or 0:
-    char leafName[LEAFNAMELEN];
-    return (struct QsFilter *) qsDictionaryFind(d,
-            GetFilterLeafName(filterName, leafName));
+    return 0;
 }
 
 

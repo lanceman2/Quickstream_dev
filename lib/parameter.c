@@ -36,33 +36,6 @@
 //
 //
 //
-// Entities are filters or controllers.
-//
-// Parameters cannot be added after the stream is flowing/running
-// and so the stream's Dictionary can't change while the stream is
-// flowing.
-//
-
-
-// We make a weird ass Dictionary tree data structure that has a
-// hierarchical structure.  The top level is the stream pointer.  The
-// direct children of the stream pointer are keyed with the className and
-// a value is a pointer to the filter or controller.  And so on like
-// below:
-//
-// Dictionary node sub-tree hierarchy structure levels:
-//
-// 0. stream#:        value = stream pointer
-// 1. filterName      value = filter pointer or controller pointer
-// 3. parameterName   value = struct Parameter *
-// 4. getCallbacks keyed "0", "1", "2", ...
-//
-//
-//  Example keys sequences for filterName = tx:
-//
-//  This is unfortunate, that we must append to the strings a terminator
-//  like thing, otherwise names would be restricted in a not so nice way.
-//
 //  We use '\a' (bell) as a separator.  This assumes that users do not
 //  use '\a' in the filter names.
 //

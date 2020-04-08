@@ -376,7 +376,7 @@ IsCharacter(const char *s, uint32_t count) {
 
 // Returns malloc() allocated string.
 //
-// Comverts in parts of 4 characters from the end.
+// Converts in parts of 4 characters from the end.
 //
 // Examples:
 //
@@ -734,8 +734,10 @@ char GetChar(char **bits, const char **c) {
 }
 
 
-// I wish C had pass by reference.  This is only used to index into a
-// child node.  So the 1 offset is not added.
+// I wish C had pass by reference.
+//
+// This is only used to index into a child node, so the 1 offset is not
+// added.
 static inline
 char GetBits(char **bits, const char **c) {
 
@@ -846,7 +848,7 @@ struct QsDictionary
             continue;
         }
 
-        // No more children, but we have unmatch key characters.
+        // No more children, but we have unmatched key characters.
         DSPEW("No key=\"%s\" found", key);
         return 0;
     }
@@ -1176,7 +1178,7 @@ struct QsDictionary
             continue;
         }
 
-        // No more children, but we have unmatch key characters.
+        // No more children, but we have unmatched key characters.
         DSPEW("No key=\"%s\" found", key);
         return 0;
     }
@@ -1235,4 +1237,201 @@ int qsDictionaryDestroySubTree(struct QsDictionary *dict,
     node->children = 0;
 
     return 0;
+}
+
+
+// Because we can remove a node from between upper and lower generations;
+// anywhere in the tree.
+//
+// This is freeing the node entry, and if there is one child it will be
+// absorbed by this node, but if there is 2 or more children than this
+// just frees the node key/value, keeping the 2 or more children
+// unchanged.
+//
+// This node may get removed from its' parent later.
+//
+// Pruning up useless parent nodes happens later too.
+//
+static
+void PruneNodeDown(struct QsDictionary *node) {
+
+    // First empty the node, but leave its' children.
+    DASSERT(node->key);
+
+    free(node->key);
+    node->key = 0;
+    if(node->freeValueOnDestroy) {
+        DASSERT(node->value);
+        node->freeValueOnDestroy((void *) node->value);
+        node->freeValueOnDestroy = 0;
+    }
+    node->value = 0;
+
+    if(!node->children) {
+        free(node->suffix);
+        node->suffix = 0;
+        return; // stop pruning down, we may prune up later.
+    } 
+
+    // If this node has children then there must be a key/value pair
+    // in at least one child.
+
+    int numChildren = 0;
+
+    struct QsDictionary *oneChild = 0;
+    int childIndex = 0;
+
+    for(int i=0;i<4;++i) {
+        struct QsDictionary *child = node->children + i;
+        if(child->key) {
+            oneChild = child;
+            ++numChildren;
+            childIndex = i;
+        }
+    }
+
+    if(numChildren >= 2)
+        // The node will keep its' children.
+        // We keep the suffix.
+        return; // stop pruning down, we may prune up.
+
+    DASSERT(numChildren == 1);
+    // Absorb this one child up to this node.
+    struct QsDictionary *nodeChildren = node->children;
+
+    node->value = oneChild->value;
+    node->children = oneChild->children;
+    node->freeValueOnDestroy = oneChild->freeValueOnDestroy;
+    node->key = oneChild->key;
+    
+    size_t len = ((node->suffix)?strlen(node->suffix):0) +
+        ((oneChild->suffix)?strlen(oneChild->suffix):0) + 2;
+    char *suffix = malloc(len);
+    ASSERT(suffix, "malloc(%zu) failed", len);
+    sprintf(suffix, "%s%c%s",
+            (node->suffix)?(node->suffix):"",
+            childIndex+1,
+            (oneChild->suffix)?(oneChild->suffix):"");
+
+    if(node->suffix)
+        free(node->suffix);
+    if(oneChild->suffix)
+        free(oneChild->suffix);
+
+    node->suffix = Compress(suffix, len+1);
+    free(suffix);
+    free(nodeChildren);
+}
+
+
+// Returns true to stop pruning up the tree.
+//
+// Returns false to keep pruning up the tree.
+//
+static bool
+PruneUp(struct QsDictionary *parent, struct QsDictionary *node) {
+
+
+    return true;
+}
+
+
+// Return true if found,
+// or return false if not found,
+// or recurse.
+//
+bool TraverseChildrenAndPrumeBack(struct QsDictionary *node,
+        const char *key,
+        char **bits, const char **c, bool *done) {
+
+    if(!**c) {
+        PruneNodeDown(node);
+        return true; // It's found.
+    }
+
+    if(node->suffix) {
+
+        const char *e = node->suffix;
+
+        // Find the point where key and suffix do not match.
+        for(;*e && **c;) {
+            // Consider iterating over 2 bit chars
+            if(*e < START) {
+                if((*e) != GetBits(bits, c))
+                    break;
+            } else
+            // Else iterate over regular characters.
+            if(*e != GetChar(bits, c))
+                break;
+            ++e;
+        }
+
+        if(*e != 0) {
+            // The suffix has more characters that we did not
+            // match.
+            DSPEW("No key=\"%s\" found", key);
+            return false;
+        }
+    }
+
+    // Okay we made it through the last suffix
+    //
+    // Go to the next node if we can.
+
+    if(**c && node->children) {
+
+        struct QsDictionary *n = node->children + GetBits(bits, c)  - 1;
+
+        if(!TraverseChildrenAndPrumeBack(n, key, bits, c, done))
+            return false; // not found.
+
+        if(*done) return true; // found and done pruning.
+
+        if(PruneUp(node, n)) {
+            *done = true; // stop pruning.
+            return true;
+        }
+    }
+
+    if(**c) {
+        // No more children, but we have unmatched key characters.
+        //
+        // Therefore we failed to find the key.
+        DSPEW("No key=\"%s\" found", key);
+        return false; // not found.
+    }
+
+    PruneNodeDown(node);
+
+    // We went through all the characters so:
+    return true; // It's found.
+}
+
+
+
+int qsDictionaryRemove(struct QsDictionary *dict, const char *key) {
+
+    DASSERT(dict);
+    DASSERT(key);
+    DASSERT(key[0]);
+
+    if(!dict->children) return 1; // not found
+
+    // Setup pointers to an array of chars that null terminates.
+    char b[5];
+    char *bits = b + 4;
+    b[0] = 1;
+    b[1] = 1;
+    b[2] = 1;
+    b[3] = 1;
+    b[4] = 0; // null terminate.
+
+    const char *c = key;
+    bool done = false;
+
+    dict = dict->children + GetBits(&bits, &c)  - 1;
+
+    if(TraverseChildrenAndPrumeBack(dict, key, &bits, &c, &done))
+        return 0; // found and removed
+    return 1; // not found
 }

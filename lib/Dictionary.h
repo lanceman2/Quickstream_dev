@@ -30,6 +30,13 @@ int qsDictionaryInsert(struct QsDictionary *dict,
         struct QsDictionary **idict);
 
 
+// If found, cleans up the value calling freeValueOnDestroy if it was set.
+//
+// Returns 0 if it was found and removed, 1 if not found, -1 on error.
+extern
+int qsDictionaryRemove(struct QsDictionary *dict, const char *key);
+
+
 // This is the fast Find() function.
 //
 // Returns element value for key or 0 if not found.
