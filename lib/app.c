@@ -62,9 +62,6 @@ struct QsApp *qsAppCreate(void) {
 
     app->id = _qsAppCount++;
 
-    app->dict = qsDictionaryCreate();
-    ASSERT(app->dict);
-
     return app;
 }
 

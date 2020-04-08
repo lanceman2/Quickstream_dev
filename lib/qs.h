@@ -165,20 +165,6 @@ struct QsApp {
     // stream IDs and controller IDs.
     uint32_t streamCount;
 
-    // qsDictionary is has a very fast string key lookup to find values.
-    // At the cost of using more memory, it's faster than a hash table.
-    // Currently (2020-04) it's a modified Trie Tree, but it may have
-    // changed.
-    //
-    // "dist" has a list of many kinds of things in a tree hierarchy.  The
-    // leafs are the set and get values of parameters.  The node that is
-    // the parent of the set and get values are the parameter names.  The
-    // parent of the parameter names are stream id or controller id,
-    // depending on which is managing the parameter.  The parent of the
-    // stream id or controller id is the root node here: "dict" below.
-    //
-    struct QsDictionary *dict;
-
 
     // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
@@ -246,11 +232,9 @@ struct QsStream {
     // not deadlock a mutex we really need atomic setting and getting.
     atomic_int isSourcing;
 
+    // A Dictionary list of the filters keyed by filter name.
+    struct QsDictionary *dict;
 
-    // There's no reason for fast access to these list at this time.
-    // Maybe we'll use a red/black tree for faster access if the need
-    // comes be.
-    //
     // List of all filters that this stream can use.  Head of a singly
     // linked list.
     struct QsFilter *filters;
@@ -388,6 +372,10 @@ struct QsFilter {
     // TODO: make mark a union with descriptive names for the different
     // uses.
     uint32_t mark;
+
+
+    // List of Parameters that this filter owns:
+    struct QsDictionary *parameters;
 
 
     void *dlhandle; // from dlopen()
@@ -782,6 +770,10 @@ void ReallocateFilterArgs(struct QsFilter *f, uint32_t num);
 
 extern
 void *RunningWorkerThread(struct QsStream *s);
+
+
+extern
+int StreamRemoveFilterConnections(struct QsStream *s, struct QsFilter *f);
 
 
 #if 0 // Not needed yet.

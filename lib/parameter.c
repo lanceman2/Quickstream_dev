@@ -9,7 +9,6 @@
 #include "Dictionary.h"
 #include "qs.h"
 #include "filterAPI.h" // struct QsJob *GetJob(void){}
-#include "parameter.h"
 
 
 
@@ -35,19 +34,9 @@
 //    b) Many other entities submit Get requests to get values.
 //
 //
+//      stream-0 tx freq
 //
-//  We use '\a' (bell) as a separator.  This assumes that users do not
-//  use '\a' in the filter names.
-//
-//
-//  Example keys sequences for filterName = tx:
-//
-//      s2\a tx\a freq1
-//      s2\a tx\a freq1 
-//      s2\a tx\a freq1 
-//
-//
-//   freq1 value -> struct Parameter 
+//   freq value -> struct Parameter 
 
 
 
@@ -119,26 +108,20 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     DASSERT(f);
     ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
             "must be called in a filter module construct()");
-    DASSERT(f->stream);
     DASSERT(f->name);
+    DASSERT(f->parameters);
 
-    // Get stream dict:
-    struct QsDictionary *d = GetStreamDictionary(f->stream);
-    DASSERT(qsDictionaryGetValue(d) == f->stream);
-
-    // Create or get a filter dict:
-    char leafName[LEAFNAMELEN];
-    int ret = qsDictionaryInsert(d,
-            GetFilterLeafName(f->name, leafName), f, &d);
-    ASSERT(ret == 0 || ret == 1);
-
-    // Create parameter dict:
-    ret = qsDictionaryInsert(d, pName, "p", &d);
+    // Create parameter dictionary entry.
+    struct QsDictionary *d;
+    int ret = qsDictionaryInsert(f->parameters, pName, "p", &d);
     ASSERT(ret >= 0);
     if(ret) {
         ERROR("Parameter %s:%s already exists", f->name, pName);
         return 1;
     }
+    DASSERT(d);
+
+    // Create and add the parameter data to this parameter dict
     struct Parameter *p = malloc(sizeof(*p));
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     memset(p, 0, sizeof(*p));
@@ -150,7 +133,6 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
     return 0;
 }
-
 
 
 int qsParameterGet(struct QsStream *s, const char *filterName,
@@ -169,31 +151,32 @@ int qsParameterGet(struct QsStream *s, const char *filterName,
     DASSERT(pName);
     DASSERT(pName[0]);
 
-    // Get stream dict:
-    struct QsDictionary *d = GetStreamDictionary(s);
-    DASSERT(qsDictionaryGetValue(d) == s);
-
-    // Get filter dict:
-    char leaf[LEAFNAMELEN];
-    d = qsDictionaryFindDict(d, GetFilterLeafName(filterName, leaf), 0);
-    if(!d) {
-        ERROR("Filter \"%s\" not found in parameter tree", filterName);
-        return -1; // error
+    struct QsFilter *f = qsFilterFromName(s, filterName);
+    if(!f) {
+        WARN("Filter named \"%s\" not found", filterName);
+        return 1; // error
     }
+    DASSERT(f->parameters);
 
     // Get parameter dict:
     struct Parameter *p = 0;
-    d = qsDictionaryFindDict(d, pName, (void*) &p);
-    ASSERT(d);
+    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
+            pName, (void*) &p);
+
+    if(!d) {
+        WARN("Parameter \"%s:%s\" not found", filterName, pName);
+        return 2; // error
+    }
+
     DASSERT(p);
     DASSERT(p->setCallback);
 
     if(p->type != type) {
-        ERROR("Filter parameter \"%s:%s\" type \"%s\" "
+        ERROR("Parameter \"%s:%s\" type \"%s\" "
                 "is not requested type \"%s\"",
                 filterName, pName, GetTypeString(p->type),
                 GetTypeString(type));
-        return -1; // error
+        return 3; // error
     }
 
     size_t i = p->numGetCallbacks;
@@ -207,7 +190,7 @@ int qsParameterGet(struct QsStream *s, const char *filterName,
     gc->userData = userData;
     ++p->numGetCallbacks;
 
-    return 0;
+    return 0; // success
 }
 
 
@@ -228,27 +211,23 @@ int qsParameterSet(struct QsStream *s,
     DASSERT(filterName[0]);
     DASSERT(pName);
     DASSERT(pName[0]);
-    DASSERT(value);
 
-    // Get stream dict:
-    struct QsDictionary *d = GetStreamDictionary(s);
-    DASSERT(qsDictionaryGetValue(d) == s);
-
-    // Get filter dict:
-    char leaf[LEAFNAMELEN];
-    struct QsFilter *f = 0;
-    d = qsDictionaryFindDict(d, GetFilterLeafName(filterName, leaf),
-            (void **)&f);
-    if(!d) {
-        ERROR("Filter \"%s\" not found in parameter tree", filterName);
-        return -1; // error
+    struct QsFilter *f = qsFilterFromName(s, filterName);
+    if(!f) {
+        WARN("Filter named \"%s\" not found", filterName);
+        return 1; // error
     }
-    DASSERT(f);
+    DASSERT(f->parameters);
 
     // Get parameter dict:
     struct Parameter *p = 0;
-    d = qsDictionaryFindDict(d, pName, (void*) &p);
-    ASSERT(d);
+    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
+            pName, (void*) &p);
+    if(!d) {
+        WARN("Parameter \"%s:%s\" not found", filterName, pName);
+        return 2; // error
+    }
+
     DASSERT(p);
     DASSERT(p->setCallback);
 
@@ -257,7 +236,7 @@ int qsParameterSet(struct QsStream *s,
                 "is not requested type \"%s\"",
                 filterName, pName, GetTypeString(p->type),
                 GetTypeString(type));
-        return -1; // error
+        return 3; // error
     }
 
     // We need thread specific data to tell what filter this is when
@@ -311,28 +290,22 @@ int qsParameterPush(const char *pName, void *value) {
 
     // We must have the filter pointer now.
     DASSERT(f);
-    DASSERT(f->stream);
-    DASSERT(f->name);
-
-    // Get stream dict:
-    struct QsDictionary *d = GetStreamDictionary(f->stream);
-    DASSERT(d);
-    DASSERT(qsDictionaryGetValue(d) == f->stream);
-
-    // Get the filter dict:
-    char leafName[LEAFNAMELEN];
-    d = qsDictionaryFindDict(d,
-            GetFilterLeafName(f->name, leafName), 0);
-    ASSERT(d);
 
     // Get parameter dict:
-    struct Parameter *p;
-    d = qsDictionaryFindDict(d, pName, (void **) &p);
-    ASSERT(d);
+    struct Parameter *p = 0;
+    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
+            pName, (void*) &p);
+    if(!d) {
+        WARN("Parameter \"%s:%s\" not found", f->name, pName);
+        return 2; // error
+    }
+
     DASSERT(p);
+    DASSERT(p->setCallback);
 
     struct GetCallback *gcs = p->getCallbacks;
-    for(size_t i=p->numGetCallbacks-1; i<-1; --i)
+    size_t num = p->numGetCallbacks;
+    for(size_t i=0; i<num; ++i)
         gcs[i].getCallback(value, f->stream,
                 (const char *) f->name,
                 pName, p->type, gcs[i].userData);
@@ -377,7 +350,7 @@ int ParameterForEach(const char *key, const void *value,
 
 
 static size_t
-ForFilterDict(struct QsDictionary *fDict, const char *pName,
+ForParameterDict(struct QsFilter *f, const char *pName,
         enum QsParameterType type,
         int (*callback)(
             struct QsStream *stream,
@@ -385,14 +358,14 @@ ForFilterDict(struct QsDictionary *fDict, const char *pName,
             enum QsParameterType type, void *userData),
         void *userData, bool *done) {
 
-    struct QsFilter *f = qsDictionaryGetValue(fDict);
-    struct Parameter *p = 0;
+    DASSERT(f->parameters);
 
     if(pName) {
-        struct QsDictionary *pDict =
-            qsDictionaryFindDict(fDict, pName, (void **) &p);
-        ASSERT(pDict);
-        DASSERT(p);
+        struct Parameter *p = qsDictionaryFind(f->parameters, pName);
+        if(!p) {
+            WARN("Parameter \"%s:%s\" not found", f->name, pName);
+            return 0;
+        }
         if(!type || type == p->type) {
             if(callback(f->stream, f->name, pName, p->type, userData))
                 *done = true;
@@ -411,14 +384,14 @@ ForFilterDict(struct QsDictionary *fDict, const char *pName,
     };
 
     // Subtract 1 for the call with the filter.
-    return qsDictionaryForEach(fDict, 
+    return qsDictionaryForEach(f->parameters, 
             (int (*)(const char *, const void *, void *))
             ParameterForEach, &args) - 1;
 }
 
 
 static size_t
-ForStreamDict(struct QsDictionary *sd, struct QsStream *s,
+ForStreamParameters(struct QsStream *s,
         const char *filterName, const char *pName,
         enum QsParameterType type,
         int (*callback)(
@@ -427,28 +400,23 @@ ForStreamDict(struct QsDictionary *sd, struct QsStream *s,
             enum QsParameterType type, void *userData),
         void *userData, bool *done) {
 
-    char leaf[LEAFNAMELEN];
+    DASSERT(s);
 
     if(!filterName) {
         // We go through all filters in this stream.
         size_t ret = 0;
         for(struct QsFilter *f = s->filters; f; f = f->next) {
-            struct QsDictionary *fDict = qsDictionaryFindDict(sd,
-                    GetFilterLeafName(f->name, leaf), 0);
-            if(fDict) {
-                ret += ForFilterDict(fDict, pName, type,
-                        callback, userData, done);
-                if(*done) break;
-            }
+            ret += ForParameterDict(f, pName, type,
+                    callback, userData, done);
+            if(*done) break;
         }
         return ret;
     }
-    struct QsDictionary *fDict =
-            qsDictionaryFindDict(sd, GetFilterLeafName(filterName, leaf), 0);
-    if(!fDict) return 0; // There are no parameters for this filter.
+
+    struct QsFilter *f = qsFilterFromName(s, filterName);
 
     // Just this one filter.
-    return ForFilterDict(fDict, pName, type, callback, userData, done);
+    return ForParameterDict(f, pName, type, callback, userData, done);
 }
 
 
@@ -469,7 +437,7 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *s,
                 "if stream is not set");
         // We go through all streams in this app.
         for(s = app->streams; s; s = s->next) {
-            ret += ForStreamDict(GetStreamDictionary(s), s,
+            ret += ForStreamParameters(s,
                     filterName, pName, type,
                     callback, userData, &done);
             if(done) break;
@@ -477,6 +445,6 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *s,
         return ret;
     }
     // Just this one stream.
-    return ForStreamDict(GetStreamDictionary(s), s, filterName,
+    return ForStreamParameters(s, filterName,
             pName, type, callback, userData, &done);
 }

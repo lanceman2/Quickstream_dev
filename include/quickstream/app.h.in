@@ -257,16 +257,6 @@ void qsStreamAllowLoops(struct QsStream *stream, bool doAllow);
 extern
 void qsStreamDestroy(struct QsStream *stream);
 
-/** Remove a filter and it's connections from a stream
- *
- * This does not unload the filter module plugin.  Use qsFilterUnload() to
- * unload and cleanup filter module resources.
- *
- * \return 0 if the filter was found and removed, and non-zero otherwise.
- */
-extern
-int qsStreamRemoveFilter(struct QsStream *stream, struct QsFilter *filter);
-
 
 
 /** Connect two filters in the stream specifying port numbers.

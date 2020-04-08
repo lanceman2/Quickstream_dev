@@ -592,6 +592,19 @@ extern
 void qsRemoveDefaultFilterOptions(void);
 
 
+/** Get a pointer to a filter module object from the filter name
+ *
+ * \param stream the stream that this filter was loaded with.
+ *
+ * \param filterName is the filter name.
+ *
+ * \return a pointer to the filter, or 0 if the filter with that name was
+ * not found in this stream.
+ */
+extern
+struct QsFilter *qsFilterFromName(struct QsStream *stream,
+        const char *filterName);
+
 
 //////////////////////////// Control/Parameter Stuff /////////////////////
 

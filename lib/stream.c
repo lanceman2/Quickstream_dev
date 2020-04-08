@@ -33,19 +33,6 @@ void GetStreamString(const struct QsStream *s, char str[16]) {
 }
 
 
-struct QsDictionary *GetStreamDictionary(const struct QsStream *s) {
-
-    DASSERT(s);
-    DASSERT(s->app);
-    DASSERT(s->app->dict);
-    // This must be consistent with qsAppStreamCreate() below:
-    char id[16];
-    GetStreamString(s, id);
-    return qsDictionaryFindDict(s->app->dict, id, 0);
-}
-
-
-
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -67,11 +54,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
     s->flags = _QS_STREAM_DEFAULTFLAGS;
     s->id = app->streamCount++;
 
-    { // This must be consistent with GetStreamDictionary() above:
-        char id[16];
-        GetStreamString(s, id);
-        ASSERT(qsDictionaryInsert(app->dict, id, s, 0) == 0);
-    }
+    s->dict = qsDictionaryCreate();
 
     return s;
 }
@@ -240,7 +223,8 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
 
 
-int qsStreamRemoveFilter(struct QsStream *s, struct QsFilter *f) {
+int StreamRemoveFilterConnections(struct QsStream *s,
+        struct QsFilter *f) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(s);
@@ -459,12 +443,7 @@ void qsStreamDestroy(struct QsStream *s) {
 
     FreeRunResources(s);
 
-
-    if(s->app->dict) {
-        char id[16];
-        GetStreamString(s, id);
-        ASSERT(qsDictionaryDestroySubTree(s->app->dict, id) == 0);
-    }
+    qsDictionaryDestroy(s->dict);
 
     // Cleanup filters in this list
     struct QsFilter *f = s->filters;
@@ -495,6 +474,7 @@ void qsStreamDestroy(struct QsStream *s) {
     }
 
     DASSERT(S, "stream was not found in the app object");
+
 }
 
 

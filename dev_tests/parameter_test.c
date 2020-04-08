@@ -25,7 +25,6 @@ void catcher(int sig) {
     }
 }
 
-
 double t = 2.32435;
 
 static
@@ -36,7 +35,7 @@ int getCallback(
 
     WARN("getCallback(value=%lg,"
             " stream=%p, \"%s\","
-            "\"%s\", type=%" PRIu32 ", userData=%zu)\n",
+            "\"%s\", type=%" PRIu32 ", userData=%zu)",
             *(double *) value, stream, filterName, pName,
             type, (uintptr_t) userData);
 
@@ -46,6 +45,7 @@ int getCallback(
 }
 
 
+#if 1
 static
 int findParameter(struct QsStream *stream,
         const char *filterName, const char *pName,
@@ -55,7 +55,7 @@ int findParameter(struct QsStream *stream,
             stream->id, type, filterName, pName);
     return 0;
 }
-
+#endif
 
 
 int main(int argc, char **argv) {
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     struct QsStream *s = qsAppStreamCreate(app);
     ASSERT(s);
 
-    qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
+    struct QsFilter *f = qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
     qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
     qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
 
@@ -87,12 +87,11 @@ int main(int argc, char **argv) {
                 "par 0", QsDouble, &t) == 0);
 
 
-
-    qsDictionaryPrintDot(app->dict, stdout);
+    qsDictionaryPrintDot(f->parameters, stdout);
 
 
     ASSERT(qsAppDestroy(app) == 0);
-    
+
     fprintf(stderr, "\nTry:  %s | display\n\n", argv[0]);
 
 

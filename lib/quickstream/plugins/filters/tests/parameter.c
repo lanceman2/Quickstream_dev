@@ -31,7 +31,7 @@ static
 int setParameterCallback(double *value, const char *pName,
         double *pValue) {
 
-    NOTICE("Changing parameter \"%s:%s\" from %lg to %lg\n",
+    NOTICE("Changing parameter \"%s:%s\" from %lg to %lg",
             filterName, pName, *pValue, *value);
     *pValue = *value;
 

@@ -12,6 +12,7 @@
 #include "./qs.h"
 #include "./flowJobLists.h"
 #include "../include/quickstream/filter.h"
+#include "Dictionary.h"
 
 // GetJob() is boiler plate code in filterAPI.h
 #include "filterAPI.h"
@@ -360,6 +361,16 @@ const char* qsGetFilterName(void) {
 
     return f->name;
 }
+
+struct QsFilter *qsFilterFromName(struct QsStream *stream,
+        const char *filterName) {
+
+    DASSERT(stream);
+    DASSERT(stream->dict);
+
+    return (struct QsFilter *) qsDictionaryFind(stream->dict, filterName);
+}
+
 
 
 // maxThread that may run in the current filter.

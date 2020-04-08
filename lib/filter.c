@@ -26,7 +26,6 @@
 #include "filterList.h"
 #include "GetPath.h"
 #include "filterAPI.h"
-#include "parameter.h"
 
 
 
@@ -262,6 +261,14 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
     f->maxThreads = 1;
     f->dlhandle = handle;
 
+    // Create a parameters dictionary:
+    f->parameters = qsDictionaryCreate();
+    ASSERT(f->parameters);
+
+    DASSERT(f->stream->dict);
+
+    ASSERT(0 == qsDictionaryInsert(f->stream->dict, f->name, f, 0));
+
 
     if(construct) {
 
@@ -315,18 +322,9 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         }
         //else Success.
 
-        // Get stream dictionary:
-        struct QsDictionary *d = GetStreamDictionary(f->stream);
-        DASSERT(qsDictionaryGetValue(d) == f->stream);
-
-        // Create or get filter dictionary:
-        char leafName[LEAFNAMELEN];
-        ret = qsDictionaryInsert(d,
-            GetFilterLeafName(f->name, leafName), f, 0);
-        // It may have been made in construct() with qsParameterCreate(),
-        // but it may not have too.
-        DASSERT(ret == 0 || ret == 1);
     }
+
+
 
     INFO("Successfully loaded module Filter %s with name \"%s\"",
             path, f->name);
@@ -338,6 +336,7 @@ cleanup:
 
     // failure mode.
     //
+    qsDictionaryRemove(f->stream->dict, f->name);
 
     DestroyFilter(s, f);
     free(path);

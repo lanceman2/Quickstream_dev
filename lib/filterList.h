@@ -117,8 +117,6 @@ struct QsFilter *FindFilter_viaHandle(struct QsStream *s, void *handle) {
 
 
 //
-// This is basically the guts of the filter destructor
-//
 // Free the filter memory, dlcose() the handle, and remove it from the
 // list.
 //
@@ -129,9 +127,18 @@ void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
     DASSERT(f);
     DASSERT(s->filters);
     DASSERT(s == f->stream);
+    DASSERT(s->dict);
 
-    // This filter should be listed in this stream and only this stream.
-    qsStreamRemoveFilter(s, f);
+
+    if(f->parameters)
+        // This will cleanup all the parameter data using the qsDictionary
+        // SetFreeValueOnDestroy thingy.
+        qsDictionaryDestroy(f->parameters);
+
+    ASSERT(0 == qsDictionaryRemove(s->dict, f->name));
+
+    // Remove this filter from any stream connections if there are any.
+    StreamRemoveFilterConnections(s, f);
 
     // Remove it from the stream list.
     struct QsFilter *F = s->filters;
@@ -175,14 +182,16 @@ struct QsFilter *AllocAndAddToFilterList(struct QsStream *s,
         size_t sLen = strlen(name) + 7;
         f->name = malloc(sLen);
 
-        while(count < 1000000) {
+#define MAX  10000000
+
+        while(count < MAX) {
             snprintf(f->name, sLen, "%s-%" PRIu32, name, count);
             ++count;
             if(!FindFilterNamed(s->app, f->name))
                 break;
         }
-        // I can't imagine that there will be ~ 1000000 filters.
-        DASSERT(count < 1000000);
+        // I can't imagine that there will be ~ 10000000 filters.
+        DASSERT(count < MAX);
     } else
         f->name = strdup(name);
 

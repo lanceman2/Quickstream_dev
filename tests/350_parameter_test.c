@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     struct QsStream *s = qsAppStreamCreate(app);
     ASSERT(s);
 
-    qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
+    struct QsFilter *f = qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
     qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
     qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
 
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 
 
 
-    qsDictionaryPrintDot(app->dict, stdout);
+    qsDictionaryPrintDot(f->parameters, stdout);
 
 
     ASSERT(qsAppDestroy(app) == 0);
