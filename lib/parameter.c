@@ -99,15 +99,13 @@ static void FreeQsParameter(struct Parameter *p) {
 
 
 
-int qsParameterCreate(const char *pName, enum QsParameterType type,
+int qsParameterCreateForFilter(struct QsFilter *f,
+        const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
             void *userData),
         void *userData) {
 
-    struct QsFilter *f = GetFilter();
     DASSERT(f);
-    ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
-            "must be called in a filter module construct()");
     DASSERT(f->name);
     DASSERT(f->parameters);
 
@@ -133,6 +131,23 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
     return 0;
 }
+
+
+
+int qsParameterCreate(const char *pName, enum QsParameterType type,
+        int (*setCallback)(void *value, const char *pName,
+            void *userData),
+        void *userData) {
+
+    struct QsFilter *f = GetFilter();
+    DASSERT(f);
+    ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
+            "must be called in a filter module construct()");
+
+    return qsParameterCreateForFilter(f, pName, type,
+            setCallback, userData);
+}
+
 
 
 int qsParameterGet(struct QsStream *s, const char *filterName,
@@ -258,7 +273,7 @@ int qsParameterSet(struct QsStream *s,
     // Now we wait for this to have an effect.  The effect does not have
     // to be soon.
 
-    return 0;
+    return 0; // success
 }
 
 

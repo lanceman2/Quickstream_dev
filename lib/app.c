@@ -62,6 +62,9 @@ struct QsApp *qsAppCreate(void) {
 
     app->id = _qsAppCount++;
 
+    app->controllers = qsDictionaryCreate();
+    DASSERT(app->controllers);
+
     return app;
 }
 
@@ -70,7 +73,12 @@ int qsAppDestroy(struct QsApp *app) {
 
     DASSERT(app);
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    
+    DASSERT(app->controllers);
+
+    // The SetFreeValueOnDestroy callbacks will cleanup
+    // all the controllers.
+    qsDictionaryDestroy(app->controllers);
+
     // Destroy the streams.  We assume they are not flowing.
     while(app->streams) qsStreamDestroy(app->streams);
 

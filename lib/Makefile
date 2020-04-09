@@ -13,6 +13,7 @@ libquickstream.so_SOURCES :=\
  makeRingBuffer.c\
  streamLaunch.c\
  parameter.c\
+ controller.c\
  Dictionary.c
 
 

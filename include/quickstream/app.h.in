@@ -115,14 +115,81 @@ extern
 int qsAppDestroy(struct QsApp *app);
 
 
+
+/** Load and create a controller module
+ * 
+ * The environment variable QS_CONTROLLER_PATH may be set to aid in
+ * finding filter module plugins.
+ *
+ * The environment variable QS_MODULE_PATH may also be set to aid in
+ * finding filter module plugins with the directory /controllers/ appended
+ * to the paths given.
+
+ * \param app that was returned from qsAppCreate()
+ * \param fileName that refers to the plugin module file.
+ * \param loadName a made-up unquie name that was refer to this
+ * loaded plugin module.  loadName=0 maybe passed in to have the
+ * name generated based on fileName.
+ * \param argc is the number of string argument in argv.
+ * \param argv is 0 or a pointer to an array of strings.  Do not count
+ * on argv being 0 (null) terminated.
+ *
+ * \return a pointer to a Controller.
+ */
+extern
+struct QsController *qsAppControllerLoad(struct QsApp *app,
+        const char *fileName,
+        const char *loadName,
+        int argc, const char **argv);
+
+
+
+/** Unload and destroy a controller module
+ *
+ * \param controller returned from qsAppControllerLoad().
+ *
+ * \return 0 on success or non-zero on failure.
+ */
+extern
+int qsControllerUnload(struct QsController *controller);
+
+/** load the controller module and print help()
+ *
+ * The environment variable QS_CONTROLLER_PATH may be set to aid in
+ * finding filter module plugins.
+ *
+ * The environment variable QS_MODULE_PATH may also be set to aid in
+ * finding filter module plugins with the directory /controllers/ appended
+ * to the paths given.
+
+ * \param fileName that refers to the plugin module file.
+ *
+ * After the module is loaded and help() is called, the module is
+ * unloaded.
+ *
+ * \return 0 is help() is found and called.
+ */
+extern
+int qsControllerPrintHelp(const char *controllerName, FILE *f);
+
+
+
+
 struct QsStream;
 
 
-/** Load a filter module
+/** Load and create a filter module
  *
  * If the filter is successfully loaded and a construct symbol is found
  * the construct will be called as a function with some arguments.  See
  * \ref construct().
+ *
+ * The environment variable QS_FILTER_PATH may be set to aid in finding
+ * filter module plugins.
+ * 
+ * The environment variable QS_MODULE_PATH may also be set to aid in
+ * finding filter module plugins with the directory /filters/ appended to
+ * the paths given.
  *
  * \param stream that was returned from a call to qsAppStreamCreate().
  * \param fileName that refers to the plugin module file.

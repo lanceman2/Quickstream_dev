@@ -145,6 +145,8 @@
 
 extern uint32_t _qsAppCount; // always increasing.
 
+struct QsDictionary;
+
 
 // App (QsApp) is the top level quickstream object.  It's a container for
 // streams.  Perhaps there should only be one app in a program, but we do
@@ -164,6 +166,11 @@ struct QsApp {
     // streamCount is always increasing.  streamCount is used to get
     // stream IDs and controller IDs.
     uint32_t streamCount;
+
+
+    // List of controllers keyed by name.
+    //
+    struct QsDictionary *controllers;
 
 
     // We could have more than one stream.  We can't delete or edit one
@@ -208,8 +215,39 @@ pthread_t _qsMainThread;
 // We can use it like so:
 // DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 // This may be needed for non-debug building in the future.
-
 #endif
+
+
+
+struct QsController {
+
+    // Controller modules are loaded in a similar way filter modules are
+    // loaded as plugin modules, but they are listed in the App which
+    // gives them a view of all streams and all filters in them.
+    // Controllers mess with filter parameters.  A single controller
+    // module can access all filters and all parameters in the said
+    // filters.
+
+
+    void *dlhandle; // from dlopen()
+
+    struct QsApp *app;
+
+    // malloc() allocated unique name for this controller in this app.
+    char *name;
+
+    // Callback functions that may be loaded.  We do not get a copy of the
+    // construct() and destroy() functions because they are only called
+    // once, so we just dlsym() (if we have a dlhandle) them just before
+    // we call them.
+
+    int (*preStart)(struct QsStream *stream);
+    int (*postStart)(struct QsStream *stream);
+
+    int (*preStop)(struct QsStream *stream);
+    int (*postStop)(struct QsStream *stream);
+};
+
 
 
 // Stream (QsStream) is the thing the manages a group of filters and their
@@ -875,6 +913,4 @@ void
 _qsParametersDictionaryDestory(struct QsStream *s);
 
 
-struct QsController {
 
-};

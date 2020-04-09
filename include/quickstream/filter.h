@@ -712,7 +712,8 @@ enum QsParameterType {
  * of this interface without much work.   If setCallback() does block
  * quickstream will not brake, but it may become slowstream.
  *
- * \param type is the parameter type.
+ * \param type is the parameter type.  type tells you how to deal with
+ * the \p value.
  *
  * \param userData is passed to the setCallback() function every time it
  * is called.
@@ -724,8 +725,7 @@ enum QsParameterType {
  * The stream and filter name are not needed as parameters because the
  * filter module knows it's stream and filter name.
  *
- * \return 0 on success and 1 if the parameter already exists, and -1 if
- * there is an error like running out of memory and crap like that.
+ * \return 0 on success and 1 if the parameter already exists.
  */
 extern
 int qsParameterCreate(const char *pName, enum QsParameterType type,
@@ -733,23 +733,45 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
             void *userData), void *userData);
 
 
-
-
-/** qsParameterCreateForEach() is called from outside the filter module
- * construct() to create one or more parameters
+/** create a parameter that is associated with a particular filter
  *
+ * This is the same as qsParameterCreate() except that this is not
+ * required to be called from the filter construct() function.  This
+ * should be called before the stream is flowing.
  *
+ * \see qsParameterCreate()
  *
+ * \param filter is the filter that will own the parameter.
+ *
+ *\param pName is the name of the parameter.  This name only needs to be
+ * unique to the filter module.
+ *
+ * \param setCallback is a function that is called when qsParameterSet()
+ * is called in by another entity possibly in a different thread than one
+ * used to call the filter input().
+ *
+ * \param type is the parameter type.  That tells you how to deal with
+ * the \p value.
+ *
+ * \param userData is passed to the setCallback() function every time it
+ * is called.
+ *
+ * The \p value pointer will point to memory that is not owned by the
+ * filter that is calling this function.  The memory should likely be
+ * copied.
+ *
+ * The stream and filter name are not needed as parameters because the
+ * filter module knows it's stream and filter name.
+ *
+ * \return 0 on success and 1 if the parameter already exists.
  */
 extern
-size_t qsParameterCreateForEach(struct QsApp *app, struct QsStream *stream,
-        const char *filterName, const char *pName,
-        enum QsParameterType type,
-        int (*setCallback)(
-            struct QsStream *stream,
-            const char *filterName, const char *pName,
-            enum QsParameterType type, void *userData),
-        void *userData);
+int qsParameterCreateForFilter(struct QsFilter *filter,
+        const char *pName, enum QsParameterType type,
+        int (*setCallback)(void *value, const char *pName,
+            void *userData), void *userData);
+
+
 
 
 /** Register a callback to get a parameter value from outside the filter

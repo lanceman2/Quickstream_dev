@@ -94,7 +94,7 @@ _quickstream()
     local dirs
     local d
 
-    # Now add modules from the environment variable CRTS_MODULE_PATH
+    # Now add modules from the environment variable QS_MODULE_PATH
     if [ -n "$QS_MODULE_PATH" ] ; then
         IFS=':' read -r -a dirs <<< "$QS_MODULE_PATH"
         for d in $dirs ; do
