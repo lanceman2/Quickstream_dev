@@ -20,7 +20,7 @@ static size_t num_checkstop = 17;
 static struct QsDictionary *d;
 
 
-int callback(const char *key, const void *value, void *userData) {
+int callback(const char *key, void *value, void *userData) {
 
     ++num2;
 
@@ -48,7 +48,7 @@ int callback(const char *key, const void *value, void *userData) {
 
 
 
-int callback2(const char *key, const void *value, void *userData) {
+int callback2(const char *key, void *value, void *userData) {
 
     ++num2;
 

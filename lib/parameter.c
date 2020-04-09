@@ -344,7 +344,7 @@ struct ParameterCBArgs {
 
 
 static
-int ParameterForEach(const char *key, const void *value,
+int ParameterForEach(const char *key, void *value,
         struct ParameterCBArgs *cbArgs) {
 
     struct QsFilter *f = cbArgs->filter;
@@ -400,7 +400,7 @@ ForParameterDict(struct QsFilter *f, const char *pName,
 
     // Subtract 1 for the call with the filter.
     return qsDictionaryForEach(f->parameters, 
-            (int (*)(const char *, const void *, void *))
+            (int (*)(const char *, void *, void *))
             ParameterForEach, &args) - 1;
 }
 

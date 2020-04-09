@@ -110,7 +110,7 @@ void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 extern 
 size_t
 qsDictionaryForEach(const struct QsDictionary *dict,
-        int (*callback) (const char *key, const void *value,
+        int (*callback) (const char *key, void *value,
             void *userData), void *userData);
 
 

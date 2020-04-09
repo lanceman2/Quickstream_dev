@@ -5,7 +5,10 @@
 #include <stdio.h>
 #include <stdatomic.h>
 #include <pthread.h>
-
+#include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 // The public installed user interfaces:
 #include "../include/quickstream/app.h"
@@ -15,6 +18,9 @@
 #include "Dictionary.h"
 #include "qs.h"
 #include "GetPath.h"
+#include "filterList.h"
+#include "LoadDSOFromTmpFile.h"
+
 
 // This cleans up all the Controller resources except it does not remove
 // the app dictionary entry, which is done in qsControllerUnload() and the
@@ -25,9 +31,46 @@ DictionaryDestroyController(struct QsController *c) {
 
     DASSERT(c);
     DASSERT(c->app);
+    DASSERT(c->dlhandle);
 
-
+    dlerror(); // clear error
+    if(dlclose(c->dlhandle))
+        WARN("dlclose(%p): %s", c->dlhandle, dlerror());
 }
+
+
+static
+int FindControllerCallback(const char *key, void *value,
+            void *dlhandle) {
+
+    struct QsController *c = value;
+
+    if(c->dlhandle == dlhandle) {
+        dlclose(dlhandle);
+        c->dlhandle = 0;
+        return 1; // found it.
+    }
+
+    return 0;
+}
+
+
+static inline bool
+FindControllerHandle(struct QsApp *app, struct QsController *c) {
+    DASSERT(app);
+    DASSERT(c);
+    DASSERT(c->dlhandle);
+
+    qsDictionaryForEach(app->controllers, FindControllerCallback,
+            c->dlhandle);
+
+    if(c->dlhandle == 0)
+        // The same controller module was loaded already.
+        return true; // it was found.
+
+    return false;
+}
+
 
 
 struct QsController *qsAppControllerLoad(struct QsApp *app,
@@ -46,7 +89,6 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     char *name = 0;
     char *name_mem = 0;
-    int i;
 
     if(loadName && *loadName) {
         if(qsDictionaryFind(app->controllers, loadName)) {
@@ -106,6 +148,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
 #define TRYS      10002
 
+    int i;
     for(i=2; i<10002; ++i) {
         if(qsDictionaryFind(app->controllers, name_mem) == 0)
             break;
@@ -120,11 +163,47 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     c->name = name_mem;
 
+    char *path = GetPluginPath("controllers/", fileName);
+
+
+    void *dlhandle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+
+    if(!dlhandle) {
+        ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
+        free(path);
+        goto cleanup;
+    }
+    c->dlhandle = dlhandle;
+
+    if(FindControllerHandle(app, c)) {
+        //
+        // This DSO (dynamic shared object) file is already loaded.  So we
+        // must copy the DSO file to a temp file and load that.  Otherwise
+        // we will have just the one plugin loaded, but referred to by two
+        // (or more) controllers, which is not what we want.  The temp file
+        // will be automatically removed when the process exits.
+        //
+        c->dlhandle = dlhandle = LoadDSOFromTmpFile(path);
+        if(!dlhandle) {
+            free(path);
+            goto cleanup;
+        }
+    }
+
+
+    // LANCEMAN MORE HERE
+    //
+    ASSERT(0, "Write this code");
+
+
+
     ASSERT(qsDictionaryInsert(app->controllers, c->name, c, &d) == 0);
     DASSERT(d);
 
     qsDictionarySetFreeValueOnDestroy(d,
             (void (*)(void *)) DictionaryDestroyController);
+
+    free(path);
 
     return c; // success
 

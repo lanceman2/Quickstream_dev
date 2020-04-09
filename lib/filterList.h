@@ -7,7 +7,6 @@
 #endif
 
 
-
 static inline
 struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
 

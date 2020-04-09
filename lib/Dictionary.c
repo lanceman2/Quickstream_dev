@@ -894,7 +894,7 @@ void *qsDictionaryFind(const struct QsDictionary *dict, const char *key) {
 
 static
 bool ForEach(const struct QsDictionary *node,
-        int (*callback) (const char *key, const void *value,
+        int (*callback) (const char *key, void *value,
             void *userData),
         size_t *count, void *userData) {
 
@@ -904,7 +904,7 @@ bool ForEach(const struct QsDictionary *node,
     if(node->value) {
         DASSERT(node->key);
         ++(*count);
-        if(callback(node->key, node->value, userData))
+        if(callback(node->key, (void *) node->value, userData))
             // The user is telling us we are done, so now we stop
             // recurring.
             return true; // We are done.
@@ -929,7 +929,7 @@ bool ForEach(const struct QsDictionary *node,
 
 size_t
 qsDictionaryForEach(const struct QsDictionary *node,
-        int (*callback) (const char *key, const void *value,
+        int (*callback) (const char *key, void *value,
             void *userData), void *userData) {
 
     DASSERT(node);
