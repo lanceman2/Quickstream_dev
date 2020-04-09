@@ -33,7 +33,9 @@
 //
 // CHECK() is not a debugging thing; it's inserting the (x) code every
 // time.  And the same goes for ASSERT(); ASSERT() is not a debugging
-// thing either.
+// thing either, it is the coder being to lazy to recover from a large
+// number of failure code paths.  If malloc(10) fails we call ASSERT.
+// If pthread_mutex_lock() fails we call ASSERT. ...
 //
 #define CHECK(x) \
     do { \
@@ -73,10 +75,9 @@
 
 
 
-// We cannot use the filter's stream when in the construct() and destroy()
-// calls, so reuse the filter mark as a flag when we are in the
-// construct() and destroy() calls.  So long as the values unique that
-// should be okay.
+// We reuse the filter mark as a flag when we are in the construct() and
+// destroy() calls.  So long as the values unique that should be okay.
+// Same idea for start() and stop().
 //
 // For in construct() filter->mark == _QS_IN_CONSTRUCT
 // For in destroy()   filter->mark == _QS_IN_DESTROY
@@ -94,7 +95,10 @@
 //
 // These values are just fixed and random
 //
-// We set filter mark to this when in the corresponding filter functions
+//
+// We set filter mark to this when calling the corresponding filter
+// functions:
+//
 // construct()
 #define _QS_IN_CONSTRUCT        ((uint32_t) 0xe583e10c)
 // and destroy()
@@ -107,6 +111,29 @@
 
 // We set the job magic number when in filter input()
 #define _QS_IS_JOB              ((uint32_t) 0x38def4de)
+
+
+
+// We set controller mark to this when calling the corresponding
+// controller functions:
+// 
+// construct()
+#define _QS_IN_CCONSTRUCT      ((uint32_t) 0x540e2c1f)
+// and destroy()
+#define _QS_IN_CDESTROY        ((uint32_t) 0x314fad5d)
+
+// Sets controller mark when in controller preStart()
+#define _QS_IN_PRESTART        ((uint32_t) 0xa74ac1c3)
+// Sets controller mark when in controller preStop(
+#define _QS_IN_PRESTOP         ((uint32_t) 0x91ba4d3c)
+
+// Sets controller mark when in controller postStart()
+#define _QS_IN_POSTSTART       ((uint32_t) 0xbec11df1)
+// Sets controller mark when in controller postStop()
+#define _QS_IN_POSTSTOP        ((uint32_t) 0x55cef7f7)
+
+
+
 
 
 
@@ -199,6 +226,9 @@ struct QsApp {
 extern
 pthread_key_t _qsKey;
 
+extern
+pthread_key_t ControllerKey;
+
 
 // https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
 // example: _sync_fetch_and_add()
@@ -228,6 +258,7 @@ struct QsController {
     // module can access all filters and all parameters in the said
     // filters.
 
+    uint32_t mark;
 
     void *dlhandle; // from dlopen()
 

@@ -148,11 +148,14 @@ static inline char *GetPluginPath(const char *category, const char *name)
         if((buf = GetPluginPathFromEnv("QS_FILTER_PATH", "", name)))
             return buf;
     }
-#ifdef DEBUG
-    else
-        ASSERT(0, "category != \"filters/\" Need "
+    else if(strcmp(category, "controllers/") == 0) {
+        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category, name)))
+            return buf;
+        if((buf = GetPluginPathFromEnv("QS_CONTROLLER_PATH", "", name)))
+            return buf;
+    } else
+        ASSERT(0, "category != \"filters/\" or \"controllers/\" Need "
                 "to add category \"%s\"", category);
-#endif
 
 
     // postLen = strlen("/lib/quickstream/plugins/" + category + name)

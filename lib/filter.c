@@ -48,7 +48,7 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
     char *err = dlerror();
     if(err) {
         // We must have a input() function.
-        ERROR("Module at path=\"%s\" no input() provided:"
+        ERROR("Module at path=\"%s\" no help() provided:"
                 " dlsym(\"help\") error: %s", path, err);
         free(path);
         dlclose(handle);
@@ -255,8 +255,8 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         // Filter f is not in construct() phase anymore.
         f->mark = 0;
 
-        // This will set the thread specific data to 0 for the
-        // case when it needs to.
+        // This will set the thread specific data to 0 for the case when
+        // it was 0 before this.
         CHECK(pthread_setspecific(_qsKey, oldFilter));
 
 
@@ -269,7 +269,6 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         //else Success.
 
     }
-
 
 
     INFO("Successfully loaded module Filter %s with name \"%s\"",

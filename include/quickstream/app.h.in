@@ -225,6 +225,20 @@ extern
 int qsFilterPrintHelp(const char *filename, FILE *file);
 
 
+/** Print the help for a controller module
+ *
+ * \param filename is the filename of the controller module file run
+ * help() for.
+ *
+ * \param file is a standard C library stream file to have the
+ * filter's help() print to.
+ *
+ * \return 0 on success, 1 on error.
+ */
+extern
+int qsControllerPrintHelp(const char *filename, FILE *file);
+
+
 /** print viscosity levels for qsAppPrintDotToFile() and
  * qsAppDisplayFlowImage().
  */

@@ -12,6 +12,7 @@ SUBDIRS :=\
  lib/quickstream/misc\
  bin\
  lib/quickstream/plugins/filters\
+ lib/quickstream/plugins/controllers\
  share/bash-completion/completions\
  share/doc/quickstream
 

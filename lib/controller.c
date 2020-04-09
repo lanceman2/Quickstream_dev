@@ -22,20 +22,77 @@
 #include "LoadDSOFromTmpFile.h"
 
 
+// Used to find which Controller module calling functions in the
+// controller API.
+pthread_key_t controllerKey;
+static pthread_once_t keyOnce = PTHREAD_ONCE_INIT;
+
+static void MakeKey(void) {
+    CHECK(pthread_key_create(&controllerKey, 0));
+}
+
+
+
+
 // This cleans up all the Controller resources except it does not remove
 // the app dictionary entry, which is done in qsControllerUnload() and the
-// qsAppDestroy(); by remove the dictionary entry and letting
+// qsAppDestroy(); by removing the dictionary entry and letting
 // qsDictionarySetFreeValueOnDestroy() do its' thing.
 static void
 DictionaryDestroyController(struct QsController *c) {
 
     DASSERT(c);
     DASSERT(c->app);
-    DASSERT(c->dlhandle);
+    DASSERT(c->name);
 
-    dlerror(); // clear error
-    if(dlclose(c->dlhandle))
-        WARN("dlclose(%p): %s", c->dlhandle, dlerror());
+    if(c->dlhandle) {
+
+        // if c->dlhandle was not set than the construct() returned
+        // an error and we do not need to call destroy().
+
+        int (*destroy)(void) = dlsym(c->dlhandle, "destroy");
+        if(destroy) {
+
+            DSPEW("Calling controller \"%s\" destroy()", c->name); 
+            // This needs to be re-entrant code.
+            void *oldController = pthread_getspecific(controllerKey);
+            CHECK(pthread_setspecific(controllerKey, c));
+
+            // A controller cannot load itself.
+            DASSERT(oldController != c);
+            // We use this, mark, flag as a marker that we are in the
+            // construct() phase.
+            c->mark = _QS_IN_CDESTROY;
+
+            int ret = destroy();
+
+            // Controller, c, is not in destroy() phase anymore.
+            c->mark = 0;
+
+            // This will set the thread specific data to 0 for the case
+            // when it was 0 before this block of code.
+            CHECK(pthread_setspecific(controllerKey, oldController));
+
+            if(ret)
+                WARN("Calling controller \"%s\" destroy() returned %d",
+                        c->name, ret);
+        }
+
+        dlerror(); // clear error
+        if(dlclose(c->dlhandle))
+            WARN("dlclose(%p): %s", c->dlhandle, dlerror());
+
+        DSPEW("Unloaded and cleaned up controller named \"%s\"",
+                c->name);
+    }
+
+    free(c->name);
+
+#ifdef DEBUG
+    memset(c, 0, sizeof(*c));
+#endif
+
+    free(c);
 }
 
 
@@ -72,6 +129,40 @@ FindControllerHandle(struct QsApp *app, struct QsController *c) {
 }
 
 
+int qsControllerPrintHelp(const char *fileName, FILE *f) {
+
+    if(f == 0) f = stderr;
+
+    char *path = GetPluginPath("controllers/", fileName);
+
+    void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+
+    if(!handle) {
+        ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
+        free(path);
+        return 1; // error
+    }
+
+    dlerror(); // clear error
+    void (*help)(FILE *) = dlsym(handle, "help");
+    char *err = dlerror();
+    if(err) {
+        // We must have a input() function.
+        ERROR("Module at path=\"%s\" no help() provided:"
+                " dlsym(\"help\") error: %s", path, err);
+        free(path);
+        dlclose(handle);
+        return 1; // error
+    }
+
+    fprintf(f, "\ncontroller path=%s\n\n", path);
+    help(f);
+
+    dlclose(handle);
+    free(path);
+    return 0; // success
+}
+
 
 struct QsController *qsAppControllerLoad(struct QsApp *app,
         const char *fileName,
@@ -92,7 +183,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     if(loadName && *loadName) {
         if(qsDictionaryFind(app->controllers, loadName)) {
-            ERROR("Controller name \"%s\" is in use already", loadName);
+            ERROR("Controller named \"%s\" is in use already", loadName);
             goto cleanup;
         }
         name = (char *) loadName;
@@ -121,7 +212,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
             // name = "/filename"
 
             // If the next directory in the path is not named
-            // "/filter/" we add it to the name.
+            // "/controllers/" we add it to the name.
             const size_t flen = strlen(DIR_STR "controllers");
             while(!(name - st > flen &&
                     strncmp(name-flen, DIR_STR "controllers", flen)
@@ -190,18 +281,87 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         }
     }
 
-
-    // LANCEMAN MORE HERE
-    //
-    ASSERT(0, "Write this code");
-
-
-
     ASSERT(qsDictionaryInsert(app->controllers, c->name, c, &d) == 0);
     DASSERT(d);
 
     qsDictionarySetFreeValueOnDestroy(d,
             (void (*)(void *)) DictionaryDestroyController);
+
+
+    // If these functions are not present, that's okay, they are
+    // optional.
+    int (* construct)(int argc, const char **argv) =
+        dlsym(dlhandle, "construct");
+    c->preStart = dlsym(dlhandle, "preStart");
+    c->postStart = dlsym(dlhandle, "postStart");
+    c->preStop = dlsym(dlhandle, "preStop");
+    c->postStop = dlsym(dlhandle, "postStop");
+
+    dlerror(); // clear error
+    dlsym(dlhandle, "help");
+    char *err = dlerror();
+    if(err) {
+#ifdef QS_FILTER_REQUIRE_HELP
+        // "help()" is not optional.
+        // We must have a help() function.
+        ERROR("no help() provided: dlsym(\"help\") error: %s", err);
+        goto cleanup;
+#else
+        // help() is optional.
+        WARN("Controller \"%s\" module from file=\"%s\" does"
+                " not provide a help() function.",
+                c->name, path);
+#endif
+    }
+
+    // We need thread specific data to tell what controller this is when
+    // the controller API is called.
+    CHECK(pthread_once(&keyOnce, MakeKey));
+
+    DSPEW("construct=%p", construct); 
+
+
+    if(construct) {
+
+        DSPEW(); 
+        // This needs to be re-entrant code.
+        void *oldController = pthread_getspecific(controllerKey);
+        CHECK(pthread_setspecific(controllerKey, c));
+
+        // A controller cannot load itself.
+        DASSERT(oldController != c);
+        // We use this, mark, flag as a marker that we are in the
+        // construct() phase.
+        c->mark = _QS_IN_CCONSTRUCT;
+
+        int ret = construct(argc, argv);
+
+        // Controller, c, is not in construct() phase anymore.
+        c->mark = 0;
+
+        // This will set the thread specific data to 0 for the case when
+        // it was 0 before this block of code.
+        CHECK(pthread_setspecific(controllerKey, oldController));
+
+        if(ret) {
+            // construct() returned an error.
+            if(ret < 0)
+                ERROR("In loading Controller \"%s\" from path %s"
+                        ": contruct() returned %d",
+                        c->name, path, ret);
+            free(path);
+            // We were all done except this dammed contruct(), so we can
+            // call the regular user API cleanup function now, but to stop
+            // it from calling the destruct() we close the dlhandle:
+            dlclose(c->dlhandle);
+            c->dlhandle = 0;
+            qsControllerUnload(c);
+            return 0; // failure returns Null pointer.
+        }
+    }
+
+    INFO("Successfully loaded module Controller %s with name \"%s\"",
+            path, c->name);
 
     free(path);
 
@@ -230,14 +390,6 @@ int qsControllerUnload(struct QsController *c) {
         ERROR("Controller \"%s\" not found in app", c->name);
         return -1; // error
     }
-
-    return 0; // success
-}
-
-/*
- * \return 0 is help() is found and called.
- */
-int qsControllerPrintHelp(const char *controllerName, FILE *f) {
 
     return 0; // success
 }

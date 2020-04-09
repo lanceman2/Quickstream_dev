@@ -163,8 +163,13 @@ int main(int argc, const char * const *argv) {
     maxThreads[0] = DEFAULT_MAXTHREADS;
 
     int lastFilterConnected = 0;
+
     int numFilters = 0;
     struct QsFilter **filters = 0;
+
+    int numControllers = 0;
+    struct QsController **controllers = 0;
+
     bool ready = false;
     // TODO: option to change maxThreads.
     char *endptr = 0;
@@ -447,9 +452,9 @@ int main(int argc, const char * const *argv) {
 
                 if(!app) {
                     app = qsAppCreate();
-                    ASSERT(app, "");
+                    ASSERT(app);
                     stream = qsAppStreamCreate(app);
-                    ASSERT(stream, "");
+                    ASSERT(stream);
                     ++numStreams;
                     streams = realloc(streams, numStreams * sizeof(*streams));
                     ASSERT(streams, "realloc(, %zu) failed",
@@ -506,6 +511,74 @@ int main(int argc, const char * const *argv) {
 
                 break;
 
+            case 'C': // Load controller module
+                //
+                // Very similar to 'f' just above, but controllers
+                // are managed by the App and not the streams.
+
+                if(!arg) {
+                    fprintf(stderr, "Bad --controller option\n\n");
+                    return usage(STDERR_FILENO);
+                }
+
+                controllers = realloc(controllers, sizeof(*controllers)*
+                        (++numControllers));
+                ASSERT(controllers, "realloc(,%zu) failed",
+                        sizeof(*controllers)*numControllers);
+
+                if(!app) {
+                    app = qsAppCreate();
+                    ASSERT(app);
+                }
+                name = 0;
+
+                // example:
+                //  --controller bar { --name foo --freq 10500000 }
+                //
+                fargc = 0; // 4
+                fargv = 0; // points to --name
+                ++i;
+
+                if(i < argc && argv[i][0] == '{') {
+                    if(argv[i][1] == '\0')
+                        // --controller bar [ --name ...
+                        fargv = &argv[++i];
+                    else
+                        // --controller bar [--name ...
+                        fargv = &argv[i];
+
+                    while(i < argc && strcmp(argv[i], "}")) {
+                        if(strcmp(argv[i],"--name") == 0) {
+                            ++i;
+                            ++fargc;
+                            if(i < argc && strcmp(argv[i], "}")) {
+                                name = argv[i];
+                                ++i;
+                                ++fargc;
+                            }
+                        } else {
+                            ++i;
+                            ++fargc;
+                        }
+                    }
+                    if(strcmp(argv[i], "}") == 0) ++i;
+                }
+
+                if(level >= 5 && fargc) {
+                    fprintf(stderr, "Got controller args[%d]= {", fargc);
+                    for(int j=0; j<fargc; ++j)
+                        fprintf(stderr, "%s ", fargv[j]);
+                    fprintf(stderr, "}\n");
+                }
+
+                controllers[numControllers-1] = qsAppControllerLoad(app,
+                        arg, name, fargc, (const char **) fargv);
+                if(!controllers[numControllers-1]) return 1; // error
+
+                // next
+                arg = 0;
+
+                break;
 
             case 'F':
                 if(!arg) {
@@ -513,6 +586,15 @@ int main(int argc, const char * const *argv) {
                     return usage(STDERR_FILENO);
                 }
                 return qsFilterPrintHelp(arg, stdout);
+
+
+            case 'H':
+                if(!arg) {
+                    fprintf(stderr, "Bad --controller-help option\n\n");
+                    return usage(STDERR_FILENO);
+                }
+                return qsControllerPrintHelp(arg, stdout);
+
 
             case 'R':
 
