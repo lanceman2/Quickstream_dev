@@ -44,6 +44,10 @@ DictionaryDestroyController(struct QsController *c) {
     DASSERT(c);
     DASSERT(c->app);
     DASSERT(c->name);
+    DASSERT(c->parameters);
+ 
+    qsDictionaryDestroy(c->parameters);
+
 
     if(c->dlhandle) {
 
@@ -281,13 +285,6 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         }
     }
 
-    ASSERT(qsDictionaryInsert(app->controllers, c->name, c, &d) == 0);
-    DASSERT(d);
-
-    qsDictionarySetFreeValueOnDestroy(d,
-            (void (*)(void *)) DictionaryDestroyController);
-
-
     // If these functions are not present, that's okay, they are
     // optional.
     int (* construct)(int argc, const char **argv) =
@@ -314,11 +311,18 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 #endif
     }
 
+    ASSERT(qsDictionaryInsert(app->controllers, c->name, c, &d) == 0);
+    DASSERT(d);
+
+    qsDictionarySetFreeValueOnDestroy(d,
+            (void (*)(void *)) DictionaryDestroyController);
+
+    c->parameters = qsDictionaryCreate();
+
+
     // We need thread specific data to tell what controller this is when
     // the controller API is called.
     CHECK(pthread_once(&keyOnce, MakeKey));
-
-    DSPEW("construct=%p", construct); 
 
 
     if(construct) {

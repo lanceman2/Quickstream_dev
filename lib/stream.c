@@ -50,6 +50,7 @@ struct QsStream *qsAppStreamCreate(struct QsApp *app) {
     } else
         app->streams = s;
 
+    s->type = _QS_STREAM_TYPE;
     s->app = app;
     s->flags = _QS_STREAM_DEFAULTFLAGS;
     s->id = app->streamCount++;

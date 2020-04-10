@@ -98,6 +98,34 @@ static void FreeQsParameter(struct Parameter *p) {
 }
 
 
+static
+struct QsDictionary *GetParameterDictionary(void *as, const char *name) {
+
+    DASSERT(as);
+
+    if(((struct QsStream *)as)->type == _QS_STREAM_TYPE) {
+
+        struct QsFilter *f =
+            qsFilterFromName((struct QsStream *)as, name);
+        if(!f) {
+            WARN("Filter named \"%s\" not found", name);
+            return 0; // error
+        }
+        DASSERT(f->parameters);
+        return f->parameters;
+    } else {
+        DASSERT(((struct QsApp *)as)->type == _QS_APP_TYPE);
+        struct QsController *c =
+            qsDictionaryFind(((struct QsApp *)as)->controllers, name);
+        if(!c) {
+            WARN("Controller named \"%s\" not found", name);
+            return 0; // error
+        }
+        DASSERT(c->parameters);
+        return c->parameters;
+    }
+}
+
 
 int qsParameterCreateForFilter(struct QsFilter *f,
         const char *pName, enum QsParameterType type,
@@ -150,7 +178,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
 
 
-int qsParameterGet(struct QsStream *s, const char *filterName,
+int qsParameterGet(void *as, const char *filterName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
             const void *value,
@@ -159,23 +187,19 @@ int qsParameterGet(struct QsStream *s, const char *filterName,
             enum QsParameterType type, void *userData),
         void *userData) {
 
-
-    DASSERT(s);
+    DASSERT(as);
     DASSERT(filterName);
     DASSERT(filterName[0]);
     DASSERT(pName);
     DASSERT(pName[0]);
 
-    struct QsFilter *f = qsFilterFromName(s, filterName);
-    if(!f) {
-        WARN("Filter named \"%s\" not found", filterName);
-        return 1; // error
-    }
-    DASSERT(f->parameters);
+    struct QsDictionary *pDict = GetParameterDictionary(as, filterName);
+    if(!pDict)
+        return 1;
 
     // Get parameter dict:
     struct Parameter *p = 0;
-    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
+    struct QsDictionary *d = qsDictionaryFindDict(pDict,
             pName, (void*) &p);
 
     if(!d) {

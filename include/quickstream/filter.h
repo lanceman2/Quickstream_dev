@@ -785,11 +785,15 @@ int qsParameterCreateForFilter(struct QsFilter *filter,
  * called in another thread, the owning filter module thread, so
  * getCallback() must be thread-safe.
  *
- * \param stream is the stream that the filter is in.
+ * \param streamOrApp is a pointer to the stream or app that the
+ * corresponding filter or controller, respectively, belongs
+ * to.
  *
- * \param filterName is the unique name that the filter has.  The filter
- * name is assigned to the filter when the filter module is loaded.  If
- * filterName is 0 than all filters will be considered.
+ * \param ownerName is the unique name that the filter or controller that
+ * owns this parameter.  The filter name is assigned to the filter when
+ * the filter module is loaded.  The controller name is assigned to the
+ * filter when the filter module is loaded.   If ownerName is 0 than all
+ * filters will be considered.
  *
  * \param pName is the name of the parameter in that filter if pName is 0
  * all parameters will be considered.
@@ -812,7 +816,7 @@ int qsParameterCreateForFilter(struct QsFilter *filter,
  * \return 0 on success and non-zero otherwise.
  */
 extern
-int qsParameterGet(struct QsStream *stream, const char *filterName,
+int qsParameterGet(void *streamOrApp, const char *ownerName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
             const void *value, struct QsStream *stream,

@@ -60,6 +60,7 @@ struct QsApp *qsAppCreate(void) {
     // flow start.
     CHECK(pthread_once(&key_once, make_key));
 
+    app->type = _QS_APP_TYPE;
     app->id = _qsAppCount++;
 
     app->controllers = qsDictionaryCreate();

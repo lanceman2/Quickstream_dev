@@ -133,7 +133,8 @@
 #define _QS_IN_POSTSTOP        ((uint32_t) 0x55cef7f7)
 
 
-
+#define _QS_STREAM_TYPE        ((uint32_t) 0x17715c6c)
+#define _QS_APP_TYPE           ((uint32_t) 0xc70ec703)
 
 
 
@@ -186,6 +187,8 @@ struct QsDictionary;
 //
 struct QsApp {
 
+    // type of struct
+    uint32_t type;
 
     // We get id from _qsAppCount just before this app is created.
     uint32_t id; // The app ID.  Unique to a given process.
@@ -267,6 +270,9 @@ struct QsController {
     // malloc() allocated unique name for this controller in this app.
     char *name;
 
+    // List of parameters the are owned by this controller.
+    struct QsDictionary *parameters;
+
     // Callback functions that may be loaded.  We do not get a copy of the
     // construct() and destroy() functions because they are only called
     // once, so we just dlsym() (if we have a dlhandle) them just before
@@ -285,6 +291,9 @@ struct QsController {
 // flow state.
 //
 struct QsStream {
+
+    // The type of struct this is:  
+    uint32_t type;
 
     // We can have many streams in an app (QsApp).
     //
@@ -440,6 +449,9 @@ struct QsFilter {
     //
     // TODO: make mark a union with descriptive names for the different
     // uses.
+    //
+    // mark must be at the top of this struct.
+    //
     uint32_t mark;
 
 
@@ -477,6 +489,8 @@ struct QsFilter {
 
 
 #ifdef DEBUG
+        // magic must be at the top of this struct
+        //
         uint32_t magic; // is set to _QS_IS_JOB when it's valid.
 #endif
 
