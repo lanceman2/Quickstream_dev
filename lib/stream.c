@@ -783,9 +783,10 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
                                 // found:
                                 f->readers[inputPortNum] = readers + k;
                             else {
-                                DASSERT(f->readers[inputPortNum] == readers + k);
-                                // We have already looked at this filter and
-                                // output.  We are using the stream
+                                DASSERT(f->readers[inputPortNum] ==
+                                        readers + k);
+                                // We have already looked at this filter
+                                // and output.  We are using the stream
                                 // connection list which can have filters
                                 // listed more than once.
                                 j = numOutputs; // pop out of j loop
@@ -818,6 +819,38 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 }
 
 
+static
+int preStop_callback(const char *key, struct QsController *c,
+        struct QsStream *s) {
+
+    if(c->preStop) {
+        int ret = c->preStop(s);
+        if(ret) {
+            ERROR("Controller \"%s\" preStop() returned (%d) error",
+                    c->name, ret);
+            ASSERT(0, "Write more code here to handle this error case");
+        }
+    }
+    return 0;
+}
+
+
+static
+int postStop_callback(const char *key, struct QsController *c,
+        struct QsStream *s) {
+
+    if(c->postStop) {
+        int ret = c->postStop(s);
+        if(ret) {
+            ERROR("Controller \"%s\" postStop() returned (%d) error",
+                    c->name, ret);
+            ASSERT(0, "Write more code here to handle this error case");
+        }
+    }
+    return 0;
+}
+
+
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -841,6 +874,15 @@ int qsStreamStop(struct QsStream *s) {
 
 
     /**********************************************************************
+     *      Stage: call all the app's controller preStop()s if present
+     *********************************************************************/
+
+    qsDictionaryForEach(s->app->controllers,
+            (int (*) (const char *, void *, void *)) preStop_callback,
+            s);
+
+
+    /**********************************************************************
      *     Stage: call all stream's filter stop() if present
      *********************************************************************/
 
@@ -857,6 +899,15 @@ int qsStreamStop(struct QsStream *s) {
 
 
     /**********************************************************************
+     *      Stage: call all the app's controller postStop()s if present
+     *********************************************************************/
+
+    qsDictionaryForEach(s->app->controllers,
+            (int (*) (const char *, void *, void *)) postStop_callback,
+            s);
+
+
+    /**********************************************************************
      *     Stage: cleanup
      *********************************************************************/
 
@@ -865,6 +916,38 @@ int qsStreamStop(struct QsStream *s) {
     s->flow = 0;
 
     return 0; // success
+}
+
+
+static
+int preStart_callback(const char *key, struct QsController *c,
+        struct QsStream *s) {
+
+    if(c->preStart) {
+        int ret = c->preStart(s);
+        if(ret) {
+            ERROR("Controller \"%s\" preStart() returned (%d) error",
+                    c->name, ret);
+            ASSERT(0, "Write more code here to handle this error case");
+        }
+    }
+    return 0;
+}
+
+
+static
+int postStart_callback(const char *key, struct QsController *c,
+        struct QsStream *s) {
+
+    if(c->postStart) {
+        int ret = c->postStart(s);
+        if(ret) {
+            ERROR("Controller \"%s\" postStart() returned (%d) error",
+                    c->name, ret);
+            ASSERT(0, "Write more code here to handle this error case");
+        }
+    }
+    return 0;
 }
 
 
@@ -1001,6 +1084,14 @@ int qsStreamReady(struct QsStream *s) {
             return -4; // error we have loops
         }
 
+    /**********************************************************************
+     *      Stage: call all the app's controller preStart()s if present
+     *********************************************************************/
+
+    qsDictionaryForEach(s->app->controllers,
+            (int (*) (const char *, void *, void *)) preStart_callback,
+            s);
+
 
     /**********************************************************************
      *      Stage: call all stream's filter start() if present
@@ -1064,6 +1155,14 @@ int qsStreamReady(struct QsStream *s) {
     for(uint32_t i=0; i<s->numSources; ++i)
         MapRingBuffers(s->sources[i]);
 
+
+    /**********************************************************************
+     *      Stage: call all the app's controller postStart()s if present
+     *********************************************************************/
+
+    qsDictionaryForEach(s->app->controllers,
+            (int (*) (const char *, void *, void *)) postStart_callback,
+            s);
 
 
     return 0; // success

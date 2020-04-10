@@ -323,7 +323,6 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     if(construct) {
 
-        DSPEW(); 
         // This needs to be re-entrant code.
         void *oldController = pthread_getspecific(controllerKey);
         CHECK(pthread_setspecific(controllerKey, c));
@@ -382,7 +381,25 @@ cleanup:
  */
 int qsControllerUnload(struct QsController *c) {
 
-    DASSERT(c);
+    if(!c) {
+        // A controller may unload itself and it identifies itself by
+        // c = 0.
+        c = pthread_getspecific(controllerKey);
+        DASSERT(c);
+        if(!c) {
+            ERROR("qsControllerUnload() No controller argument set");
+            return 1;
+        }
+        DASSERT(c->mark != _QS_IN_CDESTROY);
+        if(c->mark == _QS_IN_CDESTROY) return 1;
+
+        DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
+                c->mark == _QS_IN_PRESTART ||
+                c->mark == _QS_IN_POSTSTART ||
+                c->mark == _QS_IN_PRESTOP ||
+                c->mark == _QS_IN_POSTSTOP);
+    }
+
     DASSERT(c->app);
     DSPEW("Unloading controller \"%s\"", c->name);
 

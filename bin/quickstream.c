@@ -453,6 +453,8 @@ int main(int argc, const char * const *argv) {
                 if(!app) {
                     app = qsAppCreate();
                     ASSERT(app);
+                }
+                if(!stream) {
                     stream = qsAppStreamCreate(app);
                     ASSERT(stream);
                     ++numStreams;

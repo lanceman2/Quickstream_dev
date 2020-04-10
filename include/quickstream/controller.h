@@ -24,6 +24,8 @@
  * filters provide the knobs and the controllers turn and observe the
  * knobs.
  *
+ * \todo A controller may also create and own parameters.
+ *
  * Because quickstream is breaking the rules and making interfaces that
  * are simplistic, users of the quckstream controllers API must take care
  * not to insert blocking calls in the filter I/O (input and output) calls
@@ -84,6 +86,20 @@ int construct(int argc, const char **argv);
  * libraries fprintf() function.
  */
 void help(FILE *file);
+
+
+int preStart(struct QsStream *stream);
+int postStart(struct QsStream *stream);
+
+int preStop(struct QsStream *stream);
+int postStop(struct QsStream *stream);
+
+/** optional destructor function
+ *
+ * \return 0 on success and non-zero on failure, not that we do anything
+ * about it anyway.
+ */
+int destroy(void);
 
 
 #endif // ifndef __cplusplus
