@@ -229,8 +229,11 @@ struct QsApp {
 extern
 pthread_key_t _qsKey;
 
+
+// For thread specific data for getting the controller object in
+// controller modules:
 extern
-pthread_key_t ControllerKey;
+pthread_key_t _qsControllerKey;
 
 
 // https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html

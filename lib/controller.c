@@ -24,11 +24,11 @@
 
 // Used to find which Controller module calling functions in the
 // controller API.
-pthread_key_t controllerKey;
+pthread_key_t _qsControllerKey;
 static pthread_once_t keyOnce = PTHREAD_ONCE_INIT;
 
 static void MakeKey(void) {
-    CHECK(pthread_key_create(&controllerKey, 0));
+    CHECK(pthread_key_create(&_qsControllerKey, 0));
 }
 
 
@@ -59,8 +59,8 @@ DictionaryDestroyController(struct QsController *c) {
 
             DSPEW("Calling controller \"%s\" destroy()", c->name); 
             // This needs to be re-entrant code.
-            void *oldController = pthread_getspecific(controllerKey);
-            CHECK(pthread_setspecific(controllerKey, c));
+            void *oldController = pthread_getspecific(_qsControllerKey);
+            CHECK(pthread_setspecific(_qsControllerKey, c));
 
             // A controller cannot load itself.
             DASSERT(oldController != c);
@@ -75,7 +75,7 @@ DictionaryDestroyController(struct QsController *c) {
 
             // This will set the thread specific data to 0 for the case
             // when it was 0 before this block of code.
-            CHECK(pthread_setspecific(controllerKey, oldController));
+            CHECK(pthread_setspecific(_qsControllerKey, oldController));
 
             if(ret)
                 WARN("Calling controller \"%s\" destroy() returned %d",
@@ -328,8 +328,8 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
     if(construct) {
 
         // This needs to be re-entrant code.
-        void *oldController = pthread_getspecific(controllerKey);
-        CHECK(pthread_setspecific(controllerKey, c));
+        void *oldController = pthread_getspecific(_qsControllerKey);
+        CHECK(pthread_setspecific(_qsControllerKey, c));
 
         // A controller cannot load itself.
         DASSERT(oldController != c);
@@ -344,7 +344,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
         // This will set the thread specific data to 0 for the case when
         // it was 0 before this block of code.
-        CHECK(pthread_setspecific(controllerKey, oldController));
+        CHECK(pthread_setspecific(_qsControllerKey, oldController));
 
         if(ret) {
             // construct() returned an error.
@@ -388,7 +388,7 @@ int qsControllerUnload(struct QsController *c) {
     if(!c) {
         // A controller may unload itself and it identifies itself by
         // c = 0.
-        c = pthread_getspecific(controllerKey);
+        c = pthread_getspecific(_qsControllerKey);
         DASSERT(c);
         if(!c) {
             ERROR("qsControllerUnload() No controller argument set");

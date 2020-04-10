@@ -161,19 +161,48 @@ int qsParameterCreateForFilter(struct QsFilter *f,
 }
 
 
-
 int qsParameterCreate(const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
             void *userData),
         void *userData) {
 
     struct QsFilter *f = GetFilter();
-    DASSERT(f);
-    ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
-            "must be called in a filter module construct()");
+    if(f) {
+        ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
+                "must be called in a filter module construct()");
 
-    return qsParameterCreateForFilter(f, pName, type,
-            setCallback, userData);
+        return qsParameterCreateForFilter(f, pName, type,
+                setCallback, userData);
+    }
+
+    struct QsController *c = pthread_getspecific(_qsControllerKey);
+    DASSERT(c);
+    if(!c) {
+        ERROR("qsParameterCreate() cannot find object");
+        return 1; // error
+    }
+
+    // Create parameter dictionary entry.
+    struct QsDictionary *d;
+    int ret = qsDictionaryInsert(c->parameters, pName, "p", &d);
+    ASSERT(ret >= 0);
+    if(ret) {
+        ERROR("Parameter %s:%s already exists", c->name, pName);
+        return 1;
+    }
+    DASSERT(d);
+
+    // Create and add the parameter data to this parameter dict
+    struct Parameter *p = malloc(sizeof(*p));
+    ASSERT(p, "malloc(%zu) failed", sizeof(*p));
+    memset(p, 0, sizeof(*p));
+    qsDictionarySetValue(d, p);
+    qsDictionarySetFreeValueOnDestroy(d, (void (*)(void *))FreeQsParameter);
+    p->type = type;
+    p->userData = userData;
+    p->setCallback = setCallback;
+
+    return 0;
 }
 
 

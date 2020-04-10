@@ -690,8 +690,8 @@ enum QsParameterType {
     QsDouble = 1
 };
 
-/** qsParameterCreate() is called in a filter module construct() to create
- * a parameter
+/** qsParameterCreate() is called in a filter in construct() or in
+ * a controller module to create a parameter
  *
  * \param pName is the name of the parameter.  This name only needs to be
  * unique to the filter module.
