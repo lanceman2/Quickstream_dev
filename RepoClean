@@ -86,7 +86,9 @@ for dir in .\
  include/quickstream\
  lib/quickstream/plugins/filters\
  lib/quickstream/plugins/filters/tests\
- share/bash-completion/completions\
+ lib/quickstream/plugins/controllers\
+ lib/quickstream/plugins/controllers/tests\
+  share/bash-completion/completions\
  lib/quickstream/misc\
  $docdir ; do
     rm -f $dir/makefile.in $dir/makefile
@@ -114,7 +116,9 @@ rm -rf $docdir/latex/ $docdir/html/search/
 # Remove the autotools code built files
 #
 for d in bin lib lib/quickstream/plugins/filters\
-    lib/quickstream/plugins/filters/tests ; do
+    lib/quickstream/plugins/filters/tests\
+    lib/quickstream/plugins/controllers\
+    lib/quickstream/plugins/controllers/tests  ; do
     rm -rf $d/.deps/ $d/.libs/
     rm -f $d/*.o $d/*.so $d/*.lo $d/*.la
 done
@@ -133,6 +137,8 @@ rm -rf\
  lib/qb_build/\
  lib/quickstream/plugins/filters/qb_build/\
  lib/quickstream/plugins/filters/tests/qb_build/\
+ lib/quickstream/plugins/controllers/qb_build/\
+ lib/quickstream/plugins/controllers/tests/qb_build/\
  dev_tests/qb_build/
 
 rm -f\
