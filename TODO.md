@@ -1,12 +1,21 @@
 This file just used for quickstream design discussion in a free format,
-given that quickstream is not in an alpha (usable) state yet.
+given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 
 # Next
 
-- Parameter cleanup via Dictionary removal, and free struct QsParameter
-  stuff.
-    - Do we want to be able to remove individual parameters?
+- Finish parameters owned by the controller.  And add a test (tests/).
+
+- Write a test (in tests/) that has a filter with more than one input
+  channel/port where one of the input channels is slow compared to the
+  others.  The filter reading this slow channel syncs the slow input
+  channel with faster input channel combining the inputs and writing one
+  or more outputs from the combining the inputs.
+    - Do that with the output being a pass-through buffer from one of the
+      inputs channels.  The output channel could be something like the
+      sum of two floats, one from each of the two input channels.
+
+- Do we want to be able to remove individual parameters?
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used
@@ -61,36 +70,11 @@ given that quickstream is not in an alpha (usable) state yet.
   manager of a group of Controllers.
 
 
-- Stream (or App) has a list of all controls in a hash table.
-  - All filters can create and access controls
-  - All controllers can create and access controls
-  - Controls are really just a set of parameter getters and setters.
-  - The control parameter type is just void * data.
-    - Fuck that type proliferation shit; no matter how many types you
-      make it will never be enough.  Not much thought to prove that.
-- controller modules; they are not a filter because they do not connect
-  to the flow stream.
-
-- librtlsdr code is AWESOME unlike GNU radio and libUHD
-  - I take it back it sucks, takes a call stack of 8 to get
-    to any of the ioctl() calls; hard to follow.
-- GNU radio tests
-- run tests with DEBUG off 
-- controls
-
-
 ## Future improvements
 
 - See if making the branches in the dictionary with a 1 bit selector at
   and near each branch, making it a binary tree and not a quad tree that
-  it currently is.  Would the extra bit diddling slow it down?  The bit
-  diddling may get more straight forward.  Chars with the highest bit
-  set could be defined as the 1 bit encoded sections, but that does not
-  work unless the bit series is always 7 bits long and it's not and it
-  can't be.  We need to study fast small data size compression theory.  At
-  least we could maybe prove that the quad tree trie dictionary is
-  optimal.
-
+  it currently is. 
 
 ## References
 
@@ -106,6 +90,15 @@ https://www.bastibl.net/blog/
 
 Best one:
 https://gnss-sdr.org/docs/fundamentals/
+
+
+Does GNUradio synchronise the data for all input channels when the
+filter/block does its work?
+
+So with I/O types then there is a concept of input frames which always
+have a fixed size.
+
+Quickstream does not synchronise the data for all input channels.
 
 
 ## Threads and buffer interaction
@@ -132,7 +125,7 @@ For the single thread run case this would not help.
 
 
 
-## Not a Kahn’s process network
+## Kahn’s process network
 
 At least not like the GNUradio version of one.
 
@@ -161,9 +154,9 @@ than one thread at a time.  Net result, it can be faster than a Kahn’s
 process network.  It will only be as fast as the bottlenecks be it a
 Kahn’s process network or this trans filter threads thing.
 
-No runtime scheduler is needed the thread just control themselves.  It's
+No runtime scheduler is needed the threads just control themselves.  It's
 less complex.  If bottleneck filters are thread-safe this will be able to
-process data faster than GNUradio.
+process data faster than GNUradio by having multithreaded filters.
 
 
 
