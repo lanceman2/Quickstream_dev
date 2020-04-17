@@ -257,6 +257,10 @@ pthread_t _qsMainThread;
 
 struct QsController {
 
+    // parameters should be first in this struct.
+    // List of parameters the are owned by this controller.
+    struct QsDictionary *parameters;
+
     // Controller modules are loaded in a similar way filter modules are
     // loaded as plugin modules, but they are listed in the App which
     // gives them a view of all streams and all filters in them.
@@ -272,9 +276,6 @@ struct QsController {
 
     // malloc() allocated unique name for this controller in this app.
     char *name;
-
-    // List of parameters the are owned by this controller.
-    struct QsDictionary *parameters;
 
     // Callback functions that may be loaded.  We do not get a copy of the
     // construct() and destroy() functions because they are only called
@@ -438,6 +439,10 @@ struct QsStream {
 //
 struct QsFilter {
 
+    // parameters should be first in this struct.
+    // List of Parameters that this filter owns:
+    struct QsDictionary *parameters;
+
     // mark is extra data in this struct so that we can save a marker as
     // we look through the filters in the graph, because if the graph has
     // cycles in it, it's not easy to look at each filter just once
@@ -457,9 +462,6 @@ struct QsFilter {
     //
     uint32_t mark;
 
-
-    // List of Parameters that this filter owns:
-    struct QsDictionary *parameters;
 
 
     void *dlhandle; // from dlopen()
@@ -802,7 +804,7 @@ struct QsBuffer {
     uint8_t *end; // Pointer to end of the first mmap()ed memory.
 
     //
-    // These two parameters make it a circular buffer or ring buffer.  See
+    // These two elements make it a circular buffer or ring buffer.  See
     // makeRingBuffer.c.  The mapLength is the most the buffer can hold to
     // be read by a filter.  The overhangLength is the length of the
     // "wrap" mapping that is a second memory mapping just after the

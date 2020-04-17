@@ -1,10 +1,14 @@
-This file just used for quickstream design discussion in a free format,
+This file is just used for quickstream design discussion in a free format,
 given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 
 # Next
 
 - Finish parameters owned by the controller.  And add a test (tests/).
+
+- make the parameter thing for all filters that monitors the total number
+  of bytes out, and in, for each ports and total for all inputs and
+  outputs.   Use qsParameterCreateForFilter().
 
 - Write a test (in tests/) that has a filter with more than one input
   channel/port where one of the input channels is slow compared to the
@@ -14,6 +18,9 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
     - Do that with the output being a pass-through buffer from one of the
       inputs channels.  The output channel could be something like the
       sum of two floats, one from each of the two input channels.
+
+- Write some memory leak tests.  Tests that run and restart enough so as
+  to show a memory leak.
 
 - Do we want to be able to remove individual parameters?
 
@@ -74,7 +81,8 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - See if making the branches in the dictionary with a 1 bit selector at
   and near each branch, making it a binary tree and not a quad tree that
-  it currently is. 
+  it currently is.  This may not be an improvement, we need to see if it
+  is an improvement.
 
 ## References
 

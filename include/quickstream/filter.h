@@ -628,40 +628,58 @@ struct QsFilter *qsFilterFromName(struct QsStream *stream,
  *      size of the data in the parameter must be small, so that it may be
  *      copied to be passed to other threads to be used.
  *
- *  We generally avoid directly copying stream data, and we usually copy
- *  parameters.  If a parameter changes at the rate of stream data than it
- *  should not be a parameter, and it should be stream data, and the
- *  filter flow graph should be re-engineered.
+ * We generally avoid directly copying stream data, and we usually copy
+ * parameters.  If a parameter changes at the rate of stream data than it
+ * should not be a parameter, and it should be stream data, and the
+ * filter flow graph should be re-engineered.
  *
- *  The parameter data is shared between filters and external entities
- *  called controllers.  An obvious example control parameter would be a
- *  sound volume level on a sound channel.  The parameter could just be a
- *  single number factor that multiples an input stream channel to give an
- *  output stream channel.  For such a volume filter, using a
- *  "pass-through" buffer would be best and so no copying of the stream
- *  data would be required, it would just multiple it as it was passed
- *  through from the input port to the output port using the same ring
- *  buffer for input and output.
+ * The parameter data is shared between filters and external entities
+ * called controllers.  An obvious example control parameter would be a
+ * sound volume level on a sound channel.  The parameter could just be a
+ * single number factor that multiples an input stream channel to give an
+ * output stream channel.  For such a volume filter, using a
+ * "pass-through" buffer would be best and so no copying of the stream
+ * data would be required, it would just multiple it as it was passed
+ * through from the input port to the output port using the same ring
+ * buffer for input and output.
  *
- * This parameter API is an asynchronous API that enables non-blocking
+ * Any parameter is owned by either a filter or a controller.  When the
+ * owning filter or controller are destroyed, so is the parameter.  That's
+ * just how we define owner of a parameter.
+ *
+ * Some parameters may not be requested to be set by code that is not the
+ * owner.  This kind of parameter just ignores set requests bye not having
+ * a setCallback, or having a setCallback that does not use the value
+ * passed in to set the value.  A good example of such a parameter is
+ * filter through-put, which you would want to be set by something that
+ * is not measuring the through-put.
+ *
+ * This parameter API is an synchronous API that enables non-blocking
  * inter-filter and controller-filter communication, so long as the user
  * does not use callback functions that block.  A controller is a code
- * that can access this API and is not part of a filter module.
-
+ * that can access this API and is not a filter module.
+ *
  * Of course the use of the quickstream control parameter thingy is not
  * required, and a user can make their own "control parameter" thingy.
  * But the benefit of using it is that you take advantage of controller
- * modules that can extend parameters to addition interfaces like for
- * example making the parameters readable and writable from a web app
+ * modules that can extend parameters to have additional interfaces like
+ * for example making the parameters readable and writable from a web app
  * page, without the filter writer needing to write any browser client or
  * server code.  So if a filter has implemented a quickstream parameter,
  * that parameter can then be controlled from all the quickstream
  * controllers that are available without knowing about said
  * controllers.
  *
+ * Parameter passed between entities with the callback in this API are
+ * intended to be copied in the callbacks.  So ya, the parameters must be
+ * small, like two floats; hence stack memory can be used for passing the
+ * value, and it can be copied to local object state from there without
+ * mutexes-n-shit.  You may need mutexes for your local object state, but
+ * not for the passed parameter values.
+ *
  * The cost is this butt ugly parameter interface, these 6 functions; and
  * the benefit is seamlessly extending the controlling of parameters to a
- * library of widgets.  Such a paradigm is helpful in constructing the
+ * library of controllers.  Such a paradigm is helpful in constructing the
  * Internet of Things (IoT).
  *
  * The parameters are small and copied between threads that are running
@@ -741,7 +759,9 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
  *
  * \see qsParameterCreate()
  *
- * \param filter is the filter that will own the parameter.
+ * \param filter is the filter that will own the parameter.  The filter
+ * may know nothing about the parameter, but when the filter is destroyed
+ * the parameter is destroyed with it.
  *
  *\param pName is the name of the parameter.  This name only needs to be
  * unique to the filter module.
@@ -751,7 +771,8 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
  * used to call the filter input().
  *
  * \param type is the parameter type.  That tells you how to deal with
- * the \p value.
+ * the \p value.  quickstream does not have a parameter typing system,
+ * just this integer \p type number.
  *
  * \param userData is passed to the setCallback() function every time it
  * is called.
@@ -825,34 +846,39 @@ int qsParameterGet(void *streamOrApp, const char *ownerName,
 
 
 /** Set a parameter by calling the filter's callback, called from outside
- * the owning filter module
+ * the owning filter or controller module
  *
- * This is called by an entity that is not the filter module that created
- * the parameter.  The filter can act however it chooses to, and may even
- * ignore the request.  In order for the user of this function to know the
- * real state of the parameter they must call qsParameterGet().
- * qsParameterSet() is just a request and may not really set the
- * parameter, it's up to the filter modules qsParameterCreate() callback
- * what really happens.
+ * This is called by an entity that is not the filter or controller module
+ * that created the parameter.  The filter (or controller) can act however
+ * it chooses to, and may even ignore the request.  In order for the user
+ * of this function to know the real state of the parameter they must call
+ * qsParameterGet().  qsParameterSet() is just a request and may not
+ * really set the parameter, it's up to the filter (or controller) modules
+ * qsParameterCreate() callback what really happens.
  *
  * The alternative of having a cross-thread queue may have had a simpler
  * owner filter interface, but would have added complexity and decreased
  * performance due to thread synchronization.  This code is much simpler.
  *
- * \param stream that owns the filter.
+ * \param streamOrApp is the stream or app that owns the filter or
+ * controller respectively.
  *
- * \param filterName is the filter name that the filter was given at load
- * time.
+ * \param ownerName is the filter (or controller) name that the filter (or
+ * controller) was given at load time.
  *
  * \param pName is the parameter name.
+ *
+ * \param type is the parameter type.  That tells you how to deal with
+ * the \p value.  quickstream does not have a parameter typing system,
+ * just this integer \p type number.
  *
  * \param value is a value from the calling entity.
  *
  * \return 0 on success and non-zero otherwise.
  */
 extern
-int qsParameterSet(struct QsStream *stream,
-        const char *filterName, const char *pName,
+int qsParameterSet(void *streamOrApp, const char *ownerName,
+        const char *pName,
         enum QsParameterType type, void *value);
 
 

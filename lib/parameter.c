@@ -127,6 +127,23 @@ struct QsDictionary *GetParameterDictionary(void *as, const char *name) {
 }
 
 
+static
+void CreateParameter(struct QsDictionary *d,
+        int (*setCallback)(void *value, const char *pName,
+            void *userData), void *userData,
+        enum QsParameterType type) {
+
+    struct Parameter *p = malloc(sizeof(*p));
+    ASSERT(p, "malloc(%zu) failed", sizeof(*p));
+    memset(p, 0, sizeof(*p));
+    qsDictionarySetValue(d, p);
+    qsDictionarySetFreeValueOnDestroy(d, (void(*)(void *))FreeQsParameter);
+    p->type = type;
+    p->userData = userData;
+    p->setCallback = setCallback;
+}
+
+
 int qsParameterCreateForFilter(struct QsFilter *f,
         const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
@@ -148,15 +165,7 @@ int qsParameterCreateForFilter(struct QsFilter *f,
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    struct Parameter *p = malloc(sizeof(*p));
-    ASSERT(p, "malloc(%zu) failed", sizeof(*p));
-    memset(p, 0, sizeof(*p));
-    qsDictionarySetValue(d, p);
-    qsDictionarySetFreeValueOnDestroy(d, (void (*)(void *))FreeQsParameter);
-    p->type = type;
-    p->userData = userData;
-    p->setCallback = setCallback;
-
+    CreateParameter(d, setCallback, userData, type);
     return 0;
 }
 
@@ -168,6 +177,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
     struct QsFilter *f = GetFilter();
     if(f) {
+        // Create this parameter owned by a filter.
         ASSERT(f->mark == _QS_IN_CONSTRUCT, "qsParameterCreate() "
                 "must be called in a filter module construct()");
 
@@ -175,8 +185,17 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
                 setCallback, userData);
     }
 
+    // else: Create this parameter owned by a controller.
+    //
     struct QsController *c = pthread_getspecific(_qsControllerKey);
     DASSERT(c);
+    DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
+            c->mark == _QS_IN_CDESTROY ||
+            c->mark == _QS_IN_PRESTART ||
+            c->mark == _QS_IN_POSTSTART ||
+            c->mark == _QS_IN_PRESTOP ||
+            c->mark == _QS_IN_POSTSTOP);
+
     if(!c) {
         ERROR("qsParameterCreate() cannot find object");
         return 1; // error
@@ -193,15 +212,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    struct Parameter *p = malloc(sizeof(*p));
-    ASSERT(p, "malloc(%zu) failed", sizeof(*p));
-    memset(p, 0, sizeof(*p));
-    qsDictionarySetValue(d, p);
-    qsDictionarySetFreeValueOnDestroy(d, (void (*)(void *))FreeQsParameter);
-    p->type = type;
-    p->userData = userData;
-    p->setCallback = setCallback;
-
+    CreateParameter(d, setCallback, userData, type);
     return 0;
 }
 
@@ -226,7 +237,7 @@ int qsParameterGet(void *as, const char *filterName,
     if(!pDict)
         return 1;
 
-    // Get parameter dict:
+    // Get the parameter from the Dictionary:
     struct Parameter *p = 0;
     struct QsDictionary *d = qsDictionaryFindDict(pDict,
             pName, (void*) &p);
@@ -270,33 +281,59 @@ static void MakeKey(void) {
 }
 
 
-int qsParameterSet(struct QsStream *s,
+
+int qsParameterSet(void *sa,
         const char *filterName, const char *pName,
         enum QsParameterType type, void *value) {
 
-    DASSERT(s);
+    ASSERT("Add controller support to this");
+
+    DASSERT(sa);
     DASSERT(filterName);
     DASSERT(filterName[0]);
     DASSERT(pName);
     DASSERT(pName[0]);
-
-    struct QsFilter *f = qsFilterFromName(s, filterName);
-    if(!f) {
-        WARN("Filter named \"%s\" not found", filterName);
-        return 1; // error
-    }
-    DASSERT(f->parameters);
-
-    // Get parameter dict:
     struct Parameter *p = 0;
-    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
-            pName, (void*) &p);
-    if(!d) {
-        WARN("Parameter \"%s:%s\" not found", filterName, pName);
-        return 2; // error
+
+    struct QsFilter *f = 0;
+    struct QsController *c = 0;
+
+    struct QsStream *s = sa;
+    if(s->type == _QS_STREAM_TYPE) {
+
+        f = qsFilterFromName(s, filterName);
+        if(!f) {
+            WARN("Filter named \"%s\" not found", filterName);
+            return 1; // error
+        }
+        DASSERT(f->parameters);
+
+        // Get the parameter from the Dictionary:
+        p = qsDictionaryFind(f->parameters, pName);
+        if(!p) {
+            WARN("Parameter \"%s:%s\" not found", filterName, pName);
+            return 2; // error
+        }
+    } else {
+
+        struct QsApp *app = sa;
+        DASSERT(app->type == _QS_APP_TYPE);
+        c = qsDictionaryFind(app->controllers,
+                filterName);
+        if(!c) {
+            WARN("Controller named \"%s\" not found", filterName);
+            return 3; // error
+        }
+        DASSERT(c->parameters);
+
+        // Get the parameter:
+        p = qsDictionaryFind(c->parameters, pName);
+        if(!p) {
+            WARN("Parameter \"%s:%s\" not found", filterName, pName);
+            return 4; // error
+        }
     }
 
-    DASSERT(p);
     DASSERT(p->setCallback);
 
     if(p->type != type) {
@@ -311,9 +348,10 @@ int qsParameterSet(struct QsStream *s,
     // setCallback() is called below.  
     CHECK(pthread_once(&keyOnce, MakeKey));
 
-    // This needs to be re-entrant code.
-    void *oldFilter = pthread_getspecific(parameterKey);
-    CHECK(pthread_setspecific(parameterKey, f));
+    void *oldOwner = pthread_getspecific(parameterKey);
+
+    // Set the thread specific
+    CHECK(pthread_setspecific(parameterKey, (f)?((void *)f):((void*)c)));
 
     // This may call qsParameterPush() or it may not, or qsParameterPush()
     // may be called later, after this call.  It's up to the filter module
@@ -321,7 +359,7 @@ int qsParameterSet(struct QsStream *s,
     // parameter does not change due to this call.
     p->setCallback(value, pName, p->userData);
 
-    CHECK(pthread_setspecific(parameterKey, oldFilter));
+    CHECK(pthread_setspecific(parameterKey, oldOwner));
 
     // Now we wait for this to have an effect.  The effect does not have
     // to be soon.
@@ -346,8 +384,31 @@ int qsParameterPush(const char *pName, void *value) {
     // qsParameterSet() and if so this will get the filter object:
     
     CHECK(pthread_once(&keyOnce, MakeKey));
-    
+    struct Parameter *p = 0;
+
+
+    // First we try to find a filter or controller that is calling
+    // qsParameterSet().
+    //
+    // Here's the thing: the thread specific data may be a filter or a
+    // controller, but it does not matter which we use because they both
+    // inherit struct QsDictionary as variable named parameters.
+    //
     struct QsFilter *f = pthread_getspecific(parameterKey);
+    if(f) {
+ 
+        // NOTE: The only data we can access in f is f->parameters.
+        // Because we are accessing a sub class of this struct
+        // QsFilter.
+
+        // Get the parameter from the Dictionary:
+        p = qsDictionaryFind(f->parameters, pName);
+        if(!p) {
+            WARN("Parameter \"%s\" not found", pName);
+            return 2; // error
+        }
+        // We should have p now.
+    }
 
     if(!f)
         // Or it may be called after the filter setCallback() in one of
@@ -356,19 +417,42 @@ int qsParameterPush(const char *pName, void *value) {
         // specific variable.
         f = GetFilter();
 
-    // We must have the filter pointer now.
-    DASSERT(f);
+    if(f) {
+        // Get the parameter from the Dictionary:
+        p = qsDictionaryFind(f->parameters, pName);
+        if(!p) {
+            WARN("qsParameterPush(\"%s\") calling thread not found",
+                    pName);
+            return 3; // error
+        }
+        // We should have p now.
+    } else {
 
-    // Get parameter dict:
-    struct Parameter *p = 0;
-    struct QsDictionary *d = qsDictionaryFindDict(f->parameters,
-            pName, (void*) &p);
-    if(!d) {
-        WARN("Parameter \"%s:%s\" not found", f->name, pName);
-        return 2; // error
+        // Now try to find a controller using the controller stuff
+        // and get the dictionary and parameter from it.
+        //
+        struct QsController *c = pthread_getspecific(_qsControllerKey);
+        if(!c) {
+            WARN("Parameter \"%s\" not found", pName);
+            return 4; // error
+        }
+
+        DASSERT(c);
+        DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
+            c->mark == _QS_IN_CDESTROY ||
+            c->mark == _QS_IN_PRESTART ||
+            c->mark == _QS_IN_POSTSTART ||
+            c->mark == _QS_IN_PRESTOP ||
+            c->mark == _QS_IN_POSTSTOP);
+
+        // Get the parameter from the Dictionary:
+        p = qsDictionaryFind(c->parameters, pName);
+        if(!p) {
+            WARN("Parameter \"%s:%s\" not found", c->name, pName);
+            return 3; // error
+        }
     }
 
-    DASSERT(p);
     DASSERT(p->setCallback);
 
     struct GetCallback *gcs = p->getCallbacks;
