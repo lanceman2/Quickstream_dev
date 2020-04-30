@@ -366,6 +366,13 @@ void qsFiltersConnect(
 
 
 
+extern
+int qsStreamForEachFilter(struct QsStream *stream,
+        int (*callback)(struct QsStream *stream,
+            struct QsFilter *filter, void *userData),
+        void *userData);
+
+
 /** Launch threads and processes if they are needed, and get ready to
  * run the flow.
  *

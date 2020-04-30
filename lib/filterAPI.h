@@ -49,14 +49,18 @@ struct QsFilter *GetFilter(void) {
         return f;
     }
 
-    DASSERT(j->magic == _QS_IN_CONSTRUCT ||
-         j->magic == _QS_IN_DESTROY ||
-         j->magic == _QS_IN_START   ||
-         j->magic == _QS_IN_STOP);
+    // j is not really a job.
+
+    struct QsFilter *f = (struct QsFilter *) j;
+    // f should really be a filter since it's not a job.
+    // It's the only possibility since it's not a job;
+    // so we just check in the DEBUG case.
+    DASSERT(f->mark == _QS_IN_CONSTRUCT ||
+         f->mark == _QS_IN_DESTROY ||
+         f->mark == _QS_IN_START   ||
+         f->mark == _QS_IN_STOP);
 
     // thread specific data is really a filter.
-    struct QsFilter *f = (struct QsFilter *) j;
-    DASSERT(f);
     DASSERT(f->stream);
     return f;
 }

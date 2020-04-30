@@ -1,4 +1,4 @@
-# This file is for building and installing quickstream with quickbuild
+# This file is for building and installing quickstream with quickbuild,
 # not GNU autotools.  You can build and install quickstream with GNU
 # autotools.
 #

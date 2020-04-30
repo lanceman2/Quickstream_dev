@@ -217,14 +217,17 @@ struct QsApp {
 // pthread_getspecific() and pthread_setspecific() are very fast and do
 // not cause a mode switch (system call) each time they are called.  The
 // man page says "Performance and ease-of-use of pthread_getspecific() are
-// critical".  If they do cause a mode switch we need to recode this.
-// One can't say without looking at the code or running tests; as an
-// example of how shitty code got into the main Linux, look at system 5
+// critical".  If they do cause a mode switch we need to recode this.  One
+// can't say without looking at the code or running tests; as an example
+// of how shitty code got into the main Linux Kernel, look at system 5
 // semaphores: they are very slow and every call in the API incurs a
 // system call.
 //
 // We use _qsKey for passing data to calls to the filter API from filter
-// input() functions.
+// input() functions and other filter calls.
+//
+// The thread specific data from this key is either a QsJob or a
+// QsFilter.
 //
 extern
 pthread_key_t _qsKey;
@@ -250,15 +253,22 @@ pthread_t _qsMainThread;
 
 // We can use it like so:
 // DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-// This may be needed for non-debug building in the future.
+// This kind of thing may be needed for non-debug building in the
+// future.
 #endif
 
 
 
 struct QsController {
 
-    // parameters should be first in this struct.
-    // List of parameters the are owned by this controller.
+    // The order to mark and then parameters must be the same in the
+    // struct QsFilter 
+
+    // First in struct
+    uint32_t mark;
+
+    // parameters should be second in this struct.
+    // List of parameters that are owned by this controller.
     struct QsDictionary *parameters;
 
     // Controller modules are loaded in a similar way filter modules are
@@ -267,8 +277,6 @@ struct QsController {
     // Controllers mess with filter parameters.  A single controller
     // module can access all filters and all parameters in the said
     // filters.
-
-    uint32_t mark;
 
     void *dlhandle; // from dlopen()
 
@@ -296,7 +304,8 @@ struct QsController {
 //
 struct QsStream {
 
-    // The type of struct this is:  
+    // type must be first in this struct.
+    // The type of struct this is:
     uint32_t type;
 
     // We can have many streams in an app (QsApp).
@@ -439,10 +448,6 @@ struct QsStream {
 //
 struct QsFilter {
 
-    // parameters should be first in this struct.
-    // List of Parameters that this filter owns:
-    struct QsDictionary *parameters;
-
     // mark is extra data in this struct so that we can save a marker as
     // we look through the filters in the graph, because if the graph has
     // cycles in it, it's not easy to look at each filter just once
@@ -458,10 +463,13 @@ struct QsFilter {
     // TODO: make mark a union with descriptive names for the different
     // uses.
     //
-    // mark must be at the top of this struct.
+    // mark must be first in this struct
     //
     uint32_t mark;
 
+    // parameters should be second in this struct.
+    // List of Parameters that this filter owns:
+    struct QsDictionary *parameters;
 
 
     void *dlhandle; // from dlopen()
@@ -493,11 +501,12 @@ struct QsFilter {
     struct QsJob {
 
 
-#ifdef DEBUG
         // magic must be at the top of this struct
         //
+        // It must lineup with the mark in QsFilter.
+        //
         uint32_t magic; // is set to _QS_IS_JOB when it's valid.
-#endif
+
 
         ///////////////// STREAM MUTEX GROUP ////////////////////////////
         //

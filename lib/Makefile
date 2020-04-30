@@ -6,6 +6,7 @@ libquickstream.so_SOURCES :=\
  filter.c\
  filterAPI.c\
  stream.c\
+ streamReady.c\
  debug.c\
  opts.c\
  buffer.c\

@@ -320,7 +320,6 @@ qsCreatePassThroughBufferDownstream(uint32_t outputPortNum,
         struct QsFilter *toFilter, uint32_t toInputPort) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
-    struct QsFilter *f = _qsCurrentFilter;
     DASSERT(f);
     DASSERT(f->numOutputs <= _QS_MAX_CHANNELS);
     DASSERT(toFilter->numInputs <= _QS_MAX_CHANNELS);
