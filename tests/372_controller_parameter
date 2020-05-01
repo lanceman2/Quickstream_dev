@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+source testsEnv
+
+
+set -x
+echo "Hello123" |\
+../bin/quickstream\
+ -C tests/parameter\
+ -f stdin\
+ -f stdout\
+ -c -t 0 -r 
+
+set +x
+echo "$0 SUCCESS"

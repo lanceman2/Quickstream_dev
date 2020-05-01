@@ -259,15 +259,16 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         // it was 0 before this.
         CHECK(pthread_setspecific(_qsKey, oldFilter));
 
-
         if(ret) {
-            // Failure.
-            //
-            ERROR("filter \"%s\" construct() failed", f->name);
-            goto cleanup;
+            free(path);
+            if(ret > 0)
+                NOTICE("filter \"%s\" construct() returned > 0", f->name);
+            else
+                ERROR("filter \"%s\" construct() failed", f->name);
+            qsFilterUnload(f);
+            return (ret>0)?QS_UNLOADED:0;
         }
         //else Success.
-
     }
 
 

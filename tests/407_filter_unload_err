@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -eo pipefail
+
+source testsEnv
+
+
+set -x
+set +e
+
+# This needs to fail.
+if echo "Hello" |  ../bin/quickstream\
+ -f tests/unload { --return -1 }\
+ -f stdin\
+ -f stdout\
+ -c -t 0 -r ; then
+   set +x
+   echo "$0 FAILED"
+   exit 1 
+fi
+
+
+set +x
+echo "$0 SUCCESS"

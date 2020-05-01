@@ -62,7 +62,7 @@ DictionaryDestroyController(struct QsController *c) {
             void *oldController = pthread_getspecific(_qsControllerKey);
             CHECK(pthread_setspecific(_qsControllerKey, c));
 
-            // A controller cannot load itself.
+            // A controller cannot unload itself by calling this.
             DASSERT(oldController != c);
             // We use this, mark, flag as a marker that we are in the
             // construct() phase.
@@ -359,7 +359,12 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
             dlclose(c->dlhandle);
             c->dlhandle = 0;
             qsControllerUnload(c);
-            return 0; // failure returns Null pointer.
+            if(ret < 0)
+                return 0; // failure returns Null pointer.
+            else
+                // The module did its' thing and is effectively unloading
+                // itself.
+                return QS_UNLOADED;
         }
     }
 

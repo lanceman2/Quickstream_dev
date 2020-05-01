@@ -22,11 +22,15 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 - Write some memory leak tests.  Tests that run and restart enough so as
   to show a memory leak.
 
+- Add finding controller modules to bash completion.
+
 - Super filter that loads other filters.
 
 - Edit documentation from top to bottom.
 
 - Do we want to be able to remove individual parameters?
+
+- Add a Controller and filter unload test.
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used

@@ -265,10 +265,14 @@ int main(int argc, const char * const *argv) {
                     // default we connect filters in the order they are
                     // loaded.
                     for(int i = lastFilterConnected + 1; i<numFilters; ++i) {
-                        if(level >= 4)
-                            fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
-                        qsFiltersConnect(filters[i-1],
-                                filters[i], QS_NEXTPORT, QS_NEXTPORT);
+                        if(filters[i-1] != QS_UNLOADED &&
+                                filters[i] != QS_UNLOADED) {
+                            if(level >= 4)
+                                fprintf(stderr,"connecting: %d -> %d\n",
+                                        i-1, i);
+                            qsFiltersConnect(filters[i-1],
+                                    filters[i], QS_NEXTPORT, QS_NEXTPORT);
+                        }
                     }
                     lastFilterConnected = numFilters - 1;
                     break;
@@ -310,9 +314,19 @@ int main(int argc, const char * const *argv) {
                         lastFilterConnected = to;
                     if(from > lastFilterConnected)
                         lastFilterConnected = from;
-
-                    qsFiltersConnect(filters[from],
+ 
+                    if(filters[to] != QS_UNLOADED &&
+                                filters[from] != QS_UNLOADED) {
+                        qsFiltersConnect(filters[from],
                                 filters[to], 0, QS_NEXTPORT);
+                    } else {
+                        fprintf(stderr, "Bad --connect \"%s\" values:\n",
+                                arg);
+                        fprintf(stderr,
+                                "Filter %ld and/or %ld is not still "
+                                "loaded\n", to, from);
+                        return 1; // error
+                    }
                 }
 
                 DSPEW("option %c = %s", c, arg);
@@ -386,6 +400,14 @@ int main(int argc, const char * const *argv) {
                     return usage(STDERR_FILENO);
                 }
 
+                if(filters[fromF] == QS_UNLOADED ||
+                            filters[toF] == QS_UNLOADED) {
+                    fprintf(stderr, "Bad --plug \"%s\" values\n", arg);
+                    fprintf(stderr, "Filters %ld and/or %ld are not still "
+                            "loaded\n", fromF, toF);
+                    return 1;
+                }
+
                 if(level >= 4)
                     fprintf(stderr, "connecting: %ld:%ld -> %ld:%ld\n",
                             fromF, fromPort, toF, toPort);
@@ -411,7 +433,7 @@ int main(int argc, const char * const *argv) {
             case 'd':
                 // display a dot graph and no wait
                 if(!app) {
-                    fprintf(stderr, "--display no filters loaded"
+                    fprintf(stderr, "--display with no loaded modules"
                             " to display\n");
                     break; // nothing to display yet.
                 }
@@ -655,15 +677,19 @@ int main(int argc, const char * const *argv) {
 
             case 's':
 
-                // Since this mark the point at which we create a
+                // Since this marks the point at which we create a
                 // different stream, we connect filters in the order they
                 // are loaded if they are not connected yet, since they
                 // will not be connected otherwise.
                 for(int i = lastFilterConnected + 1; i<numFilters; ++i) {
-                    if(level >= 4)
-                        fprintf(stderr,"connecting: %d -> %d\n", i-1, i);
-                    qsFiltersConnect(filters[i-1],
-                            filters[i], QS_NEXTPORT, QS_NEXTPORT);
+                    if(filters[i-1] != QS_UNLOADED &&
+                            filters[i] != QS_UNLOADED) {
+                        if(level >= 4)
+                            fprintf(stderr,"connecting: %d -> %d\n",
+                                    i-1, i);
+                        qsFiltersConnect(filters[i-1],
+                                filters[i], QS_NEXTPORT, QS_NEXTPORT);
+                    }
                 }
                 // We over mark by one, so that we do not connect filters
                 // across different streams.
