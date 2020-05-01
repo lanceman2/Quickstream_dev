@@ -266,7 +266,7 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
             else
                 ERROR("filter \"%s\" construct() failed", f->name);
             qsFilterUnload(f);
-            return (ret>0)?QS_UNLOADED:0;
+            return (ret>0)?QS_UNLOADED/*not error*/:0/*error*/;
         }
         //else Success.
     }
