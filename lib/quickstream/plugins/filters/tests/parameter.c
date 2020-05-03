@@ -2,6 +2,7 @@
 #include <time.h>
 #include <pthread.h>
 
+#include "../../../../../include/quickstream/parameter.h"
 #include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 

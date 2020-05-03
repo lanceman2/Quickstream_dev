@@ -8,6 +8,7 @@
 
 #include "../lib/debug.h"
 #include "../include/quickstream/filter.h"
+#include "../include/quickstream/parameter.h"
 #include "../include/quickstream/app.h"
 #include "../lib/qs.h"
 #include "../lib/Dictionary.h"

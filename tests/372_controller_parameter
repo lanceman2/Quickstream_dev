@@ -6,12 +6,11 @@ source testsEnv
 
 
 set -x
-echo "Hello123" |\
 ../bin/quickstream\
  -C tests/parameter\
- -f stdin\
+ -f tests/sequenceGen.so\
  -f stdout\
- -c -t 0 -r 
+ -c -t 0 -r > /dev/null
 
 set +x
 echo "$0 SUCCESS"

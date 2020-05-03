@@ -8,6 +8,7 @@
 
 #include "../lib/debug.h"
 #include "../include/quickstream/filter.h"
+#include "../include/quickstream/parameter.h"
 #include "../include/quickstream/app.h"
 #include "../lib/qs.h"
 #include "../lib/Dictionary.h"
@@ -28,6 +29,8 @@ void catcher(int sig) {
 
 double t = 2.32435;
 
+
+
 static
 int getCallback(
         const void *value, struct QsStream *stream,
@@ -36,7 +39,7 @@ int getCallback(
 
     fprintf(stderr, "control_test getCallback(value=%lg,"
             " stream=%p, \"%s\","
-            "\"%s\", type=%" PRIu32 ", userData=%zu)\n",
+            "\"%s\", type=%d, userData=%zu)\n",
             *(double *) value, stream, filterName, pName,
             type, (uintptr_t) userData);
 

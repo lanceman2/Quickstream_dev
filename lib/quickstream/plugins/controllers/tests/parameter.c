@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "../../../../../include/quickstream/app.h"
+#include "../../../../../include/quickstream/parameter.h"
 #include "../../../../../include/quickstream/controller.h"
 #include "../../../../../lib/debug.h"
 
@@ -24,10 +25,27 @@ void help(FILE *f) {
 "\n");
 }
 
+static
+uint64_t count = 0;
+
+
+static
+int setCount(void *value, const char *pName,
+            void *userData) {
+
+    
+
+    return 0;
+}
+
+
 
 int construct(int argc, const char **argv) {
 
     DSPEW("in construct()");
+
+    qsParameterCreate("count", QsUint64, setCount, 0);
+
     printf("%s()\n", __func__);
 
     return 1; // success
@@ -36,6 +54,7 @@ int construct(int argc, const char **argv) {
 int preStart(struct QsStream *stream) {
 
     DSPEW();
+    count = 0;
     printf("%s()\n", __func__);
     return 0;
 }

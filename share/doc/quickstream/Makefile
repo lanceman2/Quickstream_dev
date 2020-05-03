@@ -52,6 +52,7 @@ QS_DOC_GEN := $(topdir)/lib/quickstream/misc/quickstreamHelp
 DOX_INFILES =\
  $(topdir)/include/quickstream/app.h\
  $(topdir)/include/quickstream/filter.h\
+ $(topdir)/include/quickstream/parameter.h\
  $(topdir)/include/quickstream/filter.hpp\
  $(topdir)/bin/quickstream.c\
  mainpage.dox

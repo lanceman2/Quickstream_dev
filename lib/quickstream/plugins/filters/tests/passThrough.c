@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 #include "../../../../../include/quickstream/filter.h"
+#include "../../../../../include/quickstream/parameter.h"
 #include "../../../../../lib/debug.h"
 
 

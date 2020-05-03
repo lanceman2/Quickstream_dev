@@ -5,6 +5,7 @@
 #include <stdatomic.h>
 
 #include "../include/quickstream/filter.h"
+#include "../include/quickstream/parameter.h"
 #include "debug.h"
 #include "Dictionary.h"
 #include "qs.h"
