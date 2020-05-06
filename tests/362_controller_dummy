@@ -7,8 +7,6 @@ source testsEnv
 compare=$0.compare
 out=$(basename $0).OUT.tmp
 
-# dd count blocks  1 block = 512bytes
-
 
 set -x
 echo "Hello123" | ../bin/quickstream -C tests/dummy -f stdin -f stdout -c -t 1 -r > $out

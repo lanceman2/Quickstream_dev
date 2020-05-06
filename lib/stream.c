@@ -292,10 +292,53 @@ void qsStreamDestroy(struct QsStream *s) {
 
 
 
-int qsStreamForEachFilter(struct QsStream *stream,
+int qsStreamForEachFilter(void *sOrA,
         int (*callback)(struct QsStream *stream,
             struct QsFilter *filter, void *userData),
         void *userData) {
 
-    return 0; // success
+
+    struct QsApp *app = sOrA;
+    struct QsStream *s = 0;
+
+    if(!sOrA) {
+        // This must be a controller calling this.
+        struct QsController *c = pthread_getspecific(_qsControllerKey);
+        DASSERT(c);
+        if(c) {
+            DASSERT(c->name);
+            DASSERT(c->name[0]);
+            DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
+                    c->mark == _QS_IN_CDESTROY ||
+                    c->mark == _QS_IN_PRESTART ||
+                    c->mark == _QS_IN_POSTSTART ||
+                    c->mark == _QS_IN_PRESTOP ||
+                    c->mark == _QS_IN_POSTSTOP);
+            app = c->app;
+        } else {
+            ERROR("No valid controller, app, or stream found");
+            return -1;
+        }
+    }
+    
+    if(app->type != _QS_APP_TYPE) {
+
+        DASSERT(app->type == _QS_STREAM_TYPE);
+
+        app = 0;
+        s = sOrA;
+    } else
+        s = app->streams;
+
+
+    int ret = 0;
+
+    for(;s ; s = (app)?(s->next):0)
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            ++ret;
+            if(callback(s, f, userData))
+                return ret; // success
+        }
+
+    return ret; // success
 }

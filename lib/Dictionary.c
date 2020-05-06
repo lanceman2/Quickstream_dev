@@ -901,8 +901,8 @@ bool ForEach(const struct QsDictionary *node,
     DASSERT(node);
     DASSERT(callback);
 
-    if(node->value) {
-        DASSERT(node->key);
+    if(node->key) {
+        DASSERT(node->value);
         ++(*count);
         if(callback(node->key, (void *) node->value, userData))
             // The user is telling us we are done, so now we stop
@@ -911,7 +911,7 @@ bool ForEach(const struct QsDictionary *node,
     }
 #ifdef DEBUG
     else {
-        DASSERT(node->key == 0);
+        DASSERT(node->value == 0);
     }
 #endif
 
@@ -922,6 +922,7 @@ bool ForEach(const struct QsDictionary *node,
             if(ForEach(child, callback, count, userData))
                 return true; // We are done.
     }
+
 
     return false; // keep going.
 }
@@ -1307,7 +1308,7 @@ void PruneNodeDown(struct QsDictionary *node) {
         free(node->suffix);
         node->suffix = 0;
         return; // stop pruning down, we may prune up later.
-    } 
+    }
 
     // If this node has children then there must be a key/value pair
     // in at least one child.

@@ -12,13 +12,14 @@
 #include "../../../../../include/quickstream/app.h"
 #include "../../../../../include/quickstream/parameter.h"
 #include "../../../../../include/quickstream/controller.h"
+#include "../../../../../include/quickstream/filter.h"
 #include "../../../../../lib/debug.h"
 
 
 
 void help(FILE *f) {
     fprintf(f,
-"   Usage: tests/dummy\n"
+"   Usage: tests/parameter\n"
 "\n"
 " A test controller module that makes and tests Parameters.\n"
 "\n"
@@ -38,6 +39,32 @@ int setCount(void *value, const char *pName,
     return 0;
 }
 
+int preInputCB(
+            struct QsFilter *filter,
+            const size_t len[],
+            const bool isFlushing[],
+            uint32_t numInputs, uint32_t numOutputs,
+            void *userData) {
+        DSPEW("-------------preInputCB(filter=\"%s\",,,)---------------",
+                qsFilterName(filter));
+
+
+    return 0;
+}
+
+
+static
+int AddFilter(struct QsStream *s, struct QsFilter *filter,
+        void *uaserData) {
+
+    DSPEW("Adding filter \"%s\"", qsFilterName(filter));
+
+    qsAddPreFilterInput(filter, preInputCB, 0);
+
+    return 0;
+}
+
+
 
 
 int construct(int argc, const char **argv) {
@@ -47,8 +74,7 @@ int construct(int argc, const char **argv) {
     qsParameterCreate("count", QsUint64, setCount, 0);
 
     printf("%s()\n", __func__);
-
-    return 1; // success
+    return 0; // success
 }
 
 int preStart(struct QsStream *stream) {
@@ -56,6 +82,9 @@ int preStart(struct QsStream *stream) {
     DSPEW();
     count = 0;
     printf("%s()\n", __func__);
+
+    qsStreamForEachFilter(0, AddFilter, 0);
+
     return 0;
 }
 

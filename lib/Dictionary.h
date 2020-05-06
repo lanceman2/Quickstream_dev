@@ -99,11 +99,14 @@ void qsDictionaryPrintDot(const struct QsDictionary *dict, FILE *file);
 //
 // Do not screw with the key memory that is passed to callback().
 //
+// The callback may remove the entry associated with it, but not other
+// entries.
+//
 // If callback returns non-zero the callback stops being called and the
 // call to qsDictionaryForEach() returns.
 //
 // Searches the entire data structure starting at dict.  Calls callback
-// with key set (if non-zero) and value.
+// with key and value.
 //
 // Returns the number of keys and callbacks called.
 //

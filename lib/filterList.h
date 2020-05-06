@@ -93,6 +93,11 @@ void FreeFilter(struct QsFilter *f) {
             // TODO: So what can I do.
     }
 
+    if(f->preInputCallbacks)
+        qsDictionaryDestroy(f->preInputCallbacks);
+    if(f->postInputCallbacks)
+        qsDictionaryDestroy(f->postInputCallbacks);
+
 
 #ifdef DEBUG
     memset(f->name, 0, strlen(f->name));

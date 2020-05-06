@@ -387,12 +387,35 @@ void qsFiltersConnect(
         uint32_t fromPortNum, uint32_t toPortNum);
 
 
-
+/** For iterating through filters in a stream or the whole app
+ *
+ *
+ * \param streamOrApp calls the callback for all filters in the stream or
+ * for all filters in all streams in an app.
+ *
+ * \param callback to be called once for each filter.
+ *
+ * \param userData passed to callback.
+ *
+ * \return the number of filters callback was called with on success.
+ * Returns less than 0 on error.
+ */
 extern
-int qsStreamForEachFilter(struct QsStream *stream,
+int qsStreamForEachFilter(void *streamOrApp,
         int (*callback)(struct QsStream *stream,
             struct QsFilter *filter, void *userData),
         void *userData);
+
+
+/** Get the filter name that was given to this filter module when it was
+ * loaded
+ *
+ * \param filter a pointer to the filter object.
+ *
+ * \return the filter name string.
+ */
+extern
+const char *qsFilterName(const struct QsFilter *filter);
 
 
 /** Launch threads and processes if they are needed, and get ready to

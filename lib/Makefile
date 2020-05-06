@@ -5,6 +5,7 @@ libquickstream.so_SOURCES :=\
  app.c\
  filter.c\
  filterAPI.c\
+ prePostInputCallbacks.c\
  stream.c\
  streamReady.c\
  debug.c\

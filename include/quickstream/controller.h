@@ -118,14 +118,31 @@ extern "C" {
  * This must be called in one of the optional controller loaded functions:
  * construct(), preStart(), postStart(), preStop(), or postStop().
  *
- * /return 0 on success, and non-zero on failure.
+ * Each controller may have only one pre-input filter callback per filter.
+ *
+ * \param filter is the filter those input() function that is of concern.
+ *
+ * \param callback is the function that is called before each filter
+ * input() is called.  \p callback() will be called with \p len that
+ * reflects the lengths pasted to the filter's input() call.
+ *
+ * If \p callback returns non-zero the callback will be removed.
+ *
+ * If qsAddPreFilterInput() is called with \p callback zero the callback
+ * will be removed.  If a callback already exists, the new callback will
+ * replace the old callback.
+ *
+ * \param userData is passed to the \p callback function each time it is
+ * called.
+ *
+ * /return 0 on success.  Returns 1 if the keyName for this filter's
+ * pre-input callback already exists.
  */
 extern
 int qsAddPreFilterInput(struct QsFilter *filter,
-        const char *pName,
         int (*callback)(
-            struct QsFilter *filter, const char *pName,
-            const void *buffer[], const size_t len[],
+            struct QsFilter *filter,
+            const size_t len[],
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs,
             void *userData), void *userData);
@@ -139,20 +156,37 @@ int qsAddPreFilterInput(struct QsFilter *filter,
  * This must be called in one of the optional controller loaded functions:
  * construct(), preStart(), postStart(), preStop(), or postStop().
  *
+ * Each controller may have only one post-input filter callback per filter.
+ *
+ * \param filter is the filter those input() function that is of concern.
+ *
+ * \param callback is the function that is called before each filter
+ * input() is called.  \p callback() will be called with \p len that
+ * reflects changes from the filter's input() call.  If a callback already
+ * exists, the new callback will replace the old callback.
+
+ *
+ * If \p callback returns non-zero the callback will be removed.
+ *
+ * If qsAddPostFilterInput() is called with \p callback zero the callback
+ * will be removed.
+
+ * \param userData is passed to the \p callback function each time it is
+ * called.
+ *
+ * /return 0 on success.  Returns 1 if the keyName for this filter's
+ * post-input callback already exists.
+ *
  * /return 0 on success, and non-zero on failure.
  */
 extern
 int qsAddPostFilterInput(struct QsFilter *filter,
-        const char *pName,
         int (*callback)(
-            struct QsFilter *filter, const char *pName,
-            const void *buffer[], const size_t len[],
+            struct QsFilter *filter,
+            const size_t len[],
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs,
             void *userData), void *userData);
-
-
-
 
 
 

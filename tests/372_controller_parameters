@@ -8,9 +8,9 @@ source testsEnv
 set -x
 ../bin/quickstream\
  -C tests/parameter\
- -f tests/sequenceGen.so\
+ -f tests/sequenceGen.so { --name seq --maxWrite 128 --length 1024 }\
  -f stdout\
- -c -t 0 -r > /dev/null
+ -c -t 0 -r
 
 set +x
 echo "$0 SUCCESS"

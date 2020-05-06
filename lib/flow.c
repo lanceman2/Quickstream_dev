@@ -8,11 +8,13 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
-#include "./debug.h"
-#include "./qs.h"
-#include "./flowJobLists.h"
-#include "../include/quickstream/filter.h"
 
+#include "debug.h"
+#include "qs.h"
+#include "flowJobLists.h"
+#include "../include/quickstream/filter.h"
+#include "controllerCallbacks.h"
+#include "Dictionary.h"
 
 
 // Stop running input() for this filter, f.
@@ -153,6 +155,19 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 }
 
 
+static void
+InputCallback(const char *key, struct Callback *cb,
+        struct QsJob *j) {
+
+    struct QsFilter *f = j->filter;
+
+    cb->callback(f, j->inputLens,
+            j->isFlushing, f->numInputs, f->numOutputs,
+            cb->userData);
+}
+
+
+
 
 //
 // Run input().
@@ -169,6 +184,14 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
+
+    if(f->preInputCallbacks)
+        // Call all controller preInput callbacks for this filter.
+        qsDictionaryForEach(f->preInputCallbacks,
+            (int (*) (const char *key, void *value,
+                void *userData)) InputCallback, j);
+
+
     // At this point this filter/thread owns this job.
     //
     int inputRet;
@@ -177,6 +200,12 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             j->isFlushing, f->numInputs, f->numOutputs);
 
 
+
+    // TODO: Call all controller postInput callbacks for this filter.
+    
+    
+
+    
     // Note: all these for loop iteration is through just the number of
     // inputs and outputs to and from the filter.  Usually there'll be
     // just 1 or 2 inputs and 1 or 2 outputs.
@@ -436,6 +465,14 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
 
     CheckUnlockFilter(f);
+
+
+
+    if(f->postInputCallbacks)
+        // Call all controller postInput callbacks for this filter.
+        qsDictionaryForEach(f->postInputCallbacks,
+            (int (*) (const char *key, void *value,
+                void *userData)) InputCallback, j);
 
 
     if(ret)

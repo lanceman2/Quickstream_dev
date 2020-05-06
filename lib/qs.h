@@ -187,7 +187,7 @@ struct QsDictionary;
 //
 struct QsApp {
 
-    // type of struct
+    // type of struct.  Must be _QS_APP_TYPE.
     uint32_t type;
 
     // We get id from _qsAppCount just before this app is created.
@@ -305,6 +305,7 @@ struct QsController {
 struct QsStream {
 
     // type must be first in this struct.
+    // Must be _QS_STREAM_TYPE.
     // The type of struct this is:
     uint32_t type;
 
@@ -433,6 +434,7 @@ struct QsStream {
 
     // TODO: We may not need next; we could use app::dict instead.
     //
+    // A singly linked list of stream that starts at app.
     struct QsStream *next; // next stream in app list of streams
 };
 
@@ -470,6 +472,12 @@ struct QsFilter {
     // parameters should be second in this struct.
     // List of Parameters that this filter owns:
     struct QsDictionary *parameters;
+
+    // list of controller's qsAddPreFilterInput() callbacks
+    struct QsDictionary *preInputCallbacks;
+
+    // List of controller's qsAddPostFilterInput() callbacks
+    struct QsDictionary *postInputCallbacks;
 
 
     void *dlhandle; // from dlopen()

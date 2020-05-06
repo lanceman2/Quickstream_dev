@@ -363,7 +363,17 @@ int preStop_callback(const char *key, struct QsController *c,
         struct QsStream *s) {
 
     if(c->preStop) {
+
+        DASSERT(c->mark == 0);
+        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
+        c->mark = _QS_IN_PRESTOP;
+        CHECK(pthread_setspecific(_qsControllerKey, c));
+
         int ret = c->preStop(s);
+
+        CHECK(pthread_setspecific(_qsControllerKey, 0));
+        c->mark = 0;
+
         if(ret) {
             ERROR("Controller \"%s\" preStop() returned (%d) error",
                     c->name, ret);
@@ -379,7 +389,17 @@ int postStop_callback(const char *key, struct QsController *c,
         struct QsStream *s) {
 
     if(c->postStop) {
+
+        DASSERT(c->mark == 0);
+        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
+        c->mark = _QS_IN_POSTSTOP;
+        CHECK(pthread_setspecific(_qsControllerKey, c));
+
         int ret = c->postStop(s);
+
+        CHECK(pthread_setspecific(_qsControllerKey, 0));
+        c->mark = 0;
+
         if(ret) {
             ERROR("Controller \"%s\" postStop() returned (%d) error",
                     c->name, ret);
@@ -463,7 +483,17 @@ int preStart_callback(const char *key, struct QsController *c,
         struct QsStream *s) {
 
     if(c->preStart) {
+
+        DASSERT(c->mark == 0);
+        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
+        c->mark = _QS_IN_PRESTART;
+        CHECK(pthread_setspecific(_qsControllerKey, c));
+
         int ret = c->preStart(s);
+
+        CHECK(pthread_setspecific(_qsControllerKey, 0));
+        c->mark = 0;
+
         if(ret) {
             ERROR("Controller \"%s\" preStart() returned (%d) error",
                     c->name, ret);
@@ -479,7 +509,17 @@ int postStart_callback(const char *key, struct QsController *c,
         struct QsStream *s) {
 
     if(c->postStart) {
+
+        DASSERT(c->mark == 0);
+        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
+        c->mark = _QS_IN_POSTSTART;
+        CHECK(pthread_setspecific(_qsControllerKey, c));
+
         int ret = c->postStart(s);
+
+        CHECK(pthread_setspecific(_qsControllerKey, 0));
+        c->mark = 0;
+
         if(ret) {
             ERROR("Controller \"%s\" postStart() returned (%d) error",
                     c->name, ret);

@@ -361,6 +361,7 @@ const char* qsGetFilterName(void) {
     return f->name;
 }
 
+
 struct QsFilter *qsFilterFromName(struct QsStream *stream,
         const char *filterName) {
 
@@ -388,4 +389,15 @@ void qsSetThreadSafe(uint32_t maxThreads) {
     // use of maxThreads=0, so that there is at least one thread.
     if(maxThreads == 0) f->maxThreads = 1;
     else f->maxThreads = maxThreads;
+}
+
+
+
+const char *qsFilterName(const struct QsFilter *f) {
+
+    DASSERT(f);
+    DASSERT(f->name);
+    DASSERT(f->name[0]);
+
+    return f->name;
 }

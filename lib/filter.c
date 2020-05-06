@@ -1,8 +1,3 @@
-#ifndef _GNU_SOURCE
-// For the GNU version of basename() that never modifies its argument.
-// and For the GNU version of dlmopen()
-#  define _GNU_SOURCE
-#endif
 #include <string.h>
 #include <stdlib.h>
 #include <alloca.h>

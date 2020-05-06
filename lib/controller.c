@@ -410,6 +410,16 @@ int qsControllerUnload(struct QsController *c) {
     }
 
     DASSERT(c->app);
+
+    for(struct QsStream *s=c->app->streams; s; s = s->next)
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            if(f->preInputCallbacks)
+                qsDictionaryRemove(f->preInputCallbacks, c->name);
+            if(f->postInputCallbacks)
+                qsDictionaryRemove(f->postInputCallbacks, c->name);
+        }
+
+
     DSPEW("Unloading controller \"%s\"", c->name);
 
     if(qsDictionaryRemove(c->app->controllers, c->name)) {
