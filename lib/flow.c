@@ -156,7 +156,7 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 
 
 static void
-InputCallback(const char *key, struct Callback *cb,
+PreInputCallback(const char *key, struct Callback *cb,
         struct QsJob *j) {
 
     struct QsFilter *f = j->filter;
@@ -165,6 +165,18 @@ InputCallback(const char *key, struct Callback *cb,
             j->isFlushing, f->numInputs, f->numOutputs,
             cb->userData);
 }
+
+static void
+PostInputCallback(const char *key, struct Callback *cb,
+        struct QsJob *j) {
+
+    struct QsFilter *f = j->filter;
+
+    cb->callback(f, j->outputLens,
+            j->isFlushing, f->numInputs, f->numOutputs,
+            cb->userData);
+}
+
 
 
 
@@ -189,7 +201,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         // Call all controller preInput callbacks for this filter.
         qsDictionaryForEach(f->preInputCallbacks,
             (int (*) (const char *key, void *value,
-                void *userData)) InputCallback, j);
+                void *userData)) PreInputCallback, j);
+
 
 
     // At this point this filter/thread owns this job.
@@ -351,6 +364,13 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     }
 
 
+    if(f->postInputCallbacks)
+        // Call all controller postInput callbacks for this filter.
+        qsDictionaryForEach(f->postInputCallbacks,
+            (int (*) (const char *key, void *value,
+                void *userData)) PostInputCallback, j);
+
+
     bool ret = true;
 
     if(inputRet || f->mark) {
@@ -467,12 +487,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     CheckUnlockFilter(f);
 
 
-
-    if(f->postInputCallbacks)
-        // Call all controller postInput callbacks for this filter.
-        qsDictionaryForEach(f->postInputCallbacks,
-            (int (*) (const char *key, void *value,
-                void *userData)) InputCallback, j);
 
 
     if(ret)
