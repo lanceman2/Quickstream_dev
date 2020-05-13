@@ -199,11 +199,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             j->isFlushing, f->numInputs, f->numOutputs);
 
 
-
-    // TODO: Call all controller postInput callbacks for this filter.
-    
-    
-
     
     // Note: all these for loop iteration is through just the number of
     // inputs and outputs to and from the filter.  Usually there'll be

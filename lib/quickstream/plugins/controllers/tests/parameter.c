@@ -49,11 +49,11 @@ int PostInputCB(
             void *userData) {
 
     if(numInputs)
-        DSPEW("-------------preInputCB(filter=\"%s\","
+        DSPEW("-------------PostInputCB(filter=\"%s\","
                 "inputLen[0]=%zu,,)---------------",
                 qsFilterName(filter), numInputs?lenIn[0]:0);
     if(numOutputs)
-        DSPEW("-------------postInputCB(filter=\"%s\","
+        DSPEW("-------------PostInputCB(filter=\"%s\","
                 "outputLen[0]=%zu,,)---------------",
                 qsFilterName(filter), numOutputs?lenOut[0]:0);
 
@@ -63,12 +63,11 @@ int PostInputCB(
 
 static
 int AddFilter(struct QsStream *s, struct QsFilter *filter,
-        void *uaserData) {
+        void *userData) {
 
     DSPEW("Adding filter \"%s\"", qsFilterName(filter));
 
     qsAddPostFilterInput(filter, PostInputCB, 0);
-
  
     return 0;
 }
