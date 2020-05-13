@@ -88,11 +88,16 @@ int construct(int argc, const char **argv);
 void help(FILE *file);
 
 
-int preStart(struct QsStream *stream);
-int postStart(struct QsStream *stream);
+int preStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
+int postStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
 
-int preStop(struct QsStream *stream);
-int postStop(struct QsStream *stream);
+int preStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
+int postStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
+
 
 /** optional destructor function
  *

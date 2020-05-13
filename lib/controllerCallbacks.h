@@ -16,7 +16,11 @@ struct ControllerCallback {
     // This is used to mark that a non-zero value was returned from the
     // callback() call.  And the callback is stopped being called if
     // non-zero was returned.
-    int returnValue;
+    //
+    // We use atomic_int because its' values changes 0 or 1 time while the
+    // stream is running, and many threads can read this changing value.
+    // The value only changes once at most.
+    atomic_int returnValue;
 
     // Used make a singly linked list of callbacks to remove.
     //

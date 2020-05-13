@@ -26,6 +26,7 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
   - is it necessary
   - add a test for isFlushing.
 
+- Add controllers to the DOT printing of the streams.
 
 - Write a test (in tests/) that has a filter with more than one input
   channel/port where one of the input channels is slow compared to the
@@ -37,7 +38,7 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
       sum of two floats, one from each of the two input channels.
 
 - Write some memory leak tests.  Tests that run and restart enough so as
-  to show a memory leak.
+  to show a memory leak.  Maybe valgrind could help.
 
 - Add finding controller modules to bash completion.
 

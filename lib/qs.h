@@ -124,7 +124,7 @@
 
 // Sets controller mark when in controller preStart()
 #define _QS_IN_PRESTART        ((uint32_t) 0xa74ac1c3)
-// Sets controller mark when in controller preStop(
+// Sets controller mark when in controller preStop()
 #define _QS_IN_PRESTOP         ((uint32_t) 0x91ba4d3c)
 
 // Sets controller mark when in controller postStart()
@@ -258,6 +258,9 @@ pthread_t _qsMainThread;
 #endif
 
 
+struct QsFilter;
+
+
 
 struct QsController {
 
@@ -290,11 +293,15 @@ struct QsController {
     // once, so we just dlsym() (if we have a dlhandle) them just before
     // we call them.
 
-    int (*preStart)(struct QsStream *stream);
-    int (*postStart)(struct QsStream *stream);
+    int (*preStart)(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
+    int (*postStart)(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
 
-    int (*preStop)(struct QsStream *stream);
-    int (*postStop)(struct QsStream *stream);
+    int (*preStop)(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
+    int (*postStop)(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs);
 };
 
 
@@ -971,13 +978,11 @@ extern
 struct QsDictionary *GetStreamDictionary(const struct QsStream *s);
 
 
-// Just Frees the malloc allocated memory that is pointer to from the
+// Just Frees the malloc allocated memory that is pointed to from the
 // Parameter Dictionary.  The Parameter Dictionary is not destroyed with
 // this.
 //
 extern
 void
 _qsParametersDictionaryDestory(struct QsStream *s);
-
-
 

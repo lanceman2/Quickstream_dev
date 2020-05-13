@@ -373,7 +373,7 @@ struct QsFilter *qsFilterFromName(struct QsStream *stream,
 
 
 
-// maxThread that may run in the current filter.
+// maxThread that may run in the current filter input() call.
 void qsSetThreadSafe(uint32_t maxThreads) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -390,6 +390,17 @@ void qsSetThreadSafe(uint32_t maxThreads) {
     if(maxThreads == 0) f->maxThreads = 1;
     else f->maxThreads = maxThreads;
 }
+
+
+// maxThread that may run in the current filter input() call.
+uint32_t qsFilterGetThreadSafe(const struct QsFilter *f) {
+
+    DASSERT(f);
+
+    // maxThreads will not be 0, so that there is at least one thread.
+    return f->maxThreads;
+}
+
 
 
 

@@ -451,7 +451,6 @@ struct QsFilter *qsFilterGetFromName(struct QsStream *stream,
 
 
 
-
 /** Tell quickstream that the filters input() function is thread safe.
  *
  * This must be called in the filter construct() function.
@@ -468,6 +467,24 @@ struct QsFilter *qsFilterGetFromName(struct QsStream *stream,
  */
 extern
 void qsSetThreadSafe(uint32_t maxThreads);
+
+
+
+/** Get the whither or not the filters input() function is thread safe.
+ *
+ * ... Because controllers may need to know that filters input() calls may
+ * be called in more than one thread at a time.
+ *
+ * \param filter the filter object.
+ *
+ * \return greater than 1 if the filter is thread safe, or 1 if not.
+ * The number returned is the maxThreads that was passed in
+ * qsSetThreadSafe() in the filter module.
+ */
+extern
+uint32_t qsFilterGetThreadSafe(const struct QsFilter *filter);
+
+
 
 
 /** Get a float as an option argument.

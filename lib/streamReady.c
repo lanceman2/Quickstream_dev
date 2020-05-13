@@ -370,12 +370,18 @@ int preStop_callback(const char *key, struct QsController *c,
         c->mark = _QS_IN_PRESTOP;
         CHECK(pthread_setspecific(_qsControllerKey, c));
 
-        int ret = c->preStop(s);
+        int ret = 0;
+
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            ret = c->preStop(s, f, f->numInputs, f->numOutputs);
+            if(ret)
+                break;
+        }
 
         CHECK(pthread_setspecific(_qsControllerKey, 0));
         c->mark = 0;
 
-        if(ret) {
+        if(ret < 0) {
             ERROR("Controller \"%s\" preStop() returned (%d) error",
                     c->name, ret);
             ASSERT(0, "Write more code here to handle this error case");
@@ -396,12 +402,18 @@ int postStop_callback(const char *key, struct QsController *c,
         c->mark = _QS_IN_POSTSTOP;
         CHECK(pthread_setspecific(_qsControllerKey, c));
 
-        int ret = c->postStop(s);
+        int ret = 0;
+
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            ret = c->postStop(s, f, f->numInputs, f->numOutputs);
+            if(ret)
+                break;
+        }
 
         CHECK(pthread_setspecific(_qsControllerKey, 0));
         c->mark = 0;
 
-        if(ret) {
+        if(ret < 0) {
             ERROR("Controller \"%s\" postStop() returned (%d) error",
                     c->name, ret);
             ASSERT(0, "Write more code here to handle this error case");
@@ -546,12 +558,18 @@ int preStart_callback(const char *key, struct QsController *c,
         c->mark = _QS_IN_PRESTART;
         CHECK(pthread_setspecific(_qsControllerKey, c));
 
-        int ret = c->preStart(s);
+        int ret = 0;
+
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            ret = c->preStart(s, f, f->numInputs, f->numOutputs);
+            if(ret)
+                break;
+        }
 
         CHECK(pthread_setspecific(_qsControllerKey, 0));
         c->mark = 0;
 
-        if(ret) {
+        if(ret < 0) {
             ERROR("Controller \"%s\" preStart() returned (%d) error",
                     c->name, ret);
             ASSERT(0, "Write more code here to handle this error case");
@@ -572,12 +590,18 @@ int postStart_callback(const char *key, struct QsController *c,
         c->mark = _QS_IN_POSTSTART;
         CHECK(pthread_setspecific(_qsControllerKey, c));
 
-        int ret = c->postStart(s);
+        int ret = 0;
+
+        for(struct QsFilter *f=s->filters; f; f = f->next) {
+            ret = c->postStart(s, f, f->numInputs, f->numOutputs);
+            if(ret)
+                break;
+        }
 
         CHECK(pthread_setspecific(_qsControllerKey, 0));
         c->mark = 0;
 
-        if(ret) {
+        if(ret < 0) {
             ERROR("Controller \"%s\" postStart() returned (%d) error",
                     c->name, ret);
             ASSERT(0, "Write more code here to handle this error case");

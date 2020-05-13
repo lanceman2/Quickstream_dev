@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+source testsEnv
+
+
+# tests/empty is a controller that has no controller functions in it.
+# It's build from a zero length C file.  Ya, it's empty except to what the
+# compiler puts in it to make it a loadable DSO (dynamic shared object).
+# 
+# This test lets us know that controllers do not have to do anything.
+
+set -x
+echo "Hello123" | ../bin/quickstream -C tests/empty -f stdin -f stdout -c -t 1 -r
+
+set +x
+echo "$0 SUCCESS"

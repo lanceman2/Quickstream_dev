@@ -44,32 +44,36 @@ int construct(int argc, const char **argv) {
     return 0; // success
 }
 
-int preStart(struct QsStream *stream) {
+int preStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW();
     printf("%s()\n", __func__);
-    return 0;
+    return 1; // done for this stream running.
 }
 
-int postStart(struct QsStream *stream) {
+int postStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW();
     printf("%s()\n", __func__);
-    return 0;
+    return 1; // done for this stream running.
 }
 
-int preStop(struct QsStream *stream) {
+int preStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW();
     printf("%s()\n", __func__);
-    return 0;
+    return 1; // done for this stream running.
 }
 
-int postStop(struct QsStream *stream) {
+int postStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW();
     printf("%s()\n", __func__);
-    return 0;
+    return 1; // done for this stream running.
 }
 
 int destroy(void) {

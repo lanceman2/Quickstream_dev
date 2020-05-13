@@ -199,7 +199,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             j->isFlushing, f->numInputs, f->numOutputs);
 
 
-    
     // Note: all these for loop iteration is through just the number of
     // inputs and outputs to and from the filter.  Usually there'll be
     // just 1 or 2 inputs and 1 or 2 outputs.
