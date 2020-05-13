@@ -6,9 +6,26 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - Finish parameters owned by the controller.  And add a test (tests/).
 
+- Add contoller modules to bash completion.
+
+- code for handling module dependences??? For both filters and
+  controllers.
+
+- Super modules.  Super modules are modules that load modules.
+
+- Q: Is input length --> preInput and  output length --> postInput and
+  isFlushing the only paramenter to the controller callbacks?
+  They get the callback parameters quickstream API Parmeters, and what
+  ever 
+
 - make the parameter thing for all filters that monitors the total number
   of bytes out, and in, for each ports and total for all inputs and
   outputs.   Use qsParameterCreateForFilter().
+
+- finish the isFlushing thing:
+  - is it necessary
+  - add a test for isFlushing.
+
 
 - Write a test (in tests/) that has a filter with more than one input
   channel/port where one of the input channels is slow compared to the

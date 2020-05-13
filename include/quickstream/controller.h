@@ -110,43 +110,6 @@ extern "C" {
 #endif
 
 
-/** Register a pre-filter-input callback function
- *
- * When the controller or the associated filter are unloaded this callback
- * is removed.
- *
- * This must be called in one of the optional controller loaded functions:
- * construct(), preStart(), postStart(), preStop(), or postStop().
- *
- * Each controller may have only one pre-input filter callback per filter.
- *
- * \param filter is the filter those input() function that is of concern.
- *
- * \param callback is the function that is called before each filter
- * input() is called.  \p callback() will be called with \p len that
- * reflects the lengths pasted to the filter's input() call.
- *
- * If \p callback returns non-zero the callback will be removed.
- *
- * If qsAddPreFilterInput() is called with \p callback zero the callback
- * will be removed.  If a callback already exists, the new callback will
- * replace the old callback.
- *
- * \param userData is passed to the \p callback function each time it is
- * called.
- *
- * /return 0 on success.  Returns 1 if the keyName for this filter's
- * pre-input callback already exists.
- */
-extern
-int qsAddPreFilterInput(struct QsFilter *filter,
-        int (*callback)(
-            struct QsFilter *filter,
-            const size_t len[],
-            const bool isFlushing[],
-            uint32_t numInputs, uint32_t numOutputs,
-            void *userData), void *userData);
-
 
 /** Register a post-filter-input callback function
  *
@@ -166,7 +129,9 @@ int qsAddPreFilterInput(struct QsFilter *filter,
  * exists, the new callback will replace the old callback.
 
  *
- * If \p callback returns non-zero the callback will be removed.
+ * If \p callback returns non-zero the callback will be removed.  The
+ * len[] argument will be the set to the number of bytes that have been
+ * pushed through the filter in the last filter input() call.
  *
  * If qsAddPostFilterInput() is called with \p callback zero the callback
  * will be removed.
@@ -183,7 +148,8 @@ extern
 int qsAddPostFilterInput(struct QsFilter *filter,
         int (*callback)(
             struct QsFilter *filter,
-            const size_t len[],
+            const size_t lenIn[],
+            const size_t lenOut[],
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs,
             void *userData), void *userData);

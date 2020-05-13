@@ -24,11 +24,12 @@
 static void CleanUpCB(void *ptr) {
     DASSERT(ptr);
 #ifdef DEBUG
-    memset(ptr, 0, sizeof(struct Callback));
+    memset(ptr, 0, sizeof(struct ControllerCallback));
 #endif
     free(ptr);
 }
 
+#if 0
 
 int qsAddPreFilterInput(struct QsFilter *f,
         int (*callback)(
@@ -58,7 +59,7 @@ int qsAddPreFilterInput(struct QsFilter *f,
     if(!f->preInputCallbacks)
         f->preInputCallbacks = qsDictionaryCreate();
 
-    struct Callback *cb = malloc(sizeof(*cb));
+    struct ControllerCallback *cb = malloc(sizeof(*cb));
     ASSERT(cb, "malloc(%zu) failed", sizeof(*cb));
 
     struct QsDictionary *d = 0;
@@ -80,15 +81,19 @@ int qsAddPreFilterInput(struct QsFilter *f,
 
     cb->callback = callback;
     cb->userData = userData;
+    cb->returnValue = 0;
 
     return 0; // success
 }
+
+#endif
 
 
 int qsAddPostFilterInput(struct QsFilter *f,
         int (*callback)(
             struct QsFilter *filter,
-            const size_t len[],
+            const size_t lenIn[],
+            const size_t lenOut[],
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs,
             void *userData), void *userData) {
@@ -113,7 +118,7 @@ int qsAddPostFilterInput(struct QsFilter *f,
     if(!f->postInputCallbacks)
         f->postInputCallbacks = qsDictionaryCreate();
 
-    struct Callback *cb = malloc(sizeof(*cb));
+    struct ControllerCallback *cb = malloc(sizeof(*cb));
     ASSERT(cb, "malloc(%zu) failed", sizeof(*cb));
 
     struct QsDictionary *d = 0;
@@ -135,6 +140,7 @@ int qsAddPostFilterInput(struct QsFilter *f,
 
     cb->callback = callback;
     cb->userData = userData;
+    cb->returnValue = 0;
 
     return 0; // success
 }

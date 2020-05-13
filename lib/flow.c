@@ -156,28 +156,21 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 
 
 static void
-PreInputCallback(const char *key, struct Callback *cb,
+PostInputCallback(const char *key, struct  ControllerCallback *cb,
         struct QsJob *j) {
 
     struct QsFilter *f = j->filter;
 
-    cb->callback(f, j->inputLens,
+    // Note: we can't edit the list of callbacks while the stream is
+    // running.  We just made it simple that way.
+
+    if(cb->returnValue == 0)
+        cb->returnValue = cb->callback(f,
+                j->advanceLens, // input lengths
+                j->outputLens,  // output lengths
             j->isFlushing, f->numInputs, f->numOutputs,
             cb->userData);
 }
-
-static void
-PostInputCallback(const char *key, struct Callback *cb,
-        struct QsJob *j) {
-
-    struct QsFilter *f = j->filter;
-
-    cb->callback(f, j->outputLens,
-            j->isFlushing, f->numInputs, f->numOutputs,
-            cb->userData);
-}
-
-
 
 
 
@@ -195,13 +188,6 @@ PostInputCallback(const char *key, struct Callback *cb,
 // holding a stream mutex lock.
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
-
-
-    if(f->preInputCallbacks)
-        // Call all controller preInput callbacks for this filter.
-        qsDictionaryForEach(f->preInputCallbacks,
-            (int (*) (const char *key, void *value,
-                void *userData)) PreInputCallback, j);
 
 
 

@@ -8,7 +8,7 @@ source testsEnv
 set -x
 ../bin/quickstream\
  -C tests/parameter\
- -f tests/sequenceGen.so { --name seq --maxWrite 128 --length 1024 }\
+ -f tests/sequenceGen.so { --name seq --maxWrite 128 --length 1000 }\
  -f stdout\
  -c -t 0 -r
 

@@ -39,23 +39,23 @@ int setCount(void *value, const char *pName,
     return 0;
 }
 
-int InputCB(
+static
+int PostInputCB(
             struct QsFilter *filter,
-            const size_t len[],
+            const size_t lenIn[],
+            const size_t lenOut[],
             const bool isFlushing[],
             uint32_t numInputs, uint32_t numOutputs,
             void *userData) {
 
-    if(userData == 0)
+    if(numInputs)
         DSPEW("-------------preInputCB(filter=\"%s\","
                 "inputLen[0]=%zu,,)---------------",
-                qsFilterName(filter), numInputs?len[0]:0);
-    else
+                qsFilterName(filter), numInputs?lenIn[0]:0);
+    if(numOutputs)
         DSPEW("-------------postInputCB(filter=\"%s\","
                 "outputLen[0]=%zu,,)---------------",
-                qsFilterName(filter), numOutputs?len[0]:0);
-
-
+                qsFilterName(filter), numOutputs?lenOut[0]:0);
 
     return 0;
 }
@@ -67,8 +67,7 @@ int AddFilter(struct QsStream *s, struct QsFilter *filter,
 
     DSPEW("Adding filter \"%s\"", qsFilterName(filter));
 
-    qsAddPreFilterInput(filter, InputCB, 0);
-    qsAddPostFilterInput(filter, InputCB, (void *) 1);
+    qsAddPostFilterInput(filter, PostInputCB, 0);
 
  
     return 0;

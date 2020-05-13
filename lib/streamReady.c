@@ -7,6 +7,7 @@
 // The public installed user interfaces:
 #include "../include/quickstream/app.h"
 #include "../include/quickstream/filter.h"
+#include "controllerCallbacks.h"
 
 // Private interfaces.
 #include "./debug.h"
@@ -410,6 +411,34 @@ int postStop_callback(const char *key, struct QsController *c,
 }
 
 
+struct ControllerCallbackRemover {
+
+    // Start and end of a singly linked list of callbacks to remove.
+    //
+    // Uses (struct Callback)::next to make the list.
+    struct  ControllerCallback *start, *end;
+};
+
+
+static void
+MarkInputCallback(const char *key, struct  ControllerCallback *cb,
+        struct ControllerCallbackRemover *r) {
+
+    if(cb->returnValue) {
+
+        // Add this callback to the list to be removed later.
+        if(r->start)
+            r->end->next = cb;
+        else
+            r->start = cb;
+        r->end = cb;
+        cb->next = 0;
+
+        cb->key = key;
+    }
+}
+
+
 int qsStreamStop(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -436,9 +465,37 @@ int qsStreamStop(struct QsStream *s) {
      *      Stage: call all the app's controller preStop()s if present
      *********************************************************************/
 
+
     qsDictionaryForEach(s->app->controllers,
             (int (*) (const char *, void *, void *)) preStop_callback,
             s);
+
+
+    /**********************************************************************
+     *      Stage: remove all PostInputCallbacks that are marked as
+     *             finished.
+     *********************************************************************/
+
+    for(struct QsFilter *f = s->filters; f; f = f->next) {
+
+        if(f->postInputCallbacks == 0)
+            continue;
+
+        struct ControllerCallbackRemover r;
+        r.start = 0;
+        r.end = 0;
+
+        qsDictionaryForEach(f->postInputCallbacks,
+            (int (*) (const char *key, void *value,
+                void *userData)) MarkInputCallback, &r);
+
+        struct ControllerCallback *next;
+        for(struct ControllerCallback *cb=r.start; cb; cb = next) {
+            next = cb->next;
+            DSPEW("Removing %s:%s PostInput callback", f->name, cb->key);
+            qsDictionaryRemove(f->postInputCallbacks, cb->key);
+        }
+    }
 
 
     /**********************************************************************
