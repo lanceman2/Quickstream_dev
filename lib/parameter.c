@@ -74,16 +74,26 @@ struct Parameter {
 
     int (*setCallback)(void *value, const char *pName, void *userData);
 
+    void (*cleanup)(const char *pName, void *userData);
+
     // realloc()ed array.
     size_t numGetCallbacks;
     struct GetCallback *getCallbacks;
+
+    char *pName;
 };
 
 
-static void FreeQsParameter(struct Parameter *p) {
+static void FreeParameter(struct Parameter *p) {
 
-    //DSPEW("Freeing Parameter");
     DASSERT(p);
+    DASSERT(p->pName);
+    DSPEW("Freeing Parameter \"%s\"", p->pName);
+
+    if(p->cleanup)
+        p->cleanup(p->pName, p->userData);
+
+    free(p->pName);
     if(p->getCallbacks) {
         DASSERT(p->numGetCallbacks);
 #ifdef DEBUG
@@ -92,6 +102,7 @@ static void FreeQsParameter(struct Parameter *p) {
 #endif
         free(p->getCallbacks);
     }
+
 #ifdef DEBUG
     memset(p, 0, sizeof(*p));
 #endif
@@ -129,19 +140,27 @@ struct QsDictionary *GetParameterDictionary(void *as, const char *name) {
 
 
 static
-void CreateParameter(struct QsDictionary *d,
+void CreateParameter(struct QsDictionary *d, const char *pName,
         int (*setCallback)(void *value, const char *pName,
-            void *userData), void *userData,
+            void *userData),
+        void (*cleanup)(const char *pName, void *userData),
+        void *userData,
         enum QsParameterType type) {
+
+    DASSERT(pName);
+    DASSERT(pName[0]);
 
     struct Parameter *p = malloc(sizeof(*p));
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     memset(p, 0, sizeof(*p));
     qsDictionarySetValue(d, p);
-    qsDictionarySetFreeValueOnDestroy(d, (void(*)(void *))FreeQsParameter);
+    qsDictionarySetFreeValueOnDestroy(d, (void(*)(void *))FreeParameter);
+    p->pName = strdup(pName);
+    ASSERT(p->pName, "strdup() failed");
     p->type = type;
     p->userData = userData;
     p->setCallback = setCallback;
+    p->cleanup = cleanup;
 }
 
 
@@ -149,6 +168,7 @@ int qsParameterCreateForFilter(struct QsFilter *f,
         const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
             void *userData),
+        void (*cleanup)(const char *pName, void *userData),
         void *userData) {
 
     DASSERT(f);
@@ -166,7 +186,7 @@ int qsParameterCreateForFilter(struct QsFilter *f,
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    CreateParameter(d, setCallback, userData, type);
+    CreateParameter(d, pName, setCallback, cleanup, userData, type);
     return 0;
 }
 
@@ -174,6 +194,7 @@ int qsParameterCreateForFilter(struct QsFilter *f,
 int qsParameterCreate(const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
             void *userData),
+        void (*cleanup)(const char *pName, void *userData),
         void *userData) {
 
     struct QsFilter *f = GetFilter();
@@ -183,7 +204,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
                 "must be called in a filter module construct()");
 
         return qsParameterCreateForFilter(f, pName, type,
-                setCallback, userData);
+                setCallback, cleanup, userData);
     }
 
     // else: Create this parameter owned by a controller.
@@ -199,7 +220,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
     if(!c) {
         ERROR("qsParameterCreate() cannot find object");
-        return 1; // error
+        return -1; // error
     }
 
     // Create parameter dictionary entry.
@@ -213,7 +234,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    CreateParameter(d, setCallback, userData, type);
+    CreateParameter(d, pName, setCallback, cleanup, userData, type);
     return 0;
 }
 

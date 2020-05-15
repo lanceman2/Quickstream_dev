@@ -12,16 +12,21 @@ if [ -n "$1" ] && [ "$1" != "-w" ] ; then
 
   Usage: $(basename $0) [-w]|[-h|--help]
 
-    Print the number of lines of C code in this package.
+    Print the number of lines of C code in this package, both counting
+    comments and excluding comments.
+
+    This will automatically download and build scc-snapshots (by Jonathan
+    Leffler) which is a C and C++ code that removes comments from C and
+    C++ code.
 
 
-    --------------------------- OPTIONS ------------------------------------
+   --------------------------- OPTIONS ------------------------------------
 
         -h|--help  print this help and exit 1.
 
-        -w          with comments and blank lines.  Otherwise it prints the
-                    number of lines of C code including comments and blank
-                    lines.
+        -w         with comments and blank lines.  Otherwise it prints the
+                   number of lines of C code excluding comments and blank
+                   lines.
 
 EOF
 
@@ -48,7 +53,7 @@ dir="$PWD"
 stripcmt="$dir/$scc_srcdir/scc"
 
 
-if [ ! -e "$stripcmt" ] ; then
+if [ ! -e "$stripcmt" ] && [ -z "$1" ] ; then
 
     # Download and build the Strip C Comments program scc
     # by Jonathan Leffler

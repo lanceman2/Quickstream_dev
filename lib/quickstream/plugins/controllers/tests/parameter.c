@@ -79,7 +79,7 @@ int construct(int argc, const char **argv) {
 
     DSPEW("in construct()");
 
-    qsParameterCreate("count", QsUint64, setCount, 0);
+    qsParameterCreate("count", QsUint64, setCount, 0, 0);
 
     printf("%s()\n", __func__);
     return 0; // success
@@ -88,7 +88,7 @@ int construct(int argc, const char **argv) {
 int preStart(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    DSPEW();
+    DSPEW("filter=\"%s\"", qsFilterName(f));
     count = 0;
     printf("%s()\n", __func__);
 
@@ -100,7 +100,7 @@ int preStart(struct QsStream *stream, struct QsFilter *f,
 int postStart(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    DSPEW();
+    DSPEW("filter=\"%s\"", qsFilterName(f));
     printf("%s()\n", __func__);
     return 0;
 }
@@ -108,7 +108,7 @@ int postStart(struct QsStream *stream, struct QsFilter *f,
 int preStop(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    DSPEW();
+    DSPEW("filter=\"%s\"", qsFilterName(f));
     printf("%s()\n", __func__);
     return 0;
 }
@@ -116,7 +116,7 @@ int preStop(struct QsStream *stream, struct QsFilter *f,
 int postStop(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    DSPEW();
+    DSPEW("filter=\"%s\"", qsFilterName(f));
     printf("%s()\n", __func__);
     return 0;
 }

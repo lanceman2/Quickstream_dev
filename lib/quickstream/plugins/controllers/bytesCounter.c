@@ -34,8 +34,8 @@ void help(FILE *f) {
 "\n"
 "\n                OPTIONS\n"
 "\n"
-"     --filter NAME [...]   add the bytes counter for just filters\n"
-"                           with the following names NAME ...\n"
+"     --filter NAME0 [...]   add the bytes counter for just filters\n"
+"                           with the following names NAME0 ...\n"
 "                           Only the last --filter option will be used.\n"
 "\n"
 "\n");

@@ -55,7 +55,7 @@ int construct(int argc, const char **argv) {
         parameters[i] = i + 0.0456;
         qsParameterCreate(pName, QsDouble,
                 (int (*)(void *, const char *, void *)) setParameterCallback,
-                parameters + i);
+                0, parameters + i);
     }
 
     return 0; // success

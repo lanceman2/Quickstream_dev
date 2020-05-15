@@ -26,6 +26,12 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
   - is it necessary
   - add a test for isFlushing.
 
+
+- controller webClient and the quickstream web server.
+  - We can pass process virtual addresses along with name strings and from
+    the client and web server.  This would make a very fast lookup to find
+    the parameter data that is in the running stream.
+
 - Add controllers to the DOT printing of the streams.
 
 - Write a test (in tests/) that has a filter with more than one input
@@ -46,9 +52,36 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - Edit documentation from top to bottom.
 
+
+- Write a master release test that must be run and passed in order to
+  make different versions of "releases".
+  - Add git download and build/install test.
+  - Add tarball generation and build/install test.
+  - Test documentation generation both local and on the web.
+  - Build/Install with quickbuild
+  - Build/Install with GNU autotools
+  - Run tests from the built source
+  - Run the tests from installed prefix
+  - Run tests with all the above permutations.
+    Examples:
+    - With source dir build from tarball
+    - With installed prefix from git repo
+  - Keep quickstream self contained so that the documentation
+    comes with the source, in one repo.
+    - The generated documentation gets pushed to the web.
+  - It may be a good idea to minimize the dependency on github
+    so that we can port all the source to other repo servers.
+    - Hence minimize the use of the github web API, or
+      at least make it easy to spot and change code that
+      uses that web API.  Release tests should exercise any
+      web APIs that are used.  It's called foresite...
+
+
 - Do we want to be able to remove individual parameters?
 
 - Add a Controller and filter unload test.
+
+- Make GNU autotools build work again.
 
 - Control objects either set or get.  Pairs of control objects like for
   example tx:freq has a setter and a getter; with the getter can be used

@@ -10,7 +10,7 @@ set -x
  -C tests/parameter\
  -f tests/sequenceGen.so { --name seq --maxWrite 128 --length 1000 }\
  -f stdout\
- -c -t 0 -r
+ -c -t 0 -r -t 2 -r
 
 set +x
 echo "$0 SUCCESS"

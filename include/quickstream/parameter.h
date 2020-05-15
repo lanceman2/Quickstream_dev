@@ -110,11 +110,19 @@ enum QsParameterType {
     QsNew = 3
 };
 
+
 /** qsParameterCreate() is called in a filter in construct() or in
  * a controller module to create a parameter
  *
+ * In general the filter or controller must exist for the parameter to
+ * exist, because the state of the parameter is not necessarily just the
+ * value of a variable, but can be defined by a complex algorithm.
+ *
  * \param pName is the name of the parameter.  This name only needs to be
  * unique to the filter module.
+ *
+ * \param type is the parameter type.  type tells you how to deal with the
+ * \p value.
  *
  * \param setCallback is a function that is called when qsParameterSet()
  * is called in by another entity possibly in a different thread than one
@@ -132,8 +140,12 @@ enum QsParameterType {
  * of this interface without much work.   If setCallback() does block
  * quickstream will not brake, but it may become slowstream.
  *
- * \param type is the parameter type.  type tells you how to deal with
- * the \p value.
+ * \param cleanup is a clean-up function that is called to do things like
+ * free memory associated with the parameter after the parameter is no
+ * longer needed.  \p cleanup may be 0 if no clean-up is needed.
+ *
+ * Parameters are destroyed when the owning filter or controller is
+ * unloaded, and \p cleanup() is called.
  *
  * \param userData is passed to the setCallback() function every time it
  * is called.
@@ -146,21 +158,29 @@ enum QsParameterType {
  * filter module knows it's stream and filter name.
  *
  * \return 0 on success and 1 if the parameter already exists.
+ * returns -1 if the filter or controller module is not found.
  */
 extern
 int qsParameterCreate(const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
-            void *userData), void *userData);
+            void *userData),
+        void (*cleanup)(const char *pName, void *userData),
+        void *userData);
+
 
 struct QsFilter;
 struct QsStream;
 struct QsApp;
+
 
 /** create a parameter that is associated with a particular filter
  *
  * This is the same as qsParameterCreate() except that this is not
  * required to be called from the filter construct() function.  This
  * should be called before the stream is flowing.
+ *
+ * This can be called from outside a filter module's code, like in a
+ * controller module.
  *
  * \see qsParameterCreate()
  *
@@ -171,13 +191,17 @@ struct QsApp;
  *\param pName is the name of the parameter.  This name only needs to be
  * unique to the filter module.
  *
+ * \param type is the parameter type.  That tells you how to deal with
+ * the \p value.  quickstream does not have a parameter typing system,
+ * just this integer \p type number.
+ *
  * \param setCallback is a function that is called when qsParameterSet()
  * is called in by another entity possibly in a different thread than one
  * used to call the filter input().
  *
- * \param type is the parameter type.  That tells you how to deal with
- * the \p value.  quickstream does not have a parameter typing system,
- * just this integer \p type number.
+ * \param cleanup is a clean-up function that is called to do things like
+ * free memory associated with the parameter after the parameter is no
+ * longer needed.  \p cleanup may be 0 if no clean-up is needed.
  *
  * \param userData is passed to the setCallback() function every time it
  * is called.
@@ -195,8 +219,9 @@ extern
 int qsParameterCreateForFilter(struct QsFilter *filter,
         const char *pName, enum QsParameterType type,
         int (*setCallback)(void *value, const char *pName,
-            void *userData), void *userData);
-
+            void *userData),
+        void (*cleanup)(const char *pName, void *userData),
+        void *userData);
 
 
 

@@ -94,7 +94,7 @@ int construct(int argc, const char **argv) {
                 filterName, sleepT);
     }
 
-    qsParameterCreate("sleep", QsDouble, setSleepCallback, 0);
+    qsParameterCreate("sleep", QsDouble, setSleepCallback, 0, 0);
 
     return 0; // success
 }

@@ -72,7 +72,7 @@
 
 
 
-/** Tells qsStreamConnectFilters() to use the next available port.
+/** Tells qsFiltersConnect() to use the next available port.
  *
  */
 #define QS_NEXTPORT  ((uint32_t) -2)
@@ -139,10 +139,10 @@ int qsAppDestroy(struct QsApp *app);
  * to the paths given.
 
  * \param app that was returned from qsAppCreate()
- * \param fileName that refers to the plugin module file.
+ * \param filename that refers to the plugin module file.
  * \param loadName a made-up unquie name that was refer to this
  * loaded plugin module.  loadName=0 maybe passed in to have the
- * name generated based on fileName.
+ * name generated based on filename.
  * \param argc is the number of string argument in argv.
  * \param argv is 0 or a pointer to an array of strings.  Do not count
  * on argv being 0 (null) terminated.
@@ -153,7 +153,7 @@ int qsAppDestroy(struct QsApp *app);
  */
 extern
 struct QsController *qsAppControllerLoad(struct QsApp *app,
-        const char *fileName,
+        const char *filename,
         const char *loadName,
         int argc, const char **argv);
 
@@ -168,6 +168,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 extern
 int qsControllerUnload(struct QsController *controller);
 
+
 /** load the controller module and print help()
  *
  * The environment variable QS_CONTROLLER_PATH may be set to aid in
@@ -177,15 +178,17 @@ int qsControllerUnload(struct QsController *controller);
  * finding filter module plugins with the directory /controllers/ appended
  * to the paths given.
 
- * \param fileName that refers to the plugin module file.
+ * \param filename that refers to the plugin module to load.
  *
  * After the module is loaded and help() is called, the module is
  * unloaded.
  *
+ * \param file is a standard C library stream file pointer.
+ *
  * \return 0 is help() is found and called.
  */
 extern
-int qsControllerPrintHelp(const char *controllerName, FILE *f);
+int qsControllerPrintHelp(const char *filename, FILE *file);
 
 
 
@@ -212,10 +215,10 @@ struct QsStream;
  * the paths given.
  *
  * \param stream that was returned from a call to qsAppStreamCreate().
- * \param fileName that refers to the plugin module file.
+ * \param filename that refers to the plugin module file.
  * \param loadName a made-up unquie name that was refer to this
  * loaded plugin module.  loadName=0 maybe passed in to have the
- * name generated based on fileName.
+ * name generated based on filename.
  * \param argc is the number of string argument in argv.
  * \param argv is 0 or a pointer to an array of strings.  Do not count
  * on argv being 0 (null) terminated.
@@ -228,7 +231,7 @@ struct QsStream;
  */
 extern
 struct QsFilter *qsStreamFilterLoad(struct QsStream *stream,
-        const char *fileName,
+        const char *filename,
         const char *loadName,
         int argc, const char **argv);
 
@@ -246,19 +249,6 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *stream,
 extern
 int qsFilterPrintHelp(const char *filename, FILE *file);
 
-
-/** Print the help for a controller module
- *
- * \param filename is the filename of the controller module file run
- * help() for.
- *
- * \param file is a standard C library stream file to have the
- * filter's help() print to.
- *
- * \return 0 on success, 1 on error.
- */
-extern
-int qsControllerPrintHelp(const char *filename, FILE *file);
 
 
 /** print viscosity levels for qsAppPrintDotToFile() and
@@ -368,8 +358,6 @@ void qsStreamDestroy(struct QsStream *stream);
  * ports are connected.  Both input and output port numbers start at 0 and
  * sequentially increase from there, so when qsStreamReady() is called
  * there must be no gaps in the output and input port numbers.
- *
- * \param stream a stream object returned from \ref qsAppStreamCreate().
  *
  * \param from filter module that we connect from.
  *
@@ -503,7 +491,7 @@ int qsStreamStop(struct QsStream *stream);
  *  connected.
  */
 extern
-void qsStreamStopSources(struct QsStream *s);
+void qsStreamStopSources(struct QsStream *stream);
 
 
 /** Set a level of verbosity for libquickstream.so
