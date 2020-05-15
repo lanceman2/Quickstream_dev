@@ -180,7 +180,7 @@ int qsParameterCreateForFilter(struct QsFilter *f,
     int ret = qsDictionaryInsert(f->parameters, pName, "p", &d);
     ASSERT(ret >= 0);
     if(ret) {
-        ERROR("Parameter %s:%s already exists", f->name, pName);
+        NOTICE("Parameter %s:%s already exists", f->name, pName);
         return 1;
     }
     DASSERT(d);

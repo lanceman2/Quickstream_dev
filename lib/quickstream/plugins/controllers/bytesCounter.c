@@ -27,7 +27,7 @@
 
 void help(FILE *f) {
     fprintf(f,
-"   Usage: bytesCount\n"
+"   Usage: bytesCounter\n"
 "\n"
 " A controller module that adds a bytes counter for\n"
 " all filters in all streams.\n"
@@ -79,6 +79,8 @@ int preStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW("filter=\"%s\"", qsFilterName(f));
+
+
 
     return 0; // keep calling for all filters.
 }

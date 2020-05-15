@@ -58,6 +58,12 @@ _quickstream()
             # We'll get a list of filters below
             modtype=filters
             ;;
+
+        -C|--controllers|-H|--controller-help)
+            # We'll get a list of filters below
+            modtype=controllers
+            ;;
+
         # TODO: add module type controllers??
 
         -t|--threads)
@@ -72,9 +78,9 @@ _quickstream()
             ;;
     esac
 
-    # All that is left is to get a list of filter modules by
-    # looking for them in the file system.  The files paths are relative
-    # to this file or from an environment variable PATH.
+    # All that is left is to get a list of filter modules or controllers
+    # modules by looking for them in the file system.  The files paths are
+    # relative to this file or from an environment variable PATH.
 
     #COMPREPLY=( "-- This is a list of filters --" "" )
 
@@ -88,7 +94,7 @@ _quickstream()
     # file is in.
     #
     # This will even work when the software is not installed yet and is
-    # built in the source directory.  A major major plus for developers.
+    # built in the source directory; a major major plus for developers.
 
     local mod_dirs=($mod_dir/../../../lib/quickstream/plugins/$modtype/)
     local dirs

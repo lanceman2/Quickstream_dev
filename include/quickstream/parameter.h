@@ -213,7 +213,8 @@ struct QsApp;
  * The stream and filter name are not needed as parameters because the
  * filter module knows it's stream and filter name.
  *
- * \return 0 on success and 1 if the parameter already exists.
+ * \return 0 on success and 1 if the parameter already exists.  If the
+ * parameter already exists then nothing will change.
  */
 extern
 int qsParameterCreateForFilter(struct QsFilter *filter,

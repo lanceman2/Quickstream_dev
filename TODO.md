@@ -4,14 +4,20 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 # Next
 
+- Finish controller bytesCounter.
+
+- Add App function qsControllerRequire().  Crap!  How does that work?
+
 - Finish parameters owned by the controller.  And add a test (tests/).
 
 - Add contoller modules to bash completion.
 
-- code for handling module dependences??? For both filters and
-  controllers.
-
 - Super modules.  Super modules are modules that load modules.
+
+- Code for handling module dependences??? For both filters and
+  controllers.
+  - This may be a major project.
+  - How do super modules fix with this idea?
 
 - Q: Is input length --> preInput and  output length --> postInput and
   isFlushing the only paramenter to the controller callbacks?
@@ -19,13 +25,51 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
   ever 
 
 - make the parameter thing for all filters that monitors the total number
-  of bytes out, and in, for each ports and total for all inputs and
+  of bytes out, and in, for each port and total for all inputs and
   outputs.   Use qsParameterCreateForFilter().
 
 - finish the isFlushing thing:
   - is it necessary
   - add a test for isFlushing.
 
+
+- Fix Usage: in the module help() thingy.  Maybe automate it more.
+
+- Add URLs to module help() spew.  So that means that each module has
+  a corresponding web page on a web site; on Github.com we suppose.
+
+
+- Make the repo and website dependency of this software project be
+  configurable.  Some how.  This is a hard problem; we do not want this to
+  add to user configuration complexity.  Example take github.com out of
+  all source files but one.  Should MicroSoft decide to destroy github
+  we need to ready to move this software project to a new home.  Current
+  github policy works for now, so we think.
+
+
+- Go workout.  Strong body = strong mind.
+
+
+- Add file URLs to bash completion help in
+  share/bash-completion/completions/quickstream
+  - So the user can type "quickstream --stuff <tab><tab>" and get
+    HTML help links in the bash completion spew.
+  - So we get many cross linkings of documentation in quickstream
+  - Both local files and on the web...
+
+- Add documention cross linking to the DSPEW(), INFO() and so on CPP
+  macros.
+  - For the binary quickstream.
+  - For libquickstream.so
+
+- Add tty color to the DSPEW(), INFO(), NOTICE(), ... class.
+
+- An --color option to program "quickstream".
+
+
+- Add suffix and prefix to help() spew to controller modules.
+
+- Add suffix and prefix to help() spew to filter modules.
 
 - controller webClient and the quickstream web server.
   - We can pass process virtual addresses along with name strings and from
