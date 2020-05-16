@@ -164,7 +164,7 @@ PostInputCallback(const char *key, struct  ControllerCallback *cb,
     // Note: we can't edit the list of callbacks while the stream is
     // running.  We just made it simple that way.
 
-    if(cb->returnValue == 0)
+    if(!cb->returnValue)
         cb->returnValue = cb->callback(f,
                 j->advanceLens, // input lengths
                 j->outputLens,  // output lengths

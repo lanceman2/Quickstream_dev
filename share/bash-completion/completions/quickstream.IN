@@ -64,8 +64,6 @@ _quickstream()
             modtype=controllers
             ;;
 
-        # TODO: add module type controllers??
-
         -t|--threads)
             # This is a nice hack:  Print a hint for the user in a
             # otherwise broken COMPREPLY array.
@@ -80,7 +78,7 @@ _quickstream()
 
     # All that is left is to get a list of filter modules or controllers
     # modules by looking for them in the file system.  The files paths are
-    # relative to this file or from an environment variable PATH.
+    # relative to this file or from an environment variable QS_MODULE_PATH.
 
     #COMPREPLY=( "-- This is a list of filters --" "" )
 
@@ -88,9 +86,9 @@ _quickstream()
     local mod_dir="$(dirname ${BASH_SOURCE[0]})" || return 0 # bash failed
 
 
-    # TODO: For now we require that this bash file be in a special path
+    # For now we require that this bash file be in a special path
     # directory which is requires that filter plugins be in
-    # ../../share/crts/plugins/Filters/ relative to the directory this
+    # ../../../lib/quickstream/plugins/filters/ relative to the directory this
     # file is in.
     #
     # This will even work when the software is not installed yet and is
