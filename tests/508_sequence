@@ -5,6 +5,7 @@ set -e
 source testsEnv
 
 ../bin/quickstream\
+ -v 2\
  -f tests/sequenceGen { --length 10000 --maxWrite=3888 }\
  -f tests/sequenceCheck { --maxWrite=1001 }\
  -f tests/sequenceCheck { --maxWrite=13 }\

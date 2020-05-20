@@ -5,6 +5,7 @@ set -e
 source testsEnv
 
 ../bin/quickstream\
+ -v 3\
  -f tests/sequenceGen { --length 109332 }\
  -f tests/passThrough\
  -f tests/passThrough\
@@ -15,3 +16,4 @@ source testsEnv
  -c\
  -r -r -r -r -r -r
 
+echo "SUCCESS"

@@ -15,6 +15,7 @@ dd if=/dev/urandom count=1300 of=$in
 
 QS_MODULE_PATH=.\
  ../bin/quickstream\
+ -v 2\
  -f stdin\
  -f my_stdout\
  -c -t 1 -r < $in > $out

@@ -169,9 +169,6 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
 
         // Singular case.  We have no connections anymore.
         //
-        from->stream = 0;
-        to->stream = 0;
-        //
         free(s->connections);
         s->connections = 0;
         return;
@@ -188,22 +185,6 @@ static inline void RemoveConnection(struct QsStream *s, uint32_t i) {
             (s->numConnections)*sizeof(*s->connections));
     ASSERT(s->connections, "realloc(,%zu) failed",
             (s->numConnections)*sizeof(*s->connections));
-
-    // If this "from" filter is not in this stream mark it as such.
-    for(i=0; i<s->numConnections; ++i)
-        if(s->connections[i].from == from || s->connections[i].to == from)
-            break;
-    if(i==s->numConnections)
-        // This "from" filter has no stream associated with it:
-        from->stream = 0;
-
-    // If the "to" filter is not in this stream mark it as such.
-    for(i=0; i<s->numConnections; ++i)
-        if(s->connections[i].from == to || s->connections[i].to == to)
-            break;
-    if(i==s->numConnections)
-        // This "to" filter has no stream associated with it:
-        to->stream = 0;
 }
 
 
@@ -257,16 +238,16 @@ void qsStreamDestroy(struct QsStream *s) {
 
     FreeRunResources(s);
 
-    qsDictionaryDestroy(s->dict);
-
     // Cleanup filters in this list
     struct QsFilter *f = s->filters;
     while(f) {
         struct QsFilter *nextF = f->next;
         // Destroy this filter f.
-        FreeFilter(f);
+        DestroyFilter(s, f);
         f = nextF;
     }
+
+    qsDictionaryDestroy(s->dict);
 
     // Find and remove this stream from the app.
     //

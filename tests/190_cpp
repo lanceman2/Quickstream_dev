@@ -13,6 +13,7 @@ out=$0.OUT.tmp
 dd if=/dev/urandom count=1300 of=$in
 
 ../bin/quickstream\
+ -v 2\
  -f stdin\
  -f tests/stdoutCPP\
  -c\

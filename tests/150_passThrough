@@ -5,9 +5,11 @@ set -e
 source testsEnv
 
 ../bin/quickstream\
+ -V 2\
  -f tests/sequenceGen { --length 102001 }\
  -f tests/passThrough\
  -f tests/sequenceCheck { --maxWrite 10 }\
  -c\
  -r
 
+echo "SUCCESS"

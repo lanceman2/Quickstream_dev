@@ -5,6 +5,7 @@ set -e
 source testsEnv
 
 ../bin/quickstream\
+ -v 2\
  -f tests/sequenceGen { --length 1000000 }\
  -f tests/sequenceCheck\
  -c -r -r -r

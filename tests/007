@@ -10,14 +10,14 @@ out=$0.OUT.tmp
 # dd count blocks  1 block = 512bytes
 
 #dd if=/dev/urandom count=133 of=$in
-dd if=/dev/urandom count=30 | hexdump > $in
+dd if=/dev/urandom count=30 2> /dev/null | hexdump > $in 
 
 
 # This will call the tests/copy input() function lots more than all other
 # input() functions, checking the buffer advancement for the extreme case
 # with a single byte input() at a time.
 #
-../bin/quickstream -f stdin\
+../bin/quickstream -v 2 -f stdin\
  -f tests/copy\
  -f tests/copy\
  -f tests/copy\

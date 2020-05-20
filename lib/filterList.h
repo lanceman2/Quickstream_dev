@@ -26,8 +26,12 @@ struct QsFilter *FindFilterNamed(struct QsApp *app, const char *name) {
 
 
 // Here is where we cleanup filter (QsFilter) data that is from loading
-// and not part of flow-time and stream resources.  Flow-time and stream
-// resources are like ring buffers and connections.
+// and not part of flow-time and stream resources.
+//
+// Flow-time and stream resources are like ring buffers and connections.
+//
+// This should not be called from another file.
+//
 static inline
 void FreeFilter(struct QsFilter *f) {
 
@@ -38,7 +42,6 @@ void FreeFilter(struct QsFilter *f) {
     DASSERT(f->app);
     DASSERT(f->stream);
 
-    DSPEW("Freeing: %s", f->name);
 
     if(f->dlhandle) {
         int (* destroy)(void) = dlsym(f->dlhandle, "destroy");
@@ -122,7 +125,7 @@ struct QsFilter *FindFilter_viaHandle(struct QsStream *s, void *handle) {
 
 //
 // Free the filter memory, dlcose() the handle, and remove it from the
-// list.
+// stream lists.
 //
 static inline
 void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
@@ -130,16 +133,23 @@ void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
     DASSERT(s);
     DASSERT(f);
     DASSERT(s->filters);
+    DASSERT(f->stream);
     DASSERT(s == f->stream);
     DASSERT(s->dict);
+    DASSERT(f->name);
 
-
+    DSPEW("Freeing: %s", f->name);
+    
     if(f->parameters)
         // This will cleanup all the parameter data using the qsDictionary
         // SetFreeValueOnDestroy thingy.
         qsDictionaryDestroy(f->parameters);
 
-    ASSERT(0 == qsDictionaryRemove(s->dict, f->name));
+    if(strcmp(f->name, "tests/passThrough") == 0)
+        qsDictionaryPrintDot(s->dict, stderr);
+
+    ASSERT(0 == qsDictionaryRemove(s->dict, f->name),
+            "Can't remove filter \"%s\" from source dict", f->name);
 
     // Remove this filter from any stream connections if there are any.
     StreamRemoveFilterConnections(s, f);
@@ -160,6 +170,7 @@ void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
         prev = F;
         F = F->next;
     }
+
     DASSERT(F, "Filter was not found in streams filter list");
 }
 

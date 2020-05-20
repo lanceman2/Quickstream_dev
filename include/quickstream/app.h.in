@@ -351,7 +351,6 @@ extern
 void qsStreamDestroy(struct QsStream *stream);
 
 
-
 /** Connect two filters in the stream specifying port numbers.
  *
  * Sometimes the filters are particular about how their output and input

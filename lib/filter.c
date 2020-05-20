@@ -277,7 +277,6 @@ cleanup:
 
     // failure mode.
     //
-    qsDictionaryRemove(f->stream->dict, f->name);
     DestroyFilter(s, f);
     free(path);
     return 0; // failure

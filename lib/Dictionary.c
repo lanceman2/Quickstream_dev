@@ -282,6 +282,9 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
 static inline char *
 STRING(const char *s) {
 
+    if(s == 0 || *s == 0)
+        return 0;
+
     static char *str = 0;
 
     str = realloc(str, strlen(s) * 4 + 2);
@@ -1249,6 +1252,7 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
     // Absorb this one child up to this parent.
     struct QsDictionary *nodeChildren = parent->children;
 
+
     parent->value = child->value;
     parent->children = child->children;
     parent->freeValueOnDestroy = child->freeValueOnDestroy;
@@ -1263,17 +1267,57 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
             childIndex+1,
             (child->suffix)?(child->suffix):"");
 
+    DSPEW("--- suffix=\"%s\"", STRING(suffix));
+
+
     if(parent->suffix)
         free(parent->suffix);
     if(child->suffix)
         free(child->suffix);
 
-    char *esuffix = Expand(suffix);
-    size_t l = strlen(esuffix);
-    parent->suffix = Compress(esuffix, l%4 + 2);
+    // The only thing left to do is compress the suffix, but we must first
+    // figure out where suffix boundaries of that divide the regular
+    // characters and the 1-4 encoded characters.  Since we there not
+    // passed a counter that tells us where the boundaries are we need to
+    // figure it out (if we can) by looking at the characters.
+    //
+    char *esuffix = 0; // for expanded 1-4 char encoded suffix
+    size_t l = 0;
+    const char *s = suffix;
+    for(;*s; ++s) {
+        if(*s >= START) {
+            l = 4 - (s - suffix)%4;
+            break;
+        }
+    }
+
+    if(*s == '\0' && parent->key) {
+        // We did not find a START char but this node will have an entry,
+        // so there must be what will be an un-encoded character at last
+        // character.
+        esuffix = Expand(suffix);
+        l = 4 - strlen(esuffix)%4;
+
+    } else if(*s == '\0') {
+        // This is the case where we can't determine the 1-4 encoded
+        // characters boundary, so we just leave the suffix in an expanded
+        // form with just 1-4 encoded characters.
+        parent->suffix = suffix;
+        free(nodeChildren);
+        return;
+    }
+
+
+    if(!esuffix)
+        esuffix = Expand(suffix);
+
+
+    parent->suffix = Compress(esuffix, l);
     free(esuffix);
     free(suffix);
     free(nodeChildren);
+    //DSPEW("l=%zu parent suffix=\"%s\"", l, STRING(parent->suffix));
+
 }
 
 
@@ -1320,7 +1364,7 @@ void PruneNodeDown(struct QsDictionary *node) {
 
     for(int i=0;i<4;++i) {
         struct QsDictionary *child = node->children + i;
-        if(child->key) {
+        if(child->key || child->children) {
             oneChild = child;
             ++numChildren;
             childIndex = i;
@@ -1332,7 +1376,7 @@ void PruneNodeDown(struct QsDictionary *node) {
         // We keep the suffix.
         return; // stop pruning down, we may prune up.
 
-    DASSERT(numChildren == 1);
+    DASSERT(numChildren == 1, "numChildren=%d", numChildren);
 
     AbsorbChild(node, oneChild, childIndex);
 }
@@ -1358,12 +1402,14 @@ PruneUp(struct QsDictionary *parent) {
 
     for(int i=0;i<4;++i) {
         struct QsDictionary *child = parent->children + i;
-        if(child->key) {
+        if(child->key || child->children) {
             oneChild = child;
             ++numChildren;
             childIndex = i;
         }
     }
+
+    //DSPEW("parent->suffix=\"%s\"", STRING(parent->suffix));
 
     if(numChildren == 1)
         // Absorb this one child up to this parent.
