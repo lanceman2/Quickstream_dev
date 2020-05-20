@@ -1277,7 +1277,7 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
 
     // The only thing left to do is compress the suffix, but we must first
     // figure out where suffix boundaries of that divide the regular
-    // characters and the 1-4 encoded characters.  Since we there not
+    // characters and the 1-4 encoded characters.  Since we were not
     // passed a counter that tells us where the boundaries are we need to
     // figure it out (if we can) by looking at the characters.
     //
@@ -1302,6 +1302,15 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
         // This is the case where we can't determine the 1-4 encoded
         // characters boundary, so we just leave the suffix in an expanded
         // form with just 1-4 encoded characters.
+        //
+        // TODO: recompress this suffix.  That's hard given we do not know
+        // at what point the character decoding begins in this version of
+        // the suffix.  It's all just in the 4 (encoding) characters \001
+        // \002 \003 and \004 with a group of 4 being a character that is
+        // between START (7) bell and END (126) '~'.  We don't know when a
+        // group of 4 starts without traversing the dictionary tree, or
+        // passing a counter parameter to this function.
+        //
         parent->suffix = suffix;
         free(nodeChildren);
         return;
