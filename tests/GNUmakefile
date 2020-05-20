@@ -11,7 +11,16 @@ endif
 
 SUBDIRS += filters
 
-BUILD_NO_INSTALL := tests/tests 301_Dictionary_test
+BUILD_NO_INSTALL :=\
+ tests/tests\
+ 301_Dictionary_test\
+ 165_DictionaryRemove_test\
+ 308_DictionaryRemove_test\
+ 310_DictionaryRemove_test\
+ 320_DictionaryDict_test\
+ 330_control_test\
+ 350_parameter_test\
+ 021_debug
 
 
 # This also tests that ../lib/Dictionary.c can be used
@@ -49,9 +58,14 @@ CLEANFILES := $(wildcard *.tmp)
 CLEANERFILES := tests/tests
 
 
-# We do not want 'test' to depend on build, so users do not get an infinite
-# make loop.
+# We do not want 'test' to depend on build.  That would be intrusive and
+# could create infinite looping make in some cases.
 test:
+	@if [ ! -e ../include/quickstream/app.h ] ; then\
+	    l="\n\n-------------------------------------------------------------------------\n\n";
+	    echo -e "$$l    Consider running \`$(MAKE)' in $(shell readlink -m $(top_srcdir)) first$$l";\
+	    exit 1;\
+	fi
 	./run_tests
 
 

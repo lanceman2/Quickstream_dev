@@ -1260,6 +1260,7 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
     
     size_t len = ((parent->suffix)?strlen(parent->suffix):0) +
         ((child->suffix)?strlen(child->suffix):0) + 2;
+
     char *suffix = malloc(len);
     ASSERT(suffix, "malloc(%zu) failed", len);
     sprintf(suffix, "%s%c%s",
@@ -1267,7 +1268,7 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
             childIndex+1,
             (child->suffix)?(child->suffix):"");
 
-    DSPEW("--- suffix=\"%s\"", STRING(suffix));
+    //DSPEW("--- suffix=\"%s\"", STRING(suffix));
 
 
     if(parent->suffix)
@@ -1293,8 +1294,8 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
 
     if(*s == '\0' && parent->key) {
         // We did not find a START char but this node will have an entry,
-        // so there must be what will be an un-encoded character at last
-        // character.
+        // so there must be what will be an un-encoded character at the
+        // last character.
         esuffix = Expand(suffix);
         l = 4 - strlen(esuffix)%4;
 
@@ -1306,10 +1307,11 @@ AbsorbChild(struct QsDictionary *parent, struct QsDictionary *child,
         // TODO: recompress this suffix.  That's hard given we do not know
         // at what point the character decoding begins in this version of
         // the suffix.  It's all just in the 4 (encoding) characters \001
-        // \002 \003 and \004 with a group of 4 being a character that is
-        // between START (7) bell and END (126) '~'.  We don't know when a
-        // group of 4 starts without traversing the dictionary tree, or
-        // passing a counter parameter to this function.
+        // \002 \003 and \004 with a group of 4 being an encoding of a
+        // character that is between START (7) bell and END (126) '~'.  We
+        // don't know when a group of 4 starts without traversing the
+        // dictionary tree, or passing a counter parameter to this
+        // function.
         //
         parent->suffix = suffix;
         free(nodeChildren);

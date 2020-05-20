@@ -34,4 +34,8 @@ $(error "First run './quickbuild'")
 endif
 
 
+test:
+	cd tests && $(MAKE) test
+
+
 include quickbuild.make

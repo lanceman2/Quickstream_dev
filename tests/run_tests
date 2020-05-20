@@ -57,7 +57,8 @@ cat << EOF
              [ $fail / $num ] FAILED
 
 
-  Run: "rm -f *.tmp" to remove generated files from this test.
+  Run: "rm -f *.tmp" in $PWD
+  to remove generated files from this test.
 
 EOF
 
