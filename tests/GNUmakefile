@@ -48,4 +48,12 @@ CLEANFILES := $(wildcard *.tmp)
 
 CLEANERFILES := tests/tests
 
+
+# We do not want 'test' to depend on build, so users do not get an infinite
+# make loop.
+test:
+	./run_tests
+
+
+
 include ../quickbuild.make

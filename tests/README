@@ -5,3 +5,10 @@ is successful ./run_tests will return exist status 0.
 
 Running `./run_tests` will write temporary files this directory.  Running
 `make clean` will remove these temporary files.
+
+
+KEEP ./run_tests RUN TIME under 5 seconds on a fast computer.
+
+
+As of May 20, 2020 it runs in about 0.6 seconds with 37 tests.
+
