@@ -296,6 +296,9 @@ int qsParameterGet(void *as, const char *filterName,
 
 
 static pthread_once_t keyOnce = PTHREAD_ONCE_INIT;
+// We put a pointer to the filter or the controller in thread specific
+// data with this key.  You see: only filters or controller modules manage
+// parameters.
 static pthread_key_t parameterKey;
 
 static void MakeKey(void) {
@@ -400,10 +403,12 @@ int qsParameterPush(const char *pName, void *value) {
 
     // First get the filter pointer some how.
 
-    // This function must be called from the filter module somewhere:
+    // This function must be called from the filter or controller module
+    // somewhere:
     //
-    // So it may be called from the filter setCallback() from a
-    // qsParameterSet() and if so this will get the filter object:
+    // So it may be called from the filter (controller) setCallback() from
+    // a qsParameterSet() and if so this will get the filter (controller)
+    // object:
     
     CHECK(pthread_once(&keyOnce, MakeKey));
     struct Parameter *p = 0;
@@ -475,7 +480,9 @@ int qsParameterPush(const char *pName, void *value) {
         }
     }
 
+    DASSERT(p);
     DASSERT(p->setCallback);
+
 
     struct GetCallback *gcs = p->getCallbacks;
     size_t num = p->numGetCallbacks;
