@@ -65,6 +65,18 @@ const char *FindOptString(int argc, const char **argv, const char *opt) {
 }
 
 
+// Just looks for --optName and return true if it's found.
+//
+bool qsOptsGetBool(int argc, const char **argv, const char *optName) {
+
+    for(int i=argc-1; i>=0; --i)
+        if(argv[i][0] == '-' && argv[i][1] == '-' &&
+                strcmp(&argv[i][2], optName) == 0)
+            return true;
+    return false;
+}
+
+
 float qsOptsGetFloat(int argc, const char **argv, const char *optName,
         float defaultVal) {
 

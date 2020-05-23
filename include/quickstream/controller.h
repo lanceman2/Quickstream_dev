@@ -132,7 +132,6 @@ extern "C" {
  * input() is called.  \p callback() will be called with \p len that
  * reflects changes from the filter's input() call.  If a callback already
  * exists, the new callback will replace the old callback.
-
  *
  * If \p callback returns non-zero the callback will be removed.  The
  * len[] argument will be the set to the number of bytes that have been

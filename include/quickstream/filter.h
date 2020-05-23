@@ -408,6 +408,21 @@ int qsCreatePassThroughBuffer(uint32_t inputPortNum, uint32_t outputPortNum,
 struct QsFilter;
 
 
+
+/** Get a filter's stream ID as a number
+ *
+ * quickstream filters always belong to a particular stream.  Each stream
+ * that is created in a given App has a unique ID, which is just a
+ * counter that is always increasing as streams are created.
+ *
+ * \parameter filter that the that stream belongs to.
+ *
+ * \return the stream ID.
+ */
+extern
+uint32_t qsFilterStreamId(const struct QsFilter *filter);
+
+
 /** Get the name of the filter
  *
  * The name of a filter is set by the person running the quickstream
@@ -553,6 +568,19 @@ const char *qsOptsGetString(int argc, const char **argv,
 extern
 int qsOptsGetInt(int argc, const char **argv,
         const char *optName, int defaultVal);
+
+
+/** Get an options presents
+ *
+ * \param argc is the length of the argv array of strings.
+ * \param argv is a pointer to an array of strings that are the arguments.
+ * \param optName is the name of the argument that was passed with the
+ * form --name.  This does not look for an additional value argument.
+ *
+ * \return true if an option argument is present.
+ */
+extern
+bool qsOptsGetBool(int argc, const char **argv, const char *optName);
 
 
 /** Get an size_t as an option argument.

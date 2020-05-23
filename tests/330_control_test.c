@@ -33,7 +33,7 @@ double t = 2.32435;
 
 static
 int getCallback(
-        const void *value, struct QsStream *stream,
+        const void *value, void *stream,
         const char *filterName, const char *pName, 
         enum QsParameterType type, void *userData) {
 

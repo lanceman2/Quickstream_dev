@@ -226,10 +226,13 @@ void FreeChildren(struct QsDictionary *children) {
         // Clean up this child's struct QsDictionary
         //
         if(child->value) {
-            if(child->freeValueOnDestroy)
+            if(child->freeValueOnDestroy) {
                 child->freeValueOnDestroy((void *) child->value);
+                child->freeValueOnDestroy = 0;
+            }
             DASSERT(child->key);
             free(child->key);
+            child->key = 0;
         }
         //
         if(child->suffix)
@@ -258,17 +261,24 @@ void qsDictionaryDestroy(struct QsDictionary *dict) {
 
     DASSERT(dict);
 
-    if(dict->children)
+    if(dict->children) {
         FreeChildren(dict->children);
+        dict->children = 0;
+    }
 
-    if(dict->suffix)
+    if(dict->suffix) {
         free(dict->suffix);
+        dict->suffix = 0;
+    }
 
     if(dict->value) {
-        if(dict->freeValueOnDestroy)
+        if(dict->freeValueOnDestroy) {
             dict->freeValueOnDestroy((void *) dict->value);
+            dict->freeValueOnDestroy = 0;
+        }
         DASSERT(dict->key);
         free(dict->key);
+        dict->key = 0;
     }
 
 #if DEBUG
@@ -1393,9 +1403,6 @@ void PruneNodeDown(struct QsDictionary *node) {
 }
 
 
-// Returns true to stop pruning up the tree.
-//
-// Returns false to keep pruning up the tree.
 //
 static void
 PruneUp(struct QsDictionary *parent) {

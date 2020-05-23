@@ -55,24 +55,26 @@ const char *GetTypeString(enum QsParameterType type) {
 }
 
 
+// Get callbacks are called when qsParameterPush() is called.
 struct GetCallback {
 
     int (*getCallback)(
             const void *value,
-            struct QsStream *stream,
+            void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData);
     void *userData;
 };
 
 
-struct Parameter {
+struct QsParameter {
 
     enum QsParameterType type;
 
-    void *userData;
+    void *userData; // that was passed to qsParameterCreate*()
 
-    int (*setCallback)(void *value, const char *pName, void *userData);
+    int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName, void *userData);
 
     void (*cleanup)(const char *pName, void *userData);
 
@@ -80,11 +82,18 @@ struct Parameter {
     size_t numGetCallbacks;
     struct GetCallback *getCallbacks;
 
+    // The root dictionary object that contains this parameter.
+    // In either a filter or a controller.
+    struct QsDictionary *dict;
+
+    void *streamOrApp;
+
+    const char *filterName; // or controller name.
     char *pName;
 };
 
 
-static void FreeParameter(struct Parameter *p) {
+static void FreeParameter(struct QsParameter *p) {
 
     DASSERT(p);
     DASSERT(p->pName);
@@ -107,6 +116,25 @@ static void FreeParameter(struct Parameter *p) {
     memset(p, 0, sizeof(*p));
 #endif
     free(p);
+}
+
+
+int
+qsParameterDestroy(struct QsParameter *p) {
+
+    return qsDictionaryRemove(p->dict, p->pName);
+}
+
+
+int
+qsParameterDestroyByFilter(struct QsFilter *f, const char *pName) {
+
+    DASSERT(f);
+    DASSERT(f->parameters);
+    DASSERT(pName);
+    DASSERT(pName[0]);
+
+    return qsDictionaryRemove(f->parameters, pName);
 }
 
 
@@ -140,9 +168,13 @@ struct QsDictionary *GetParameterDictionary(void *as, const char *name) {
 
 
 static
-void CreateParameter(struct QsDictionary *d, const char *pName,
-        int (*setCallback)(void *value, const char *pName,
-            void *userData),
+struct QsParameter *
+CreateParameter(struct QsDictionary *dict/*root of dictionary*/,
+        void *streamOrApp,
+        struct QsDictionary *entry, const char *fName,
+        const char *pName,
+        int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName, void *userData),
         void (*cleanup)(const char *pName, void *userData),
         void *userData,
         enum QsParameterType type) {
@@ -150,24 +182,31 @@ void CreateParameter(struct QsDictionary *d, const char *pName,
     DASSERT(pName);
     DASSERT(pName[0]);
 
-    struct Parameter *p = malloc(sizeof(*p));
+    struct QsParameter *p = malloc(sizeof(*p));
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     memset(p, 0, sizeof(*p));
-    qsDictionarySetValue(d, p);
-    qsDictionarySetFreeValueOnDestroy(d, (void(*)(void *))FreeParameter);
+    qsDictionarySetValue(entry, p);
+    qsDictionarySetFreeValueOnDestroy(entry, (void(*)(void *))FreeParameter);
     p->pName = strdup(pName);
+    p->streamOrApp = streamOrApp;
+    // This fName string should exist so long as the filer/controller so
+    // we should not have to copy it.
+    p->filterName = fName;
+    p->dict = dict;
     ASSERT(p->pName, "strdup() failed");
     p->type = type;
     p->userData = userData;
     p->setCallback = setCallback;
     p->cleanup = cleanup;
+    return p;
 }
 
 
-int qsParameterCreateForFilter(struct QsFilter *f,
+struct QsParameter *
+qsParameterCreateForFilter(struct QsFilter *f,
         const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value, const char *pName,
-            void *userData),
+        int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName, void *userData),
         void (*cleanup)(const char *pName, void *userData),
         void *userData) {
 
@@ -181,19 +220,20 @@ int qsParameterCreateForFilter(struct QsFilter *f,
     ASSERT(ret >= 0);
     if(ret) {
         NOTICE("Parameter %s:%s already exists", f->name, pName);
-        return 1;
+        return 0;
     }
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    CreateParameter(d, pName, setCallback, cleanup, userData, type);
-    return 0;
+    return CreateParameter(f->parameters, f->stream,
+            d, f->name, pName, setCallback,
+            cleanup, userData, type);
 }
 
-
-int qsParameterCreate(const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value, const char *pName,
-            void *userData),
+struct QsParameter *
+qsParameterCreate(const char *pName, enum QsParameterType type,
+        int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName, void *userData),
         void (*cleanup)(const char *pName, void *userData),
         void *userData) {
 
@@ -220,7 +260,7 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 
     if(!c) {
         ERROR("qsParameterCreate() cannot find object");
-        return -1; // error
+        return 0; // error
     }
 
     // Create parameter dictionary entry.
@@ -229,13 +269,14 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
     ASSERT(ret >= 0);
     if(ret) {
         ERROR("Parameter %s:%s already exists", c->name, pName);
-        return 1;
+        return 0;
     }
     DASSERT(d);
 
     // Create and add the parameter data to this parameter dict
-    CreateParameter(d, pName, setCallback, cleanup, userData, type);
-    return 0;
+    return CreateParameter(c->parameters, c->app,
+            d, c->name, pName, setCallback,
+            cleanup, userData, type);
 }
 
 
@@ -244,7 +285,7 @@ int qsParameterGet(void *as, const char *filterName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
             const void *value,
-            struct QsStream *stream,
+            void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
         void *userData) {
@@ -260,7 +301,7 @@ int qsParameterGet(void *as, const char *filterName,
         return 1;
 
     // Get the parameter from the Dictionary:
-    struct Parameter *p = 0;
+    struct QsParameter *p = 0;
     struct QsDictionary *d = qsDictionaryFindDict(pDict,
             pName, (void*) &p);
 
@@ -318,7 +359,7 @@ int qsParameterSet(void *sa,
     DASSERT(filterName[0]);
     DASSERT(pName);
     DASSERT(pName[0]);
-    struct Parameter *p = 0;
+    struct QsParameter *p = 0;
 
     struct QsFilter *f = 0;
     struct QsController *c = 0;
@@ -382,7 +423,7 @@ int qsParameterSet(void *sa,
     // may be called later, after this call.  It's up to the filter module
     // when and if to call qsParameterPush().  It may not call it if the
     // parameter does not change due to this call.
-    p->setCallback(value, pName, p->userData);
+    p->setCallback(p, value, pName, p->userData);
 
     CHECK(pthread_setspecific(parameterKey, oldOwner));
 
@@ -392,6 +433,23 @@ int qsParameterSet(void *sa,
     return 0; // success
 }
 
+
+int qsParameterPushByPointer(const struct QsParameter *p,
+        void *value) {
+
+    DASSERT(p);
+    DASSERT(p->setCallback);
+    DASSERT(p->filterName);
+    DASSERT(p->filterName[0]);
+
+    struct GetCallback *gcs = p->getCallbacks;
+    size_t num = p->numGetCallbacks;
+    for(size_t i=0; i<num; ++i)
+        gcs[i].getCallback(value, p->streamOrApp,
+                p->filterName, p->pName, p->type, gcs[i].userData);
+
+    return 0;
+}
 
 
 // This is call inside the filter setCallback()
@@ -411,7 +469,7 @@ int qsParameterPush(const char *pName, void *value) {
     // object:
     
     CHECK(pthread_once(&keyOnce, MakeKey));
-    struct Parameter *p = 0;
+    struct QsParameter *p = 0;
 
 
     // First we try to find a filter or controller that is calling
@@ -480,18 +538,7 @@ int qsParameterPush(const char *pName, void *value) {
         }
     }
 
-    DASSERT(p);
-    DASSERT(p->setCallback);
-
-
-    struct GetCallback *gcs = p->getCallbacks;
-    size_t num = p->numGetCallbacks;
-    for(size_t i=0; i<num; ++i)
-        gcs[i].getCallback(value, f->stream,
-                (const char *) f->name,
-                pName, p->type, gcs[i].userData);
-
-    return 0;
+    return qsParameterPushByPointer(p, value);
 }
 
 
@@ -514,7 +561,7 @@ int ParameterForEach(const char *key, void *value,
         struct ParameterCBArgs *cbArgs) {
 
     struct QsFilter *f = cbArgs->filter;
-    const struct Parameter *p = value;
+    const struct QsParameter *p = value;
     DASSERT(f);
 
     int ret = 0;
@@ -542,7 +589,7 @@ ForParameterDict(struct QsFilter *f, const char *pName,
     DASSERT(f->parameters);
 
     if(pName) {
-        struct Parameter *p = qsDictionaryFind(f->parameters, pName);
+        struct QsParameter *p = qsDictionaryFind(f->parameters, pName);
         if(!p) {
             WARN("Parameter \"%s:%s\" not found", f->name, pName);
             return 0;

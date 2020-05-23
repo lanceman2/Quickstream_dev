@@ -17,6 +17,15 @@
 
 
 
+uint32_t qsFilterStreamId(const struct QsFilter *f) {
+
+    DASSERT(f);
+    DASSERT(f->stream);
+
+    return f->stream->id;
+}
+
+
 struct QsStream *qsAppStreamCreate(struct QsApp *app) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");

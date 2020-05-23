@@ -29,7 +29,8 @@ static double parameters[NUM];
 
 
 static
-int setParameterCallback(double *value, const char *pName,
+int setParameterCallback(struct QsParameter *p,
+        double *value, const char *pName,
         double *pValue) {
 
     NOTICE("Changing parameter \"%s:%s\" from %lg to %lg",
@@ -54,7 +55,8 @@ int construct(int argc, const char **argv) {
         snprintf(pName, 16, "par %zu", i);
         parameters[i] = i + 0.0456;
         qsParameterCreate(pName, QsDouble,
-                (int (*)(void *, const char *, void *)) setParameterCallback,
+                (int (*)(struct QsParameter *, void *,
+                         const char *, void *)) setParameterCallback,
                 0, parameters + i);
     }
 

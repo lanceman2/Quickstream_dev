@@ -31,8 +31,8 @@ uint64_t count = 0;
 
 
 static
-int setCount(void *value, const char *pName,
-            void *userData) {
+int setCount(struct QsParameter *p,
+        void *value, const char *pName, void *userData) {
 
     
 

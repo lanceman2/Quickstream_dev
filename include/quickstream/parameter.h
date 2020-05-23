@@ -99,16 +99,35 @@ extern "C" {
 #endif
 
 
-/** parameter type
+/** parameter data type
  *
+ * The quickstream parameter type defines how the user may handle the
+ * data that is passed around.
+ *
+ * These types have nothing to do, necessarily, with the type of data that
+ * is flowing in the stream.  The quickstream "stream data" is not typed,
+ * in the same way that the standard C library functions read(2) and
+ * write(2) do not require a certain type of data, it's just pointers to
+ * bytes of data, that the user types the way they know it to be.
+ *
+ * The quickstream API doe not define a lot of parameter data types.
+ * Users may define their own types.  A general requirement for a
+ * parameter data type is that they are small compared to the size of data
+ * passed in the flow stream in one filter input() call.
+ *
+ * \todo How does a user add types.
  */
 enum QsParameterType {
 
-    None = 0,
-    QsDouble = 1,
-    QsUint64 = 2,
-    QsNew = 3
+    None = 0 /** A null type that has no data being passed. */,
+    QsDouble = 1/** The void pointer points to a \c double. */,
+    QsUint64 = 2/** The void pointer points to a \c uint64_t */,
+    QsNew = 3/** A type that has not been defined by the quickstream API
+               that a user defines on their own.*/
 };
+
+
+struct QsParameter;
 
 
 /** qsParameterCreate() is called in a filter in construct() or in
@@ -157,12 +176,13 @@ enum QsParameterType {
  * The stream and filter name are not needed as parameters because the
  * filter module knows it's stream and filter name.
  *
- * \return 0 on success and 1 if the parameter already exists.
- * returns -1 if the filter or controller module is not found.
- */
+ * \return a pointer to an opaque parameter object, or 0 if the parameter
+ * already exists, or other error. */
 extern
-int qsParameterCreate(const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value, const char *pName,
+struct QsParameter *
+qsParameterCreate(const char *pName, enum QsParameterType type,
+        int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName,
             void *userData),
         void (*cleanup)(const char *pName, void *userData),
         void *userData);
@@ -171,6 +191,33 @@ int qsParameterCreate(const char *pName, enum QsParameterType type,
 struct QsFilter;
 struct QsStream;
 struct QsApp;
+
+
+/** parameter are automatically destroyed when the owning filter or
+ * controller is destroyed but if a stream flow graph changes one might
+ * want to destroy a parameter because of the change
+ *
+ * \param parameter is a pointer to a parameter pointer.
+ *
+ * \return 0 on success, non-zero if the parameter is invalid; already
+ * destroyed or something.
+ */
+int
+qsParameterDestroy(struct QsParameter *parameter);
+
+
+/** parameter are automatically destroyed when the owning filter or
+ * controller is destroyed but if a stream flow graph changes one might
+ * want to destroy a parameter because of the change
+ *
+ * \param filter is a pointer to a filter.
+ *
+ * \return 0 on success, non-zero if the parameter is invalid; already
+ * destroyed or something.
+ */
+int
+qsParameterDestroyByFilter(struct QsFilter *filter, const char *pName);
+
 
 
 /** create a parameter that is associated with a particular filter
@@ -213,13 +260,14 @@ struct QsApp;
  * The stream and filter name are not needed as parameters because the
  * filter module knows it's stream and filter name.
  *
- * \return 0 on success and 1 if the parameter already exists.  If the
- * parameter already exists then nothing will change.
- */
+ * \return a pointer to an opaque parameter object, or 0 if the parameter
+ * already exists, or other error. */
 extern
-int qsParameterCreateForFilter(struct QsFilter *filter,
+struct QsParameter *
+qsParameterCreateForFilter(struct QsFilter *filter,
         const char *pName, enum QsParameterType type,
-        int (*setCallback)(void *value, const char *pName,
+        int (*setCallback)(struct QsParameter *parameter,
+            void *value, const char *pName,
             void *userData),
         void (*cleanup)(const char *pName, void *userData),
         void *userData);
@@ -271,7 +319,7 @@ extern
 int qsParameterGet(void *streamOrApp, const char *ownerName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
-            const void *value, struct QsStream *stream,
+            const void *value, void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData), void *userData);
 
@@ -335,6 +383,22 @@ int qsParameterSet(void *streamOrApp, const char *ownerName,
  */
 int qsParameterPush(const char *pName, void *value);
 
+
+/** Push the value to the qsParameterGet() callbacks in other modules
+ *
+ * \see qsParameterPush().
+ *
+ * This will be a little faster than qsParameterPush() because there is no
+ * name lookup.
+ *
+ * \param parameter a parameter pointer.
+ *
+ * \param value value to send.
+ *
+ * \return 0 on success and non-zero otherwise.
+ */
+int qsParameterPushByPointer(const struct QsParameter *parameter,
+        void *value);
 
 
 /** Iterate through the parameters via a callback function

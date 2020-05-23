@@ -43,7 +43,8 @@ double sleepT = 0;
 // This may be called by any thread hence we use a mutex to protect
 // _sleepT.
 //
-int setSleepCallback(void *value, const char *pName, void *userData) {
+int setSleepCallback(struct QsParameter *p,
+        void *value, const char *pName, void *userData) {
 
     DSPEW("\"%s\" time set to %lg seconds", pName, *(double *) value);
 
