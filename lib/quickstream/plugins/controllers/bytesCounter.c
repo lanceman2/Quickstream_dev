@@ -23,8 +23,13 @@
 // libquickstream API.  libquickstream is a streaming framework not a
 // general C/C++ utility library.  Exposing it would be bad form.
 // The same can be said of debug.h.
-//
+
+#include <pthread.h>
+#include <string.h>
+#include <stdatomic.h>
+
 #include "../../../../lib/Dictionary.h"
+#include "../../../../lib/qs.h"
 
 
 
@@ -37,14 +42,14 @@ void help(FILE *f) {
 "\n"
 "\n                OPTIONS\n"
 "\n"
-"     --filter NAME0 [...]  add the bytes counter for just filters\n"
-"                           with the following names NAME0 ...\n"
-"                           Only the last --filter option will be used.\n"
+"    --filter NAME0 [...]  add the bytes counter for just filters\n"
+"                          with the following names NAME0 ...\n"
+"                          Only the last --filter option will be used.\n"
 "\n"
 "\n"
-"    --printNoSummary       do not print a count summary to stderr.\n"
-"                           By default a summary is printed to stderr\n"
-"                           after each run.\n"
+"   --printNoSummary       do not print a count summary to stderr.\n"
+"                          By default a summary is printed to stderr\n"
+"                          after each stream run.\n"
 "\n"
 "\n");
 }
@@ -144,11 +149,21 @@ PrintSummary(struct FilterBytesCounter *bc, FILE *file) {
                 line);
 
     fprintf(file,
-                "    |%s|\n"
-                "\n",
+                "    |%s|\n",
                 line);
 
     //fprintf(file,"  ***********************************************\n");
+}
+
+void PrintStreamHeader(const struct QsFilter *f) {
+
+    fprintf(stderr,
+        "  |*********************************************|\n"
+        "  |*****          Stream %3" PRIu32
+        "               *****|\n"
+        "  |*********************************************|\n"
+        "  |                                             |\n",
+        qsFilterStreamId(f));
 }
 
 
@@ -161,19 +176,8 @@ CleanFilterByteCounter(const char *pName,
     DSPEW("Cleaning up filter parameter \"%s:%s\"",
             qsFilterName(bc->filter), pName);
 
-    if(printSummary) {
-        fprintf(stderr,
-            "  |*********************************************|\n"
-            "  |*****          Stream %3" PRIu32
-            "               *****|\n"
-            "  |*********************************************|\n"
-            "  |                                             |\n",
-            qsFilterStreamId(bc->filter));
-
-        // Now may be a good time to print a summary:
-        PrintSummary(bc, stderr);
-    }
-
+    // Now may be a good time to print a summary:
+    PrintSummary(bc, stderr);
 
     if(bc->numInputs) {
 #ifdef DEBUG
@@ -252,7 +256,7 @@ int postFilterInputCB(
     // filter input() in that thread call and not during, so there's no
     // multi-thread issue here.
     //
-    DSPEW("filter=\"%s\"", qsFilterName(f));
+    //DSPEW("filter=\"%s\"", qsFilterName(f));
 
     DASSERT(numInputs == bc->numInputs);
     DASSERT(numOutputs == bc->numOutputs);
@@ -285,9 +289,13 @@ int postFilterInputCB(
 }
 
 
+static uint32_t printingStreamId = -1;
+
 
 int preStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
+
+    printingStreamId = -1;
 
     DSPEW("filter=\"%s\"", qsFilterName(f));
 
@@ -401,12 +409,20 @@ int preStart(struct QsStream *s, struct QsFilter *f,
 }
 
 
+
+
 int postStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW("filter=\"%s\"", qsFilterName(f));
 
-#if 0  // This fails
+    if(printSummary &&
+            printingStreamId != qsFilterStreamId(f)) {
+        PrintStreamHeader(f);
+        printingStreamId = qsFilterStreamId(f);
+    }
+
+
     // Because quickstream can re-configure filter connections between
     // stream runs, we must destroy all the parameters that we created
     // and recreate them (possibly differently) again in the next run
@@ -422,6 +438,10 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         qsParameterDestroyByFilter(f,"bytesInTotal");
     }
 
+    //if(strcmp(qsFilterName(f), "tests/sequenceGen") == 0)
+    //    qsDictionaryPrintDot(f->parameters, stderr);
+
+
     if(numOutputs) {
         uint32_t i=0;
         for(; i<numOutputs; ++i) {
@@ -431,11 +451,6 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         }
         qsParameterDestroyByFilter(f, "bytesOutTotal");
     }
-#endif
-
-    DSPEW();
 
     return 0;
 }
-
-

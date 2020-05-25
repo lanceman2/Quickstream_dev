@@ -6,13 +6,16 @@ source testsEnv
 
 
 set -x
-../bin/quickstream -v 5\
+../bin/quickstream -v 4\
  -C bytesCounter\
  -C tests/byteMonitor\
  -f tests/sequenceGen.so {\
  --maxWrite 100\
  --length 5003 }\
- -f tests/sequenceCheck -c -t 1 -r
+ -f tests/sequenceCheck\
+ -f tests/sequenceCheck\
+ -f tests/sequenceCheck\
+ -c -t 1 -r -r
 
 set +x
 echo "$0 SUCCESS"
