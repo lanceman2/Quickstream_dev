@@ -216,7 +216,7 @@ qsParameterDestroy(struct QsParameter *parameter);
  * destroyed or something.
  */
 int
-qsParameterDestroyByFilter(struct QsFilter *filter, const char *pName);
+qsParameterDestroyForFilter(struct QsFilter *filter, const char *pName);
 
 
 
@@ -320,7 +320,7 @@ int qsParameterGet(void *streamOrApp, const char *ownerName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
             const void *value, void *streamOrApp,
-            const char *filterName, const char *pName, 
+            const char *ownerName, const char *pName, 
             enum QsParameterType type, void *userData), void *userData);
 
 

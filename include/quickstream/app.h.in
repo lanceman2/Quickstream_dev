@@ -137,7 +137,7 @@ int qsAppDestroy(struct QsApp *app);
  * The environment variable QS_MODULE_PATH may also be set to aid in
  * finding filter module plugins with the directory /controllers/ appended
  * to the paths given.
-
+ *
  * \param app that was returned from qsAppCreate()
  * \param filename that refers to the plugin module file.
  * \param loadName a made-up unquie name that was refer to this

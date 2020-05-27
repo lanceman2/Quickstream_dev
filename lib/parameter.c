@@ -127,7 +127,7 @@ qsParameterDestroy(struct QsParameter *p) {
 
 
 int
-qsParameterDestroyByFilter(struct QsFilter *f, const char *pName) {
+qsParameterDestroyForFilter(struct QsFilter *f, const char *pName) {
 
     DASSERT(f);
     DASSERT(f->parameters);

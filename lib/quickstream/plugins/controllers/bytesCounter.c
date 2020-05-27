@@ -1,13 +1,14 @@
-// This controller module is part of a test in tests/362_controller_dummy
+// quickstream controller module that add a byte counter for every filter
+// input and output port.
 //
-// If you change this file you'll likely brake that test.  If you need to
-// edit this, make sure that that you also fix tests/362_controller_dummy,
-// without changing the nature of that test.
+// This module should be able to work with more than one stream running.
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
 
 #include "../../../../include/quickstream/app.h"
 #include "../../../../include/quickstream/filter.h"
@@ -15,41 +16,20 @@
 #include "../../../../include/quickstream/parameter.h"
 #include "../../../../lib/debug.h"
 
-// Since this code comes with quickstream we can use the some of its'
-// "internal lib" API, that is QsDictionary.
-//
-// Other non-quickstream developers may want a Dictionary object, but we
-// don't have a pressing need to make QsDictionary part of the public
-// libquickstream API.  libquickstream is a streaming framework not a
-// general C/C++ utility library.  Exposing it would be bad form.
-// The same can be said of debug.h.
-
-#include <pthread.h>
-#include <string.h>
-#include <stdatomic.h>
-
-#include "../../../../lib/Dictionary.h"
-#include "../../../../lib/qs.h"
-
 
 
 void help(FILE *f) {
     fprintf(f,
 "   Usage: bytesCounter\n"
 "\n"
-" A controller module that adds a bytes counter for\n"
-" all filters in all streams.\n"
+"   A controller module that adds a bytes counter for all\n"
+" filters in all streams.\n"
 "\n"
 "\n                OPTIONS\n"
 "\n"
-"    --filter NAME0 [...]  add the bytes counter for just filters\n"
-"                          with the following names NAME0 ...\n"
-"                          Only the last --filter option will be used.\n"
-"\n"
-"\n"
-"   --printNoSummary       do not print a count summary to stderr.\n"
-"                          By default a summary is printed to stderr\n"
-"                          after each stream run.\n"
+"   --printNoSummary    do not print a count summary to stderr.\n"
+"                       By default a summary is printed to stderr\n"
+"                       after each stream run.\n"
 "\n"
 "\n");
 }
@@ -74,7 +54,25 @@ struct FilterBytesCounter {
     uint64_t *outputCounts; // array of counters
 };
 
+
+// Related to option --printNoSummary
+//
 static bool printSummary = true;
+// Marker to keep us from printing the stream header more than once.
+static uint32_t printingStreamId = -1;
+
+
+
+void PrintStreamHeader(const struct QsFilter *f) {
+
+    fprintf(stderr,
+        "  |*********************************************|\n"
+        "  |*****          Stream %3" PRIu32
+        "               *****|\n"
+        "  |*********************************************|\n"
+        "  |                                             |\n",
+        qsFilterStreamId(f));
+}
 
 
 static inline void
@@ -120,9 +118,6 @@ PrintSummary(struct FilterBytesCounter *bc, FILE *file) {
                 "    |-------------   NO INPUTS   ---------------|\n",
                 line);
 
-    //fprintf(file,"    |                                           |\n");
-
-
     if(bc->numOutputs) {
         uint32_t i=0;
         fprintf(file,
@@ -152,18 +147,6 @@ PrintSummary(struct FilterBytesCounter *bc, FILE *file) {
                 "    |%s|\n",
                 line);
 
-    //fprintf(file,"  ***********************************************\n");
-}
-
-void PrintStreamHeader(const struct QsFilter *f) {
-
-    fprintf(stderr,
-        "  |*********************************************|\n"
-        "  |*****          Stream %3" PRIu32
-        "               *****|\n"
-        "  |*********************************************|\n"
-        "  |                                             |\n",
-        qsFilterStreamId(f));
 }
 
 
@@ -173,11 +156,13 @@ CleanFilterByteCounter(const char *pName,
 
     DASSERT(bc);
     DASSERT(bc->filter);
-    DSPEW("Cleaning up filter parameter \"%s:%s\"",
-            qsFilterName(bc->filter), pName);
 
-    // Now may be a good time to print a summary:
-    PrintSummary(bc, stderr);
+    //DSPEW("Cleaning up filter parameter \"%s:%s\"",
+    //        qsFilterName(bc->filter), pName);
+
+    if(printingStreamId == qsFilterStreamId(bc->filter))
+        PrintSummary(bc, stderr);
+
 
     if(bc->numInputs) {
 #ifdef DEBUG
@@ -230,17 +215,16 @@ CleanFilterByteCounter(const char *pName,
 
 int construct(int argc, const char **argv) {
 
-    DSPEW();
+    //DSPEW();
 
     printSummary = !qsOptsGetBool(argc, argv, "printNoSummary");
-
-
-    // TODO: parse options.
 
     return 0; // success
 }
 
 
+// This callback is called after every filter module input() call.
+//
 int postFilterInputCB(
             struct QsFilter *f,
             const size_t lenIn[],
@@ -287,9 +271,6 @@ int postFilterInputCB(
 
     return 0;
 }
-
-
-static uint32_t printingStreamId = -1;
 
 
 int preStart(struct QsStream *s, struct QsFilter *f,
@@ -409,8 +390,6 @@ int preStart(struct QsStream *s, struct QsFilter *f,
 }
 
 
-
-
 int postStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
@@ -433,9 +412,9 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         for(; i<numInputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesIn%" PRIu32, i);
-            qsParameterDestroyByFilter(f, pName);
+            qsParameterDestroyForFilter(f, pName);
         }
-        qsParameterDestroyByFilter(f,"bytesInTotal");
+        qsParameterDestroyForFilter(f,"bytesInTotal");
     }
 
     //if(strcmp(qsFilterName(f), "tests/sequenceGen") == 0)
@@ -447,9 +426,9 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         for(; i<numOutputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesOut%" PRIu32, i);
-            qsParameterDestroyByFilter(f, pName);
+            qsParameterDestroyForFilter(f, pName);
         }
-        qsParameterDestroyByFilter(f, "bytesOutTotal");
+        qsParameterDestroyForFilter(f, "bytesOutTotal");
     }
 
     return 0;

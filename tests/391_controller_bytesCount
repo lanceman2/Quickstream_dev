@@ -6,17 +6,15 @@ source testsEnv
 
 
 set -x
-../bin/quickstream -v 4\
+../bin/quickstream -v 3\
  -C bytesCounter\
  -C tests/byteMonitor\
  -f tests/sequenceGen.so {\
- --maxWrite 100\
- --length 5003 }\
- -f tests/sequenceCheck\
+ --maxWrite 1000\
+ --length 500300 }\
  -f tests/sequenceCheck\
  -f tests/sequenceCheck\
  -c -t 1 -r
-
 
 
 set +x
