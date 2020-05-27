@@ -73,12 +73,13 @@ int main(int argc, char **argv) {
     qsStreamFilterLoad(s, "tests/parameter", 0, 0, 0);
 
     ASSERT(qsParameterGet(s, "tests/parameter", "par 0",
-                QsDouble, getCallback, 0) == 0);
+                QsDouble, getCallback, 0, 0) == 1);
 
     ASSERT(qsParameterGet(s, "tests/parameter", "par 1",
-                QsDouble, getCallback, (void *) 1) == 0);
+                QsDouble, getCallback, (void *) 1, 0) == 1);
 
-    qsParameterForEach(app, s, 0, 0, 0, findParameter, 0);
+    qsParameterForEach(app, s, 0, 0, 0, findParameter,
+            0/*userData*/, 0/*flags*/);
 
     ASSERT(qsParameterSet(s, "tests/parameter",
                 "par 0", QsDouble, &t) == 0);

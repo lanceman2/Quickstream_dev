@@ -6,6 +6,8 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - Finish controller bytesCounter.
 
+- make userData const in qsParameter*() functions.
+
 - Add App function qsAppControllerRequire().  Crap!  How does that work?
 
 - Finish parameters owned by the controller.  And add a test (tests/).

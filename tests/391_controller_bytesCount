@@ -8,10 +8,10 @@ source testsEnv
 set -x
 ../bin/quickstream -v 3\
  -C bytesCounter\
- -C tests/byteMonitor\
+ -C bytesRate\
  -f tests/sequenceGen.so {\
  --maxWrite 1000\
- --length 500300 }\
+ --length 5003 }\
  -f tests/sequenceCheck\
  -f tests/sequenceCheck\
  -c -t 1 -r

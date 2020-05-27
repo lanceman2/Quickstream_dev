@@ -35,6 +35,7 @@ MurmurHash_test_SOURCES := MurmurHash_test.c ../lib/MurmurHash1.c
 
 Dictionary_test_SOURCES := Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 
+clock_gettime_SOURCES := clock_gettime.c
 
 
 regex_SOURCES := regex.c

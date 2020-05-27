@@ -62,13 +62,13 @@ int main(int argc, char **argv) {
     struct QsFilter *f = qsStreamFilterLoad(s, "tests/passThrough", "passThrough", 0, 0);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback, 0) == 0);
+                QsDouble, getCallback, 0, 0) == 1);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback, (void *) 1) == 0);
+                QsDouble, getCallback, (void *) 1, 0) == 1);
 
     ASSERT(qsParameterGet(s, "passThrough", "sleep",
-                QsDouble, getCallback, (void *) 2) == 0);
+                QsDouble, getCallback, (void *) 2, 0) == 1);
 
     ASSERT(qsParameterSet(s, "passThrough",
                 "sleep", QsDouble, &t) == 0);

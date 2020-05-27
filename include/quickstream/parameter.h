@@ -1,10 +1,12 @@
 #ifndef __qsparameter_h__
 #define __qsparameter_h__
 
+#include <stdint.h>
+
 //////////////////////////// Control/Parameter Stuff /////////////////////
 
 
-// Parameters are owned by the filter that creates them.
+// Parameters are owned by the filter or controller that creates them.
 //
 // The value pointer is owned by the filter's thread.  If the filter is
 // multi-threaded the filter insure that the value pointer stays valid.
@@ -13,20 +15,22 @@
 //
 // Parameter values are must be copied in the callbacks.
 
+
 /** \defgroup parameters Filter Module Parameters
  *
  * quickstream manages two kinds of data:
  *
- *   1. stream data that is quickly flowing between filters in the stream,
- *      and the rate at which data flows is relatively large compared to
+ *   1. stream data that is quickly flowing between filters in the stream.
+ *      The size of stream data is relatively large.  The rate at which
+ *      data flows is relatively large compared to
  *   2. control parameter data that is changing relatively slowly.  The
  *      size of the data in the parameter must be small, so that it may be
- *      copied to be passed to other threads to be used.
+ *      copied to be passed to other modules and functions to be used.
  *
  * We generally avoid directly copying stream data, and we usually copy
  * parameters.  If a parameter changes at the rate of stream data than it
  * should not be a parameter, and it should be stream data, and the
- * filter flow graph should be re-engineered.
+ * filter flow graph should be redesigned.
  *
  * The parameter data is shared between filters and external entities
  * called controllers.  An obvious example control parameter would be a
@@ -273,6 +277,11 @@ qsParameterCreateForFilter(struct QsFilter *filter,
         void *userData);
 
 
+/** bit flags used to mark the use of regular expressions to find
+ * parameter with qsParameterGet().
+ */
+#define QS_PNAME_REGEX     (01)
+
 
 /** Register a callback to get a parameter value from outside the filter
  * module
@@ -299,7 +308,8 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  * all parameters will be considered.
  *
  * \param type is the type of parameter.  The \p getCallback() needs to
- * know what to do with the \p value.
+ * know what to do with the \p value.  If type is None than type will be
+ * ignored, otherwise type must match the parameter type.
  *
  * \param getCallback is the callback function.  This callback function
  * must understand the nature and size of what the parameter value is.  \p
@@ -309,11 +319,16 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  *
  * \param userData is passed to the getCallback() every time it is called.
  *
+ * \param flags if flags includes the bit QS_PNAME_REGEX \p pName will be
+ * interpreted as a POSIX Regular Expression and all parameters with a name
+ * matches the regular expression will have the get callback added to it.
+ * Use 0 otherwise.
+ *
  * Calling getCallback() should not block.
  *
  * If the getCallback returns non-zero the callback will be removed.
  *
- * \return 0 on success and non-zero otherwise.
+ * \return the number of parameters found or less than zero on error.
  */
 extern
 int qsParameterGet(void *streamOrApp, const char *ownerName,
@@ -321,7 +336,8 @@ int qsParameterGet(void *streamOrApp, const char *ownerName,
         int (*getCallback)(
             const void *value, void *streamOrApp,
             const char *ownerName, const char *pName, 
-            enum QsParameterType type, void *userData), void *userData);
+            enum QsParameterType type, void *userData), void *userData,
+        uint32_t flags);
 
 
 /** Set a parameter by calling the filter's callback, called from outside
@@ -432,6 +448,12 @@ int qsParameterPushByPointer(const struct QsParameter *parameter,
  * time
  * it is called.
  *
+ * \param flags if flags includes the bit QS_PNAME_REGEX \p pName will be
+ * interpreted as a POSIX Regular Expression and all parameters with a name
+ * matches the regular expression will have the get callback added to it.
+ * Use 0 otherwise.
+
+ *
  * \return the number of parameters that have been iterated through; or
  * the same as, the number of times \p callback() is called.
  */
@@ -443,7 +465,7 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *stream,
             struct QsStream *stream,
             const char *filterName, const char *pName,
             enum QsParameterType type, void *userData),
-        void *userData);
+        void *userData, uint32_t flags);
 
 /** @}
  */

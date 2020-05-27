@@ -46,16 +46,19 @@ int main (int argc, char *argv[]) {
         if (result == REG_ESPACE)
             fprintf(stderr, "%s\n", strerror(ENOMEM));
         else
-            fputs("Syntax error in the regular expression passed as first argument\n", stderr);
+            fputs("Syntax error in the regular expression passed as first argument\n",
+                    stderr);
         return EXIT_FAILURE;               
     }
   
     for (int i = 2; i < argc; i++) {
         result = regexec(&regex, argv[i], 0, NULL, 0);
         if (!result)
-            printf("'%s' matches the regular expression '%s'\n", argv[i], argv[1]);
+            printf("'%s' matches the regular expression '%s'\n",
+                    argv[i], argv[1]);
         else if(result == REG_NOMATCH)
-            printf ("'%s' doesn't the regular expression '%s'\n", argv[i], argv[1]);
+            printf ("'%s' doesn't match the regular expression '%s'\n",
+                    argv[i], argv[1]);
         else {
             // The function returned an error; print the string 
             // describing it.

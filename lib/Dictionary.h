@@ -44,6 +44,8 @@ extern
 void *qsDictionaryFind(const struct QsDictionary *dict, const char *key);
 
 
+// TODO: remove this function.
+//
 // Returns 0 if found and entry removed destroying all children too.
 //         1 if not found
 //        -1 on error

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdatomic.h>
+#include <errno.h>
+#include <regex.h>
 
 #include "../include/quickstream/filter.h"
 #include "../include/quickstream/parameter.h"
@@ -280,8 +282,8 @@ qsParameterCreate(const char *pName, enum QsParameterType type,
 }
 
 
-
-int qsParameterGet(void *as, const char *filterName,
+static int
+AddGetCallback(struct QsParameter *p, const char *filterName,
         const char *pName, enum QsParameterType type,
         int (*getCallback)(
             const void *value,
@@ -289,36 +291,16 @@ int qsParameterGet(void *as, const char *filterName,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
         void *userData) {
-
-    DASSERT(as);
-    DASSERT(filterName);
-    DASSERT(filterName[0]);
-    DASSERT(pName);
-    DASSERT(pName[0]);
-
-    struct QsDictionary *pDict = GetParameterDictionary(as, filterName);
-    if(!pDict)
-        return 1;
-
-    // Get the parameter from the Dictionary:
-    struct QsParameter *p = 0;
-    struct QsDictionary *d = qsDictionaryFindDict(pDict,
-            pName, (void*) &p);
-
-    if(!d) {
-        WARN("Parameter \"%s:%s\" not found", filterName, pName);
-        return 2; // error
-    }
-
+    
     DASSERT(p);
     DASSERT(p->setCallback);
 
-    if(p->type != type) {
+    if(type != None && p->type != type) {
         ERROR("Parameter \"%s:%s\" type \"%s\" "
                 "is not requested type \"%s\"",
                 filterName, pName, GetTypeString(p->type),
                 GetTypeString(type));
-        return 3; // error
+        return -3; // error
     }
 
     size_t i = p->numGetCallbacks;
@@ -332,7 +314,106 @@ int qsParameterGet(void *as, const char *filterName,
     gc->userData = userData;
     ++p->numGetCallbacks;
 
-    return 0; // success
+    return 1; // success
+}
+
+
+struct Check_AddGetCallback_args {
+
+    enum QsParameterType type;
+    const char *filterName;
+    int numParameters; // number of parameters added
+    regex_t regex; // libc regular expression
+    int (*getCallback)(
+            const void *value,
+            void *streamOrApp,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData);
+    void *userData;
+};
+
+
+static
+int Check_AddGetCallback(const char *pName, struct QsParameter *p,
+        struct Check_AddGetCallback_args *args) {
+
+    if(args->type != 0 && args->type != p->type)
+        // It's not the type we are looking for.
+        return 0;
+
+    if(regexec(&args->regex, pName, 0, NULL, 0) == 0) {
+        // This parameter name matches the regular expression.
+        AddGetCallback(p, args->filterName, pName, p->type,
+                args->getCallback, args->userData);
+        ++args->numParameters;
+    }
+    return 0; // keep going.
+}
+
+
+int qsParameterGet(void *as, const char *filterName,
+        const char *pName, enum QsParameterType type,
+        int (*getCallback)(
+            const void *value,
+            void *streamOrApp,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData),
+        void *userData, uint32_t flags) {
+
+    DASSERT(as);
+    DASSERT(filterName);
+    DASSERT(filterName[0]);
+    DASSERT(pName);
+    DASSERT(pName[0]);
+
+    struct QsDictionary *pDict = GetParameterDictionary(as, filterName);
+    if(!pDict)
+        return -1;
+
+    if(pName && pName[0] && ! (flags & QS_PNAME_REGEX)) {
+    
+        // Get the parameter from the Dictionary:
+        struct QsParameter *p = 0;
+        struct QsDictionary *d = qsDictionaryFindDict(pDict,
+                pName, (void*) &p);
+
+        if(!d) {
+            WARN("Parameter \"%s:%s\" not found", filterName, pName);
+            return -2; // error
+        }
+
+        return AddGetCallback(p, filterName, pName, type, getCallback,
+                userData);
+    }
+
+    // This could be getting many parameters via a parameter name regular
+    // expression, pName.  We need a struct to pass many arguments in a
+    // ForEach callback to iterate through the parameter dictionary
+    // with.
+    //
+    struct Check_AddGetCallback_args args;
+    args.type = type;
+    args.filterName = filterName;
+    args.numParameters = 0;
+    args.getCallback = getCallback;
+    args.userData = userData;
+
+    int ret = regcomp(&args.regex, pName, REG_EXTENDED);
+    if(ret == REG_ESPACE)
+        ASSERT(0, "regcomp(,\"%s\",REG_EXTENDED) failed", pName);
+    if(ret) {
+        ERROR("Bad regular expression \"%s\"", pName);
+        return -3;
+    }
+
+    qsDictionaryForEach(pDict,
+                (int (*) (const char *key, void *value,
+                        void *userData)) Check_AddGetCallback,
+                &args);
+
+    regfree(&args.regex);
+
+    return args.numParameters; // success
 }
 
 
@@ -553,6 +634,10 @@ struct ParameterCBArgs {
         const char *filterName, const char *pName, 
         enum QsParameterType type, void *userData);
     bool *done;
+    // Kind of a waste of memory given regex, but regex_t does not have a
+    // null like value.
+    bool useRegex;
+    regex_t regex;
 };
 
 
@@ -567,8 +652,11 @@ int ParameterForEach(const char *key, void *value,
     int ret = 0;
 
     if((void *) f != value &&
-            (!cbArgs->type || cbArgs->type == p->type)) {
-        ret = cbArgs->callback(f->stream, f->name, key,
+            (!cbArgs->type || cbArgs->type == p->type) &&
+            ( cbArgs->useRegex &&
+                regexec(&cbArgs->regex, key, 0, NULL, 0) == 0)
+            ) {
+        ret = cbArgs->callback(f->stream, f->name, p->pName,
                 p->type, cbArgs->userData);
         if(ret) *cbArgs->done = true;
     }
@@ -584,11 +672,11 @@ ForParameterDict(struct QsFilter *f, const char *pName,
             struct QsStream *stream,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
-        void *userData, bool *done) {
+        void *userData, bool *done, uint32_t flags) {
 
     DASSERT(f->parameters);
 
-    if(pName) {
+    if(pName && pName[0] && !(flags & QS_PNAME_REGEX)) {
         struct QsParameter *p = qsDictionaryFind(f->parameters, pName);
         if(!p) {
             WARN("Parameter \"%s:%s\" not found", f->name, pName);
@@ -608,13 +696,30 @@ ForParameterDict(struct QsFilter *f, const char *pName,
         type,
         userData,
         callback,
-        done
+        done,
+        false
     };
 
+    if(pName && pName[0] && (flags & QS_PNAME_REGEX)) {
+        int ret = regcomp(&args.regex, pName, REG_EXTENDED);
+        if(ret == REG_ESPACE)
+            ASSERT(0, "regcomp(,\"%s\",REG_EXTENDED) failed", pName);
+        if(ret) {
+            ERROR("Bad regular expression \"%s\"", pName);
+            return 0;
+        }
+        args.useRegex = true;
+    }
+
     // Subtract 1 for the call with the filter.
-    return qsDictionaryForEach(f->parameters, 
+    size_t ret = qsDictionaryForEach(f->parameters, 
             (int (*)(const char *, void *, void *))
             ParameterForEach, &args) - 1;
+
+    if(args.useRegex)
+        regfree(&args.regex);
+
+    return ret;
 }
 
 
@@ -626,7 +731,7 @@ ForStreamParameters(struct QsStream *s,
             struct QsStream *stream,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
-        void *userData, bool *done) {
+        void *userData, bool *done, uint32_t flags) {
 
     DASSERT(s);
 
@@ -635,7 +740,7 @@ ForStreamParameters(struct QsStream *s,
         size_t ret = 0;
         for(struct QsFilter *f = s->filters; f; f = f->next) {
             ret += ForParameterDict(f, pName, type,
-                    callback, userData, done);
+                    callback, userData, done, flags);
             if(*done) break;
         }
         return ret;
@@ -644,7 +749,7 @@ ForStreamParameters(struct QsStream *s,
     struct QsFilter *f = qsFilterFromName(s, filterName);
 
     // Just this one filter.
-    return ForParameterDict(f, pName, type, callback, userData, done);
+    return ForParameterDict(f, pName, type, callback, userData, done, flags);
 }
 
 
@@ -655,7 +760,7 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *s,
             struct QsStream *stream,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
-        void *userData) {
+        void *userData, uint32_t flags) {
 
     bool done = false;
 
@@ -667,12 +772,12 @@ size_t qsParameterForEach(struct QsApp *app, struct QsStream *s,
         for(s = app->streams; s; s = s->next) {
             ret += ForStreamParameters(s,
                     filterName, pName, type,
-                    callback, userData, &done);
+                    callback, userData, &done, flags);
             if(done) break;
         }
         return ret;
     }
     // Just this one stream.
     return ForStreamParameters(s, filterName,
-            pName, type, callback, userData, &done);
+            pName, type, callback, userData, &done, flags);
 }
