@@ -216,12 +216,17 @@ qsParameterDestroy(struct QsParameter *parameter);
  *
  * \param filter is a pointer to a filter.
  *
+ * \param flags if flags includes the bit QS_PNAME_REGEX \p pName will be
+ * interpreted as a POSIX Regular Expression and all parameters with a
+ * name matches the regular expression will be destroyed.  Set flags to 0
+ * otherwise.
+ *
  * \return 0 on success, non-zero if the parameter is invalid; already
  * destroyed or something.
  */
 int
-qsParameterDestroyForFilter(struct QsFilter *filter, const char *pName);
-
+qsParameterDestroyForFilter(struct QsFilter *filter, const char *pName,
+        uint32_t flags);
 
 
 /** create a parameter that is associated with a particular filter
@@ -231,7 +236,9 @@ qsParameterDestroyForFilter(struct QsFilter *filter, const char *pName);
  * should be called before the stream is flowing.
  *
  * This can be called from outside a filter module's code, like in a
- * controller module.
+ * controller module.  This is handy to use the filter's namespace
+ * for the parameter, when we need correspondence between the parameter
+ * and the filters that we make the parameter for.
  *
  * \see qsParameterCreate()
  *
@@ -278,7 +285,8 @@ qsParameterCreateForFilter(struct QsFilter *filter,
 
 
 /** bit flags used to mark the use of regular expressions to find
- * parameter with qsParameterGet().
+ * parameter with qsParameterGet(), qsParameterForEach(), and
+ * qsParameterDestroyForFilter().
  */
 #define QS_PNAME_REGEX     (01)
 

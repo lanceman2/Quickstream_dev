@@ -128,15 +128,79 @@ qsParameterDestroy(struct QsParameter *p) {
 }
 
 
+struct RemovalMarker {
+
+    struct QsParameter *stack;
+    regex_t regex;
+};
+
+
+static int MarkForRemoval(const char *pName, struct QsParameter *p,
+        struct RemovalMarker *rm) {
+
+    if(regexec(&rm->regex, pName, 0, NULL, 0) == 0) {
+        // This parameter matched.
+        //
+        // We borrow the setCallback pointer (since we don't need it any
+        // more) to mark this parameter by having it point to the next
+        // parameter in a stack list that we will destroy after we
+        // iterate through the dictionary.
+        if(rm->stack) {
+            p->setCallback = (int (*)(struct QsParameter *,
+                    void *, const char *, void *)) rm->stack;
+            rm->stack = p;
+        } else {
+            rm->stack = p;
+            p->setCallback = 0; // null terminate.
+        }
+    }
+    return 0;
+}
+
+
 int
-qsParameterDestroyForFilter(struct QsFilter *f, const char *pName) {
+qsParameterDestroyForFilter(struct QsFilter *f, const char *pName,
+        uint32_t flags) {
 
     DASSERT(f);
     DASSERT(f->parameters);
     DASSERT(pName);
     DASSERT(pName[0]);
 
-    return qsDictionaryRemove(f->parameters, pName);
+    if(! (flags & QS_PNAME_REGEX))
+        return qsDictionaryRemove(f->parameters, pName);
+
+    // pName is a regex (regular expression string).
+
+    struct RemovalMarker rm = { 0 };
+
+    int ret = regcomp(&rm.regex, pName, REG_EXTENDED);
+    if(ret == REG_ESPACE)
+        ASSERT(0, "regcomp(,\"%s\",REG_EXTENDED) failed", pName);
+    if(ret) {
+        ERROR("Bad regular expression \"%s\"", pName);
+        return -3;
+    }
+
+    qsDictionaryForEach(f->parameters,
+                (int (*) (const char *key, void *value,
+                        void *userData)) MarkForRemoval,
+                &rm);
+
+    int count = 0;
+    // Now look for "marks", they are in a stack list to remove.
+    struct QsParameter *p = rm.stack;
+    while(p) {
+        ++count;
+        // We borrowed the setCallback pointer to make a stack, seeing as
+        // we do not need it anymore, and we like small data structures.
+        struct QsParameter *next = (struct QsParameter *) p->setCallback;
+        qsDictionaryRemove(f->parameters, p->pName);
+        // p is no longer points to valid memory, but next is valid.
+        p = next;
+    }
+
+    return count;
 }
 
 

@@ -14,7 +14,7 @@
 #include "../../../../include/quickstream/filter.h"
 #include "../../../../include/quickstream/controller.h"
 #include "../../../../include/quickstream/parameter.h"
-#include "../../../../lib/debug.h"
+#include "../../../debug.h"
 
 
 
@@ -405,7 +405,7 @@ int preStart(struct QsStream *s, struct QsFilter *f,
 int postStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    DSPEW("filter=\"%s\"", qsFilterName(f));
+    //WARN("filter=\"%s\"", qsFilterName(f));
 
     if(printSummary &&
             printingStreamId != qsFilterStreamId(f)) {
@@ -413,34 +413,30 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         printingStreamId = qsFilterStreamId(f);
     }
 
-
     // Because quickstream can re-configure filter connections between
     // stream runs, we must destroy all the parameters that we created
     // and recreate them (possibly differently) again in the next run
     // preStart().
+
 
     if(numInputs) {
         uint32_t i=0;
         for(; i<numInputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesIn%" PRIu32, i);
-            qsParameterDestroyForFilter(f, pName);
+            qsParameterDestroyForFilter(f, pName, 0);
         }
-        qsParameterDestroyForFilter(f,"bytesInTotal");
+        qsParameterDestroyForFilter(f,"bytesInTotal", 0);
     }
-
-    //if(strcmp(qsFilterName(f), "tests/sequenceGen") == 0)
-    //    qsDictionaryPrintDot(f->parameters, stderr);
-
 
     if(numOutputs) {
         uint32_t i=0;
         for(; i<numOutputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesOut%" PRIu32, i);
-            qsParameterDestroyForFilter(f, pName);
+            qsParameterDestroyForFilter(f, pName, 0);
         }
-        qsParameterDestroyForFilter(f, "bytesOutTotal");
+        qsParameterDestroyForFilter(f, "bytesOutTotal", 0);
     }
 
     return 0;

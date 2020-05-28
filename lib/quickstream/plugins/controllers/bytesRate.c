@@ -1,11 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "../../../../include/quickstream/app.h"
 #include "../../../../include/quickstream/controller.h"
 #include "../../../../include/quickstream/parameter.h"
 #include "../../../../include/quickstream/filter.h"
-#include "../../../../lib/debug.h"
+#include "../../../debug.h"
 
 
 
@@ -57,6 +59,8 @@ struct BytesRate {
     struct timespec t;
 
     uint64_t bytes;
+
+    struct QsParameter *parameter;
 };
 
 
@@ -67,6 +71,18 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
         enum QsParameterType type, struct BytesRate *br) {
 
     //WARN("%s:%s %" PRIu64 " bytes", filterName, pName, *bytes);
+
+    struct timespec prevT;
+    memcpy(&prevT, &br->t, sizeof(prevT));
+
+    // TODO: This may be to expensive to do this often:
+    //
+    clock_gettime(clockType, &br->t);
+
+    if(prevT.tv_sec == 0 && prevT.tv_nsec == 0)
+        // The previous time was not initialized.
+        return 0;
+
 
     return 0;
 }
@@ -85,22 +101,59 @@ int construct(int argc, const char **argv) {
 }
 
 
+static void FreeByteRate(const char *pName, struct BytesRate *br) {
+
+    DASSERT(br);
+
+    free(br);
+};
+
+
+static int CreateByteRateParameter(struct QsStream *s,
+            const char *filterName, const char *pName_in,
+            enum QsParameterType type, struct QsFilter *f) {
+
+    char pName[24];
+    snprintf(pName, 24, "%sRate", pName_in);
+
+    struct BytesRate *br = calloc(1, sizeof(*br));
+    ASSERT(br, "calloc(1,%zu) failed", sizeof(*br));
+
+    br->parameter = qsParameterCreateForFilter(f,
+        pName, QsDouble,
+        0/*setCallback() is not needed*/,
+        (void (*)(const char *pName, void *userData)) FreeByteRate,
+        br);
+    ASSERT(br->parameter, "Can't create parameter %s:%s", filterName, pName);
+
+    qsParameterGet(s, filterName, pName_in, QsUint64,
+            (int (*)(
+                const void *value, void *streamOrApp,
+                const char *ownerName, const char *pName,
+                enum QsParameterType type, void *userData))
+            GetBytesCountCallback,
+            br /*userData*/, 0);
+
+    return 0;
+}
+
+
+
 int postStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
-
-    WARN("filter \"%s\"", qsFilterName(f));
 
     // A regular expression to match for bytes count for input and
     // outputs:
     const char *regex = "^bytes(In|Out)([0-9]+|Total)$";
 
-    qsParameterGet(s, qsFilterName(f), regex, QsUint64,
+    qsParameterForEach(0, s, qsFilterName(f), regex, QsUint64,
             (int (*)(
-                const void *value, void *streamOrApp,
-                const char *ownerName, const char *pName, 
-                enum QsParameterType type, void *userData))
-            GetBytesCountCallback,
-            0 /*userData*/, QS_PNAME_REGEX);
+            struct QsStream *stream,
+            const char *filterName, const char *pName,
+            enum QsParameterType type, void *userData))
+            CreateByteRateParameter,
+            f, QS_PNAME_REGEX);
+
 
     return 0;
 }
@@ -109,7 +162,17 @@ int postStart(struct QsStream *s, struct QsFilter *f,
 int postStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
-    WARN("filter \"%s\"", qsFilterName(f));
+    DSPEW("filter \"%s\"", qsFilterName(f));
+
+
+    // We destroy all the parameter that this module created.  This is
+    // required if the stream is allowed re-configure before the next
+    // start.
+
+    // A regular expression to match for bytes rate for input and
+    // outputs:
+    qsParameterDestroyForFilter(f, "^bytes(In|Out)([0-9]+|Total)Rate$",
+            QS_PNAME_REGEX);
 
     return 0;
 }
