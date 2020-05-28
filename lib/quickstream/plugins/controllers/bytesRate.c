@@ -36,15 +36,15 @@ void help(FILE *f) {
 "                      OPTIONS\n"
 "\n"
 "\n"
-"     --period SECONDS   set the period to average over.  The default averages\n"
-"                        at every filter input.  Longer period may give smoother\n"
-"                        and more consistent parameter values.\n"
+"   --period SECONDS  set the period to average over.  The default averages\n"
+"                     at every filter input.  Longer period may give smoother\n"
+"                     and more consistent parameter values.\n"
 "\n"
 "\n"
-"     --coarse           use a coarse timer.  Uses the CLOCK_MONOTONIC_COARSE\n"
-"                        flag for clock_gettime().  This can give better\n"
-"                        stream performance than the default, CLOCK_MONOTONIC.\n"
-"                        \"A faster but less precise version of CLOCK_MONOTONIC.\"\n"
+"   --coarse          use a coarse timer.  Uses the CLOCK_MONOTONIC_COARSE\n"
+"                     flag for clock_gettime().  This can give better\n"
+"                     stream performance than the default, CLOCK_MONOTONIC.\n"
+"                     \"A faster but less precise version of CLOCK_MONOTONIC.\"\n"
 "\n");
 }
 
@@ -64,7 +64,7 @@ struct BytesRate {
 };
 
 
-
+// 
 static int
 GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterName,
         const char *pName,
@@ -73,20 +73,33 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
     //WARN("%s:%s %" PRIu64 " bytes", filterName, pName, *bytes);
 
     struct timespec prevT;
-    memcpy(&prevT, &br->t, sizeof(prevT));
+    prevT.tv_sec = br->t.tv_sec;
+    prevT.tv_nsec = br->t.tv_nsec;
 
-    // TODO: This may be to expensive to do this often:
+    // TODO: clock_gettime() may be too expensive to do this often:
     //
     clock_gettime(clockType, &br->t);
 
-    if(prevT.tv_sec == 0 && prevT.tv_nsec == 0)
+    if(prevT.tv_sec == 0) {
         // The previous time was not initialized.
+        br->bytes = *bytes;
         return 0;
+    }
 
+    double bytesRate = br->t.tv_sec - prevT.tv_sec +
+        (1.0e-9)*(br->t.tv_nsec - prevT.tv_nsec);
+
+    bytesRate = (*bytes - br->bytes)/bytesRate;
+
+    qsParameterPushByPointer(br->parameter, &bytesRate);
+
+    //printf("%s:%s rate=%lg bytes/s\n", filterName, pName, bytesRate);
+
+    // Save the last count.
+    br->bytes = *bytes;
 
     return 0;
 }
-
 
 
 
@@ -95,7 +108,8 @@ int construct(int argc, const char **argv) {
 
     period = qsOptsGetDouble(argc, argv, "period", 0.0);
 
-    clockType = qsOptsGetBool(argc, argv, "coarse")?CLOCK_MONOTONIC_COARSE:CLOCK_MONOTONIC;
+    clockType = qsOptsGetBool(argc, argv, "coarse")?
+        CLOCK_MONOTONIC_COARSE:CLOCK_MONOTONIC;
 
     return 0; // success
 }

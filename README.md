@@ -7,12 +7,6 @@ some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
 that process data in filter module stages.
 
-quickstream is the next generation of a stream flow graph API that we
-wrote a year or more ago.  The old stream flow graph API was the subset of
-larger project, with a larger scope.  I consider quickstream a smaller
-more refined spin-off project.  I hope to give quickstream more polish
-and usability than it's previous generation.
-
 The quickstream starting point is this web page at
 https://github.com/lanceman2/quickstream.git, should it move we wish to
 keep that URL current.
@@ -26,7 +20,8 @@ https://lanceman2.github.io/quickstream.doc/html/index.html
 It's not functional yet.  Currently it's got most of directory structure
 laid out, build system, and components figured out.  The thing of interest
 now for you may be this README.md file.  Current development is on Debian
-9 and Ubuntu 18.04 systems.
+9 and Ubuntu 18.04 systems.  If you must play with it, use the
+"quickbuild" method for building it, described below.
 
 
 ## Prerequisite packages
