@@ -34,6 +34,12 @@ void help(FILE *f) {
 "\n");
 }
 
+struct Counter {
+
+    uint64_t count;
+    struct QsParameter *parameter;
+};
+
 
 struct FilterBytesCounter {
 
@@ -46,12 +52,14 @@ struct FilterBytesCounter {
     uint32_t numOutputs;
 
     // If there is just one input port then there will be one counter for
-    // port 0 and the total.
-    uint64_t *inputCounts; // array of counters
-        
+    // port 0 and the total, but a parameter for each.
+    struct Counter *inputCounters; // array of counters
+
     // If there is just one output port then there will be one counter for
-    // port 0 and the total.
-    uint64_t *outputCounts; // array of counters
+    // port 0 and the total, but a parameter for each.
+    struct Counter *outputCounters; // array of counters
+
+    struct timespec start;
 };
 
 
@@ -62,15 +70,16 @@ static bool printSummary = true;
 static uint32_t printingStreamId = -1;
 
 
-
 void PrintStreamHeader(const struct QsFilter *f) {
 
+
+
     fprintf(stderr,
-        "  |*********************************************|\n"
-        "  |*****          Stream %3" PRIu32
-        "               *****|\n"
-        "  |*********************************************|\n"
-        "  |                                             |\n",
+        "  |******************************************************************|\n"
+        "  |*****                  Stream %3" PRIu32
+        "                            *****|\n"
+        "  |******************************************************************|\n"
+        "  |                                                                  |\n",
         qsFilterStreamId(f));
 }
 
@@ -82,65 +91,70 @@ PrintSummary(struct FilterBytesCounter *bc, FILE *file) {
     DASSERT(bc->filter);
 
     const char *st =
-            "  |---------------------------------------------|";
+            "  |------------------------------------------------------------------|";
     const char *line =
-            "-------------------------------------------";
+            "----------------------------------------------------------------";
+
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+
+    // Change in time in seconds since start.
+    double dt = t.tv_sec - bc->start.tv_sec +
+        (1.0e-9)*(t.tv_nsec - bc->start.tv_nsec);
 
 
     fprintf(file,
                 "%s\n"
-                "  |    Filter \"%s\"\n"
+                "  |    Filter \"%s\"     %3.3lg seconds\n"
                 "%s\n",
-                st, qsFilterName(bc->filter), st);
+                st, qsFilterName(bc->filter), dt, st);
 
     if(bc->numInputs) {
         uint32_t i=0;
         fprintf(file,
                 "    |%s|\n"
-                "    |---------------   INPUTS   ----------------|\n"
+                "    |------------------------   INPUTS   ----------------------------|\n"
                 "    |%s|\n"
-                "    |   port_number             bytes           |\n"
-                "    |   -------------    -----------------------|\n",
+                "    |   port_number             bytes              average bytes/sec |\n"
+                "    |   -------------    ----------------------   -------------------|\n",
                 line, line);
         for(; i<bc->numInputs; ++i)
             fprintf(file,
-                "    |          %4" PRIu32 "      %21" PRIu64 "  |\n",
-                    i, bc->inputCounts[i]);
-        if(bc->numInputs == 1) i = 0;
+                "    |          %4" PRIu32 "      %21" PRIu64 "          %3.3lg\n",
+                    i, bc->inputCounters[i].count, bc->inputCounters[i].count/dt);
         fprintf(file,
-                "    |         total      %21" PRIu64 "  |\n"
+                "    |         total      %21" PRIu64 "          %3.3lg\n"
                 "    |%s|\n",
-                bc->inputCounts[i],
+                bc->inputCounters[i].count, bc->inputCounters[i].count/dt,
                 line);
     } else
         fprintf(file,
                 "    |%s|\n"
-                "    |-------------   NO INPUTS   ---------------|\n",
+                "    |----------------------   NO INPUTS   ---------------------------|\n",
                 line);
 
     if(bc->numOutputs) {
         uint32_t i=0;
         fprintf(file,
                 "    |%s|\n"
-                "    |---------------   OUTPUTS   ---------------|\n"
+                "    |----------------------    OUTPUTS    ---------------------------|\n"
                 "    |%s|\n"
-                "    |    port_number             bytes          |\n"
-                "    |   -------------    -----------------------|\n",
+                "    |    port_number             bytes             average bytes/sec |\n"
+                "    |   -------------    ----------------------   -------------------|\n",
                 line, line);
         for(; i<bc->numOutputs; ++i)
             fprintf(file,
-                "    |          %4" PRIu32 "      %21" PRIu64 "  |\n",
-                    i, bc->outputCounts[i]);
-        if(bc->numOutputs == 1) i = 0;
+                "    |          %4" PRIu32 "      %21" PRIu64 "          %3.3lg\n",
+                    i, bc->outputCounters[i].count, bc->outputCounters[i].count/dt);
         fprintf(file,
-                "    |         total      %21" PRIu64 "  |\n"
+                "    |         total      %21" PRIu64 "          %3.3lg\n"
                 "    |%s|\n",
-                bc->outputCounts[i],
+                bc->outputCounters[i].count, bc->outputCounters[i].count/dt,
                 line);
     } else
         fprintf(file,
                 "    |%s|\n"
-                "    |-------------   NO OUTPUTS   --------------|\n",
+                "    |--------------------    NO OUTPUTS    --------------------------|\n",
                 line);
 
     fprintf(file,
@@ -166,43 +180,35 @@ CleanFilterByteCounter(const char *pName,
 
     if(bc->numInputs) {
 #ifdef DEBUG
-        DASSERT(bc->inputCounts);
+        DASSERT(bc->inputCounters);
 
         // Zeroing the counters may help in debugging.  In general zeroing
         // memory before freeing it can help debugging, so long as we have
         // all the DASSERT() checks in the code.
-        memset(bc->inputCounts, 0,
-                bc->numInputs*sizeof(*bc->inputCounts));
-        if(bc->numInputs > 1)
-            // We have a total input counter too.
-            memset(bc->inputCounts + bc->numInputs, 0,
-                    sizeof(*bc->inputCounts));
+        memset(bc->inputCounters, 0,
+                (bc->numInputs+1)*sizeof(*bc->inputCounters));
 #endif
-        free(bc->inputCounts);
+        free(bc->inputCounters);
     }
 #ifdef DEBUG
     else
-        DASSERT(bc->inputCounts == 0);
+        DASSERT(bc->inputCounters == 0);
 #endif
 
 
     if(bc->numOutputs) {
 #ifdef DEBUG
-        DASSERT(bc->outputCounts);
+        DASSERT(bc->outputCounters);
 
         // Zeroing the counters may help in debugging.
-        memset(bc->outputCounts, 0,
-                bc->numOutputs*sizeof(*bc->outputCounts));
-        if(bc->numOutputs > 1)
-            // We have a total output counter too.
-            memset(bc->outputCounts + bc->numOutputs, 0,
-                    sizeof(*bc->outputCounts));
+        memset(bc->outputCounters, 0,
+                (bc->numOutputs+1)*sizeof(*bc->outputCounters));
 #endif
-        free(bc->outputCounts);
+        free(bc->outputCounters);
     }
 #ifdef DEBUG
     else
-        DASSERT(bc->outputCounts == 0);
+        DASSERT(bc->outputCounters == 0);
 #endif
 
 #ifdef DEBUG
@@ -245,28 +251,40 @@ int postFilterInputCB(
     DASSERT(numInputs == bc->numInputs);
     DASSERT(numOutputs == bc->numOutputs);
 
-    if(numInputs > 1) {
-        // zero the total
-        bc->inputCounts[numInputs] = 0;
-        for(uint32_t i=0; i<numInputs; ++i)
+    if(numInputs) {
+        // zero the total at the start of this for loop.
+        bc->inputCounters[numInputs].count = 0;
+        uint32_t i=0;
+        for(; i<numInputs; ++i) {
             // Add to the port count and the total is the sum of all.
-            bc->inputCounts[numInputs] += (bc->inputCounts[i] +=
+            bc->inputCounters[numInputs].count +=
+                (bc->inputCounters[i].count +=
                     lenIn[i]);
-    } else if(numInputs) {
-        // There is just one port to count.
-        bc->inputCounts[0] += lenIn[0];
+            // Port i
+            qsParameterPushByPointer(bc->inputCounters[i].parameter,
+                    &(bc->inputCounters[i].count));
+        }
+        // Total
+        qsParameterPushByPointer(bc->inputCounters[i].parameter,
+                    &(bc->inputCounters[i].count));
     }
 
-    if(numOutputs > 1) {
-        // zero the total
-        bc->outputCounts[numOutputs] = 0;
-        for(uint32_t i=0; i<numOutputs; ++i)
+    if(numOutputs) {
+        // zero the total at the start of this for loop.
+        bc->outputCounters[numOutputs].count = 0;
+        uint32_t i=0;
+        for(; i<numOutputs; ++i) {
             // Add to the port count and the total is the sum of all.
-            bc->outputCounts[numOutputs] += (bc->outputCounts[i] +=
+            bc->outputCounters[numOutputs].count +=
+                (bc->outputCounters[i].count +=
                     lenOut[i]);
-    } else if(numOutputs) {
-        // There is just one port to count.
-        bc->outputCounts[0] += lenOut[0];
+            // Port i
+            qsParameterPushByPointer(bc->outputCounters[i].parameter,
+                    &(bc->outputCounters[i].count));
+        }
+        // Total
+        qsParameterPushByPointer(bc->outputCounters[i].parameter,
+                &(bc->outputCounters[i].count));
     }
 
     return 0;
@@ -294,34 +312,24 @@ int preStart(struct QsStream *s, struct QsFilter *f,
     bc->numOutputs = numOutputs;
     bc->filter = f;
 
+    clock_gettime(CLOCK_MONOTONIC, &bc->start);
+
     // Allocate input counters
-    if(numInputs == 1) {
-        // We only have one counter for both port 0 and the total
-        // since the total has the same count as port 0.
-        bc->inputCounts = calloc(1, sizeof(*bc->inputCounts));
-        ASSERT(bc->inputCounts, "calloc(1,%zu) failed",
-                sizeof(*bc->inputCounts));
-    } else if(numInputs > 1) {
-        // We require 1 more counter for the total.
-        bc->inputCounts = calloc(numInputs + 1,
-                sizeof(*bc->inputCounts));
-        ASSERT(bc->inputCounts, "calloc(%" PRIu32 ",%zu) failed",
-                numInputs + 1, sizeof(*bc->inputCounts));
+    if(numInputs) {
+        // We require 1 more parameter for the total.
+        bc->inputCounters = calloc(numInputs + 1,
+                sizeof(*bc->inputCounters));
+        ASSERT(bc->inputCounters, "calloc(%" PRIu32 ",%zu) failed",
+                numInputs + 1, sizeof(*bc->inputCounters));
     }
 
     // Allocate output counters
-    if(numOutputs == 1) {
-        // We only have one counter for both port 0 and the total
-        // since the total has the same count as port 0.
-        bc->outputCounts = calloc(1, sizeof(*bc->outputCounts));
-        ASSERT(bc->outputCounts, "calloc(1,%zu) failed",
-                sizeof(*bc->outputCounts));
-    } else if(numOutputs > 1) {
+    if(numOutputs) {
         // We require 1 more counter for the total.
-        bc->outputCounts = calloc(numOutputs + 1,
-                sizeof(*bc->outputCounts));
-        ASSERT(bc->outputCounts, "calloc(%" PRIu32 ",%zu) failed",
-                numOutputs + 1, sizeof(*bc->outputCounts));
+        bc->outputCounters = calloc(numOutputs + 1,
+                sizeof(*bc->outputCounters));
+        ASSERT(bc->outputCounters, "calloc(%" PRIu32 ",%zu) failed",
+                numOutputs + 1, sizeof(*bc->outputCounters));
     }
 
     // Make a parameter object for each input port and an input total
@@ -330,7 +338,8 @@ int preStart(struct QsStream *s, struct QsFilter *f,
         for(; i<numInputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesIn%" PRIu32, i);
-            qsParameterCreateForFilter(f,
+            bc->inputCounters[i].parameter =
+                qsParameterCreateForFilter(f,
                     pName, QsUint64, 
                     0 /*setCallback=0*/,
                     0 /*cleanup=0*/,
@@ -342,7 +351,8 @@ int preStart(struct QsStream *s, struct QsFilter *f,
         // FilterBytesCounter for all of the parameters that we create for
         // this filter.  We'll have just one cleanup function for all
         // byte counter parameters that we make for this filter.
-        qsParameterCreateForFilter(f,
+        bc->inputCounters[numInputs].parameter =
+            qsParameterCreateForFilter(f,
                     "bytesInTotal", QsUint64, 
                     0 /*setCallback=0*/,
                     (void (*)(const char *pName, void *userData))
@@ -356,7 +366,8 @@ int preStart(struct QsStream *s, struct QsFilter *f,
         for(; i<numOutputs; ++i) {
             char pName[16];
             snprintf(pName, 16, "bytesOut%" PRIu32, i);
-            qsParameterCreateForFilter(f,
+            bc->outputCounters[i].parameter =
+                qsParameterCreateForFilter(f,
                     pName, QsUint64, 
                     0 /*setCallback=0*/,
                     0 /*cleanup=0*/,
@@ -367,7 +378,8 @@ int preStart(struct QsStream *s, struct QsFilter *f,
         // FilterBytesCounter for all of the parameters that we create for
         // this filter.  We'll have just one cleanup function for all
         // byte counter parameters that we make for this filter.
-        qsParameterCreateForFilter(f,
+        bc->outputCounters[numOutputs].parameter =
+            qsParameterCreateForFilter(f,
                     "bytesOutTotal", QsUint64, 
                     0 /*setCallback=0*/,
                     // We have a cleanup function for this parameter

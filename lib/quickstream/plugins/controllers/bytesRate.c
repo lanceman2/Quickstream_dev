@@ -66,7 +66,7 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
         const char *pName,
         enum QsParameterType type, struct BytesRate *br) {
 
-    DSPEW("%s:%s %" PRIu64 " bytes", filterName, pName, *bytes);
+    //WARN("%s:%s %" PRIu64 " bytes", filterName, pName, *bytes);
 
     return 0;
 }
@@ -85,7 +85,7 @@ int construct(int argc, const char **argv) {
 }
 
 
-int preStart(struct QsStream *s, struct QsFilter *f,
+int postStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
     WARN("filter \"%s\"", qsFilterName(f));

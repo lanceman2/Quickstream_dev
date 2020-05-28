@@ -293,7 +293,9 @@ AddGetCallback(struct QsParameter *p, const char *filterName,
         void *userData) {
     
     DASSERT(p);
-    DASSERT(p->setCallback);
+    // p->setCallback is not necessary.  A filter or controller can just
+    // set the parameter at flow time by calling qsParameterPush().
+    //DASSERT(p->setCallback);
 
     if(type != None && p->type != type) {
         ERROR("Parameter \"%s:%s\" type \"%s\" "
@@ -340,6 +342,7 @@ int Check_AddGetCallback(const char *pName, struct QsParameter *p,
     if(args->type != 0 && args->type != p->type)
         // It's not the type we are looking for.
         return 0;
+
 
     if(regexec(&args->regex, pName, 0, NULL, 0) == 0) {
         // This parameter name matches the regular expression.
@@ -519,7 +522,8 @@ int qsParameterPushByPointer(const struct QsParameter *p,
         void *value) {
 
     DASSERT(p);
-    DASSERT(p->setCallback);
+    // p->setCallback is not necessary.
+    //DASSERT(p->setCallback);
     DASSERT(p->filterName);
     DASSERT(p->filterName[0]);
 
