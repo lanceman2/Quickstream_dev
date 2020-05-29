@@ -30,22 +30,25 @@ void help(FILE *f) {
     fprintf(f,
 "   Usage: bytesCounter\n"
 "\n"
-"   A controller module that adds a bytes counter for all\n"
-" filters in all streams.\n"
+"   A controller module that adds a bytes counter parameter for all\n"
+"   filters and their input and output ports, in all running streams.\n"
 "\n"
 "\n                OPTIONS\n"
 "\n"
-"   --printNoSummary    do not print a count summary to stderr.\n"
-"                       By default a summary is printed to stderr\n"
+"  --printNoSummary    do not print a count summary to stderr.\n"
+"                      By default a summary is printed to stderr\n"
 "\n"
 "\n"
 "  --report-period SECONDS  The quickest this will update byte rates\n"
 "                           is the rate had which the filter input() is\n"
 "                 reported.  The default report period is %lg seconds.\n"
+"                 A report period of 0 will report after each filter\n"
+"                 input() call.\n"
 "\n"
 "\n",
     DEFAULT_PERIOD);
 }
+
 
 struct Counter {
 
@@ -86,7 +89,6 @@ static uint32_t printingStreamId = -1;
 
 
 void PrintStreamHeader(const struct QsFilter *f) {
-
 
 
     fprintf(stderr,
