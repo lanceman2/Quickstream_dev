@@ -10,6 +10,13 @@
 #include "../../../debug.h"
 
 
+#define DEFAULT_PERIOD  ((double) 0.01)
+
+
+static clockid_t clockType = CLOCK_MONOTONIC_COARSE;
+static double period = DEFAULT_PERIOD;
+
+
 
 void help(FILE *f) {
     fprintf(f,
@@ -35,28 +42,29 @@ void help(FILE *f) {
 "\n"
 "                      OPTIONS\n"
 "\n"
+"  --not-coarse   use a fine timer; use the CLOCK_MONOTONIC flag\n"
+"                 for clock_gettime().  CLOCK_MONOTONIC_COARSE is\n"
+"                 a faster but less precise version of\n"
+"                 CLOCK_MONOTONIC.   CLOCK_MONOTONIC_COARSE is\n"
+"                 used by default.  See 'man 2 clock_gettime'.\n"
+"                 Using CLOCK_MONOTONIC could hurt your filter\n"
+"                 stream performance.\n"
 "\n"
-"   --period SECONDS  set the period to average over.  The default averages\n"
-"                     at every filter input.  Longer period may give smoother\n"
-"                     and more consistent parameter values.\n"
 "\n"
-"\n"
-"   --coarse          use a coarse timer.  Uses the CLOCK_MONOTONIC_COARSE\n"
-"                     flag for clock_gettime().  This can give better\n"
-"                     stream performance than the default, CLOCK_MONOTONIC.\n"
-"                     \"A faster but less precise version of CLOCK_MONOTONIC.\"\n"
-"\n");
+"  --report-period SECONDS  The quickest this will update byte rates\n"
+"                           is the rate had which the byteCounter is\n"
+"                 reported.  The default report period is %lg seconds.\n"
+"                 If the stream runs in a time less than this period\n"
+"                 then you will get no measurements.\n"
+"\n",
+    DEFAULT_PERIOD);
 }
 
-
-static double period = 0;
-
-static clockid_t clockType = CLOCK_MONOTONIC;
 
 
 struct BytesRate {
 
-    struct timespec t;
+    struct timespec prevT;
 
     uint64_t bytes;
 
@@ -72,22 +80,30 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
 
     //WARN("%s:%s %" PRIu64 " bytes", filterName, pName, *bytes);
 
-    struct timespec prevT;
-    prevT.tv_sec = br->t.tv_sec;
-    prevT.tv_nsec = br->t.tv_nsec;
-
-    // TODO: clock_gettime() may be too expensive to do this often:
+    struct timespec t;
+    // TODO: clock_gettime() may be too expensive to do this often, but
+    // maybe the CLOCK_MONOTONIC_COARSE flag will ease the use of system
+    // resources.
     //
-    clock_gettime(clockType, &br->t);
+    clock_gettime(clockType, &t);
 
-    if(prevT.tv_sec == 0) {
+    if(br->prevT.tv_sec == 0) {
         // The previous time was not initialized.
         br->bytes = *bytes;
+        // We wait until the next call to get a value.
+        br->prevT.tv_sec = t.tv_sec;
+        br->prevT.tv_nsec = t.tv_nsec;
         return 0;
     }
 
-    double bytesRate = br->t.tv_sec - prevT.tv_sec +
-        (1.0e-9)*(br->t.tv_nsec - prevT.tv_nsec);
+    double bytesRate = t.tv_sec - br->prevT.tv_sec +
+        (1.0e-9)*(t.tv_nsec - br->prevT.tv_nsec);
+
+    if(bytesRate < period)
+        // Maybe it's possible that the clock resolution is not enough
+        // to measure a time difference; if so we wait for the next or
+        // other later call.
+        return 0;
 
     bytesRate = (*bytes - br->bytes)/bytesRate;
 
@@ -95,21 +111,21 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
 
     //printf("%s:%s rate=%lg bytes/s\n", filterName, pName, bytesRate);
 
-    // Save the last count.
+    // Save the last measurements
     br->bytes = *bytes;
+    br->prevT.tv_sec = t.tv_sec;
+    br->prevT.tv_nsec = t.tv_nsec;
 
     return 0;
 }
 
 
 
-
 int construct(int argc, const char **argv) {
 
-    period = qsOptsGetDouble(argc, argv, "period", 0.0);
-
-    clockType = qsOptsGetBool(argc, argv, "coarse")?
-        CLOCK_MONOTONIC_COARSE:CLOCK_MONOTONIC;
+    clockType = qsOptsGetBool(argc, argv, "not-coarse")?
+        CLOCK_MONOTONIC:CLOCK_MONOTONIC_COARSE;
+    period = qsOptsGetDouble(argc, argv, "report-period", DEFAULT_PERIOD);
 
     return 0; // success
 }
@@ -118,7 +134,6 @@ int construct(int argc, const char **argv) {
 static void FreeByteRate(const char *pName, struct BytesRate *br) {
 
     DASSERT(br);
-
     free(br);
 };
 
@@ -152,7 +167,6 @@ static int CreateByteRateParameter(struct QsStream *s,
 }
 
 
-
 int postStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
@@ -168,7 +182,6 @@ int postStart(struct QsStream *s, struct QsFilter *f,
             CreateByteRateParameter,
             f, QS_PNAME_REGEX);
 
-
     return 0;
 }
 
@@ -177,7 +190,6 @@ int postStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
 
     DSPEW("filter \"%s\"", qsFilterName(f));
-
 
     // We destroy all the parameter that this module created.  This is
     // required if the stream is allowed re-configure before the next

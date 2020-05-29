@@ -18,6 +18,14 @@
 
 
 
+#define DEFAULT_PERIOD  ((double) 0.0)
+
+
+static clockid_t clockType = CLOCK_MONOTONIC_COARSE;
+static double period = DEFAULT_PERIOD;
+
+
+
 void help(FILE *f) {
     fprintf(f,
 "   Usage: bytesCounter\n"
@@ -29,9 +37,14 @@ void help(FILE *f) {
 "\n"
 "   --printNoSummary    do not print a count summary to stderr.\n"
 "                       By default a summary is printed to stderr\n"
-"                       after each stream run.\n"
 "\n"
-"\n");
+"\n"
+"  --report-period SECONDS  The quickest this will update byte rates\n"
+"                           is the rate had which the filter input() is\n"
+"                 reported.  The default report period is %lg seconds.\n"
+"\n"
+"\n",
+    DEFAULT_PERIOD);
 }
 
 struct Counter {
@@ -44,6 +57,8 @@ struct Counter {
 struct FilterBytesCounter {
 
     struct QsFilter *filter;
+
+    struct timespec t; // time of the last parameter push.
 
     // ports 0, 1, 2, 3, .. N-1, and Total
     // For just one port it's just Total at element 0.
@@ -195,7 +210,6 @@ CleanFilterByteCounter(const char *pName,
         DASSERT(bc->inputCounters == 0);
 #endif
 
-
     if(bc->numOutputs) {
 #ifdef DEBUG
         DASSERT(bc->outputCounters);
@@ -224,6 +238,7 @@ int construct(int argc, const char **argv) {
     //DSPEW();
 
     printSummary = !qsOptsGetBool(argc, argv, "printNoSummary");
+    period = qsOptsGetDouble(argc, argv, "report-period", DEFAULT_PERIOD);
 
     return 0; // success
 }
@@ -251,6 +266,26 @@ int postFilterInputCB(
     DASSERT(numInputs == bc->numInputs);
     DASSERT(numOutputs == bc->numOutputs);
 
+    bool pushReport = true;
+
+    if(period) {
+
+        struct timespec t;
+        clock_gettime(clockType, &t);
+        double dt = t.tv_sec - bc->t.tv_sec +
+            (1.0e-9)*(t.tv_nsec - bc->t.tv_nsec);
+        if(dt < period)
+            // Do not push (report) this measurement.  But we still need
+            // to tally the byte counters.
+            pushReport = false;
+        else {
+            // Save the last time that we pushed the measurement.
+            bc->t.tv_sec = t.tv_sec;
+            bc->t.tv_nsec = t.tv_nsec;
+        }
+    }
+
+
     if(numInputs) {
         // zero the total at the start of this for loop.
         bc->inputCounters[numInputs].count = 0;
@@ -260,12 +295,14 @@ int postFilterInputCB(
             bc->inputCounters[numInputs].count +=
                 (bc->inputCounters[i].count +=
                     lenIn[i]);
-            // Port i
-            qsParameterPushByPointer(bc->inputCounters[i].parameter,
-                    &(bc->inputCounters[i].count));
+            if(pushReport)
+                // Port i
+                qsParameterPushByPointer(bc->inputCounters[i].parameter,
+                        &(bc->inputCounters[i].count));
         }
-        // Total
-        qsParameterPushByPointer(bc->inputCounters[i].parameter,
+        if(pushReport)
+            // Total
+            qsParameterPushByPointer(bc->inputCounters[i].parameter,
                     &(bc->inputCounters[i].count));
     }
 
@@ -278,13 +315,15 @@ int postFilterInputCB(
             bc->outputCounters[numOutputs].count +=
                 (bc->outputCounters[i].count +=
                     lenOut[i]);
-            // Port i
+            if(pushReport)
+                // Port i
+                qsParameterPushByPointer(bc->outputCounters[i].parameter,
+                        &(bc->outputCounters[i].count));
+        }
+        if(pushReport)
+            // Total
             qsParameterPushByPointer(bc->outputCounters[i].parameter,
                     &(bc->outputCounters[i].count));
-        }
-        // Total
-        qsParameterPushByPointer(bc->outputCounters[i].parameter,
-                &(bc->outputCounters[i].count));
     }
 
     return 0;
