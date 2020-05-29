@@ -403,7 +403,7 @@ static
 int Check_AddGetCallback(const char *pName, struct QsParameter *p,
         struct Check_AddGetCallback_args *args) {
 
-    if(args->type != 0 && args->type != p->type)
+    if(args->type != Any && args->type != p->type)
         // It's not the type we are looking for.
         return 0;
 
@@ -750,7 +750,7 @@ ForParameterDict(struct QsFilter *f, const char *pName,
             WARN("Parameter \"%s:%s\" not found", f->name, pName);
             return 0;
         }
-        if(!type || type == p->type) {
+        if(type != Any || type == p->type) {
             if(callback(f->stream, f->name, pName, p->type, userData))
                 *done = true;
             return 1;

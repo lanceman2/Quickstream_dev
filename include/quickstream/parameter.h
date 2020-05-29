@@ -123,10 +123,11 @@ extern "C" {
  */
 enum QsParameterType {
 
-    None = 0 /** A null type that has no data being passed. */,
-    QsDouble = 1/** The void pointer points to a \c double. */,
-    QsUint64 = 2/** The void pointer points to a \c uint64_t */,
-    QsNew = 3/** A type that has not been defined by the quickstream API
+    Any = 0, /** Any type */
+    None = 1 /** A null type that has no data being passed. */,
+    QsDouble = 2/** The void pointer points to a \c double. */,
+    QsUint64 = 3/** The void pointer points to a \c uint64_t */,
+    QsNew = 4/** A type that has not been defined by the quickstream API
                that a user defines on their own.*/
 };
 

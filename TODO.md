@@ -6,6 +6,10 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - Finish controller bytesCounter.
 
+- Need some kind to controller::preStart() call ordering
+  otherwise they can't get called after preStart() in
+  other controllers.  See tests/391_controller_bytesCount.
+
 - make userData const in qsParameter*() functions.
 
 - Add App function qsAppControllerRequire().  Crap!  How does that work?

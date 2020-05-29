@@ -9,6 +9,7 @@ set -x
 ../bin/quickstream -v 3\
  -C bytesCounter { --report-period 0.3 }\
  -C bytesRate\
+ -C tests/monitor\
  -f tests/sequenceGen.so {\
  --maxWrite 1000\
  --length 80003 }\

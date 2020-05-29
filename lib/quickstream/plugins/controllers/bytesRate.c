@@ -109,7 +109,7 @@ GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterNam
 
     qsParameterPushByPointer(br->parameter, &bytesRate);
 
-    //printf("%s:%s rate=%lg bytes/s\n", filterName, pName, bytesRate);
+    //printf("%s:%sRate = %lg bytes/s\n", filterName, pName, bytesRate);
 
     // Save the last measurements
     br->bytes = *bytes;
