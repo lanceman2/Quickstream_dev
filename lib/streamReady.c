@@ -359,9 +359,8 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 }
 
 
-static
-int preStop_callback(const char *key, struct QsController *c,
-        struct QsStream *s) {
+static inline
+int preStop_callback(struct QsController *c, struct QsStream *s) {
 
     if(c->preStop) {
 
@@ -391,9 +390,8 @@ int preStop_callback(const char *key, struct QsController *c,
 }
 
 
-static
-int postStop_callback(const char *key, struct QsController *c,
-        struct QsStream *s) {
+static inline
+int postStop_callback(struct QsController *c, struct QsStream *s) {
 
     if(c->postStop) {
 
@@ -477,10 +475,9 @@ int qsStreamStop(struct QsStream *s) {
      *      Stage: call all the app's controller preStop()s if present
      *********************************************************************/
 
-
-    qsDictionaryForEach(s->app->controllers,
-            (int (*) (const char *, void *, void *)) preStop_callback,
-            s);
+    // We call them in reverse load order:
+    for(struct QsController *c=s->app->last; c; c=c->prev)
+        preStop_callback(c, s);
 
 
     /**********************************************************************
@@ -530,9 +527,9 @@ int qsStreamStop(struct QsStream *s) {
      *      Stage: call all the app's controller postStop()s if present
      *********************************************************************/
 
-    qsDictionaryForEach(s->app->controllers,
-            (int (*) (const char *, void *, void *)) postStop_callback,
-            s);
+    // We call them in reverse load order:
+    for(struct QsController *c=s->app->last; c; c=c->prev)
+        postStop_callback(c, s);
 
 
     /**********************************************************************
@@ -548,8 +545,7 @@ int qsStreamStop(struct QsStream *s) {
 
 
 static
-int preStart_callback(const char *key, struct QsController *c,
-        struct QsStream *s) {
+int preStart_callback(struct QsController *c, struct QsStream *s) {
 
     if(c->preStart) {
 
@@ -580,8 +576,7 @@ int preStart_callback(const char *key, struct QsController *c,
 
 
 static
-int postStart_callback(const char *key, struct QsController *c,
-        struct QsStream *s) {
+int postStart_callback(struct QsController *c, struct QsStream *s) {
 
     if(c->postStart) {
 
@@ -748,9 +743,9 @@ int qsStreamReady(struct QsStream *s) {
      *      Stage: call all the app's controller preStart()s if present
      *********************************************************************/
 
-    qsDictionaryForEach(s->app->controllers,
-            (int (*) (const char *, void *, void *)) preStart_callback,
-            s);
+    // We call them in load order:
+    for(struct QsController *c=s->app->first; c; c=c->next)
+        preStart_callback(c, s);
 
 
     /**********************************************************************
@@ -820,9 +815,9 @@ int qsStreamReady(struct QsStream *s) {
      *      Stage: call all the app's controller postStart()s if present
      *********************************************************************/
 
-    qsDictionaryForEach(s->app->controllers,
-            (int (*) (const char *, void *, void *)) postStart_callback,
-            s);
+    // We call them in load order:
+    for(struct QsController *c=s->app->first; c; c=c->next)
+        postStart_callback(c, s);
 
 
     return 0; // success

@@ -90,6 +90,26 @@ DictionaryDestroyController(struct QsController *c) {
                 c->name);
     }
 
+    // Remove this controller from the Apps doubly linked list
+    //
+    if(c->prev) {
+        DASSERT(c != c->app->first);
+        c->prev->next = c->next;
+    } else {
+        // c->prev == 0
+        DASSERT(c == c->app->first);
+        c->app->first = c->next;
+    }
+    
+    if(c->next) {
+        DASSERT(c != c->app->last);
+        c->next->prev = c->prev;
+    } else {
+        // c->next == 0
+        DASSERT(c == c->app->last);
+        c->app->last = c->prev;
+    }
+
     free(c->name);
 
 #ifdef DEBUG
@@ -317,6 +337,18 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
     qsDictionarySetFreeValueOnDestroy(d,
             (void (*)(void *)) DictionaryDestroyController);
 
+    // Add this controller to the last of Apps doubly linked list
+    //
+    if(app->first) {
+        DASSERT(app->last);
+        app->last->next = c;
+        c->prev = app->last;
+    } else {
+        DASSERT(app->last == 0);
+        app->first = c;
+    }
+    app->last = c;
+
     c->parameters = qsDictionaryCreate();
 
 
@@ -367,6 +399,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
                 return QS_UNLOADED;
         }
     }
+
 
     INFO("Successfully loaded module Controller %s with name \"%s\"",
             path, c->name);

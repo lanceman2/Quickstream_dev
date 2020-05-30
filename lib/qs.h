@@ -198,15 +198,22 @@ struct QsApp {
     uint32_t streamCount;
 
 
-    // List of controllers keyed by name.
+    // List of controllers keyed by name.  TODO: This dictionary list may
+    // not be needed.
     //
     struct QsDictionary *controllers;
+    //
+    // And a doubly linked list of controllers, so we have an order in
+    // which they are loaded, so we may call preStart() and postStart() in
+    // load order, and preStop() and postStop() in reverse load order.
+    struct QsController *first; // first loaded
+    struct QsController *last; // last loaded
 
 
     // We could have more than one stream.  We can't delete or edit one
     // while it is running.  You could do something weird like configure
     // one stream while another stream is running.  We can also run more
-    // than one stream at a time.
+    // than one stream at a time; we have a test that does that.
     //
     // List of streams.  Head of a singly linked list.
     struct QsStream *streams;
@@ -287,6 +294,9 @@ struct QsController {
 
     // malloc() allocated unique name for this controller in this app.
     char *name;
+
+    // For the doubly linked list that is in App.
+    struct QsController *next, *prev;
 
     // Callback functions that may be loaded.  We do not get a copy of the
     // construct() and destroy() functions because they are only called
