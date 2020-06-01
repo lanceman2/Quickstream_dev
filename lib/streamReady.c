@@ -10,12 +10,12 @@
 #include "controllerCallbacks.h"
 
 // Private interfaces.
-#include "./debug.h"
+#include "debug.h"
 #include "Dictionary.h"
-#include "./qs.h"
+#include "qs.h"
 #include "filterList.h"
 #include "stream.h"
-
+#include "parameter.h"
 
 
 
@@ -530,6 +530,14 @@ int qsStreamStop(struct QsStream *s) {
     // We call them in reverse load order:
     for(struct QsController *c=s->app->last; c; c=c->prev)
         postStop_callback(c, s);
+
+
+    /**********************************************************************
+     *     Stage: remove all the parameter get callbacks that we can.
+     *********************************************************************/
+
+    for(struct QsFilter *f = s->filters; f; f = f->next)
+        _qsParameterRemoveCallbacksForRestart(f);
 
 
     /**********************************************************************

@@ -66,6 +66,7 @@ struct GetCallback {
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData);
     void *userData;
+    uint32_t flags;
 };
 
 
@@ -233,6 +234,58 @@ struct QsDictionary *GetParameterDictionary(void *as, const char *name) {
 }
 
 
+int RemoveCallbacksForRestart(const char *key,
+        struct QsParameter *p, void *userData) {
+
+    if(p->numGetCallbacks == 0) return 0;
+
+    DASSERT(p->getCallbacks);
+
+    // Squeeze all the getCallbacks that we'll be keeping to a condensed
+    // array.
+    size_t newNum=0;
+    for(size_t j=0; j<p->numGetCallbacks;) {
+        // Keep going until we find one to keep:
+        while(j<p->numGetCallbacks &&
+                !(p->getCallbacks[j].flags & QS_KEEP_AT_RESTART)) ++j;
+        if(j==p->numGetCallbacks) break;
+        // We keep j-th one in the newNum position.
+        if(newNum != j)
+            memcpy(&(p->getCallbacks[newNum]), &(p->getCallbacks[j]),
+                    sizeof(*p->getCallbacks));
+        // else newNum == j so we do not need to copy it.
+
+        ++newNum;
+        ++j;
+    }
+
+    if(p->numGetCallbacks != newNum && newNum) {
+        p->getCallbacks = realloc(p->getCallbacks, newNum*
+                sizeof(*p->getCallbacks));
+        ASSERT(p->getCallbacks, "realloc(%p,%zu) failed",
+                p->getCallbacks, newNum*
+                sizeof(*p->getCallbacks));
+    } else if(newNum == 0) {
+#ifdef DEBUG
+        memset(p->getCallbacks, 0, p->numGetCallbacks*
+                sizeof(*p->getCallbacks));
+#endif
+        free(p->getCallbacks);
+    }
+    p->numGetCallbacks = newNum;
+    return 0;
+}
+
+
+void
+_qsParameterRemoveCallbacksForRestart(struct QsFilter *f) {
+
+    qsDictionaryForEach(f->parameters,
+            (int (*) (const char *key, void *value,
+                    void *userData)) RemoveCallbacksForRestart, 0);
+}
+
+
 static
 struct QsParameter *
 CreateParameter(struct QsDictionary *dict/*root of dictionary*/,
@@ -354,14 +407,14 @@ AddGetCallback(struct QsParameter *p, const char *filterName,
             void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
-        void *userData) {
+        void *userData, uint32_t flags) {
     
     DASSERT(p);
     // p->setCallback is not necessary.  A filter or controller can just
     // set the parameter at flow time by calling qsParameterPush().
     //DASSERT(p->setCallback);
 
-    if(type != None && p->type != type) {
+    if(type != Any && p->type != type) {
         ERROR("Parameter \"%s:%s\" type \"%s\" "
                 "is not requested type \"%s\"",
                 filterName, pName, GetTypeString(p->type),
@@ -369,15 +422,24 @@ AddGetCallback(struct QsParameter *p, const char *filterName,
         return -3; // error
     }
 
-    size_t i = p->numGetCallbacks;
+    if(flags & QS_KEEP_ONE)
+        // Check that we only add this callback just once.
+        for(size_t i=p->numGetCallbacks-1; i!=-1; --i)
+            if(getCallback == p->getCallbacks[i].getCallback)
+                // It's there already, so we're done.
+                return 0;
+
+
+    size_t num = p->numGetCallbacks;
 
     p->getCallbacks = realloc(p->getCallbacks,
-            (i+1)*sizeof(*p->getCallbacks));
+            (num+1)*sizeof(*p->getCallbacks));
     ASSERT(p->getCallbacks, "realloc(,%zu) failed",
-            (i+1)*sizeof(*p->getCallbacks));
-    struct GetCallback *gc = p->getCallbacks + i;
+            (num+1)*sizeof(*p->getCallbacks));
+    struct GetCallback *gc = p->getCallbacks + num;
     gc->getCallback = getCallback;
     gc->userData = userData;
+    gc->flags = flags;
     ++p->numGetCallbacks;
 
     return 1; // success
@@ -396,6 +458,7 @@ struct Check_AddGetCallback_args {
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData);
     void *userData;
+    uint32_t flags;
 };
 
 
@@ -411,7 +474,7 @@ int Check_AddGetCallback(const char *pName, struct QsParameter *p,
     if(regexec(&args->regex, pName, 0, NULL, 0) == 0) {
         // This parameter name matches the regular expression.
         AddGetCallback(p, args->filterName, pName, p->type,
-                args->getCallback, args->userData);
+                args->getCallback, args->userData, args->flags);
         ++args->numParameters;
     }
     return 0; // keep going.
@@ -450,7 +513,7 @@ int qsParameterGet(void *as, const char *filterName,
         }
 
         return AddGetCallback(p, filterName, pName, type, getCallback,
-                userData);
+                userData, flags);
     }
 
     // This could be getting many parameters via a parameter name regular
@@ -464,6 +527,7 @@ int qsParameterGet(void *as, const char *filterName,
     args.numParameters = 0;
     args.getCallback = getCallback;
     args.userData = userData;
+    args.flags = flags;
 
     int ret = regcomp(&args.regex, pName, REG_EXTENDED);
     if(ret == REG_ESPACE)

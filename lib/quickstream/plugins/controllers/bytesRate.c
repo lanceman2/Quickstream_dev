@@ -74,7 +74,8 @@ struct BytesRate {
 
 // 
 static int
-GetBytesCountCallback(uint64_t *bytes, struct QsStream *s, const char *filterName,
+GetBytesCountCallback(uint64_t *bytes, struct QsStream *s,
+        const char *filterName,
         const char *pName,
         enum QsParameterType type, struct BytesRate *br) {
 

@@ -285,12 +285,16 @@ qsParameterCreateForFilter(struct QsFilter *filter,
         void *userData);
 
 
-/** bit flags used to mark the use of regular expressions to find
+/** bit flag used to mark the use of regular expressions to find
  * parameter with qsParameterGet(), qsParameterForEach(), and
  * qsParameterDestroyForFilter().
  */
 #define QS_PNAME_REGEX     (01)
-
+/** bit flag to mark keeping parameter get callback across restarts. */
+#define QS_KEEP_AT_RESTART (02)
+/** bit flag to mark parameter get callback to not get added more than
+ * once. */
+#define QS_KEEP_ONE        (04)
 
 /** Register a callback to get a parameter value from outside the filter
  * module
@@ -328,16 +332,27 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  *
  * \param userData is passed to the getCallback() every time it is called.
  *
- * \param flags if flags includes the bit QS_PNAME_REGEX \p pName will be
- * interpreted as a POSIX Regular Expression and all parameters with a name
- * matches the regular expression will have the get callback added to it.
- * Use 0 otherwise.
+ * \param flags
  *
- * Calling getCallback() should not block.
+ *  - QS_PNAME_REGEX: If flags includes the bit QS_PNAME_REGEX \p pName
+ *  will be interpreted as a POSIX Regular Expression and all parameters
+ *  with a name matches the regular expression will have the get callback
+ *  added to it.  Use 0 otherwise.
+ *
+ *  - QS_KEEP_AT_RESTART: By default the get callback is removed at each
+ *  stream stop (rstart).  If flags includes the bit the get callback will
+ *  be kept across restarts.
+ *
+ *  - QS_KEEP_ONE: bit flag to mark parameter get callback to not get
+ *  added more than once.  The address of the getCallback is what defines
+ *  the callback.
+ *
+ * Calling users getCallback() function should not block.
  *
  * If the getCallback returns non-zero the callback will be removed.
  *
- * \return the number of parameters found or less than zero on error.
+ * \return the number of parameters found and callback is added, or less
+ * than zero on error.
  */
 extern
 int qsParameterGet(void *streamOrApp, const char *ownerName,
