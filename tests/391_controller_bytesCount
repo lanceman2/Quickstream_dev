@@ -15,7 +15,7 @@ set -x
  --length 80003 }\
  -f tests/sequenceCheck\
  -f tests/sequenceCheck\
- -c -t 1 -r -r
+ -c -t 1 -r
 
 
 set +x
