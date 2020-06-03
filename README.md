@@ -2,6 +2,22 @@
 
 data quickly flows between modules in a directed graph
 
+
+## Development Status
+
+Current development is on Debian 9 and Ubuntu 18.04 systems.  It's in a
+pre-alpha state.  Install the [required prerequisite packages](## Required
+prerequisite packages), and then run
+```console
+make
+```
+in the top source directory.   Then run
+```console
+make test
+```
+
+## About quickstream
+
 quickstream is a run library, a filter library, some filter modules, and
 some utility programs.  quickstream is written in C and the libraries can
 link with C and C++ code.  quickstream is for building flow stream graphs
@@ -15,16 +31,7 @@ We keep the current Doxygen generated manual in html at
 https://lanceman2.github.io/quickstream.doc/html/index.html
 
 
-## Development Status
-
-It's not functional yet.  Currently it's got most of directory structure
-laid out, build system, and components figured out.  The thing of interest
-now for you may be this README.md file.  Current development is on Debian
-9 and Ubuntu 18.04 systems.  If you must play with it, use the
-"quickbuild" method for building it, described below.
-
-
-## Prerequisite packages
+## Required prerequisite packages
 
 Building and installing quickstream requires the following debian package
 prerequisites:
@@ -35,6 +42,16 @@ libudev-dev
 graphviz
 imagemagick
 doxygen
+```
+
+## Optional prerequisite packages
+
+You can install the following debian package prerequisites, but they
+will are not required:
+
+
+```shell
+librtlsdr-dev
 ```
 
 
