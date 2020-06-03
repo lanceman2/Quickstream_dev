@@ -1,5 +1,17 @@
 #!/bin/bash
 
+
+#########################################################################
+# Current project status GNU autotools is not being used.  GNU autotools
+# will be used in the future, when we have an alpha release:
+
+set -e
+cd $(dirname ${BASH_SOURCE[0]})
+./quickbuild
+exit
+#########################################################################
+
+
 # Run this file if you got the source from a git repository.
 # Running this generates some GNU autotools files that will complete the
 # tarball source of this package.

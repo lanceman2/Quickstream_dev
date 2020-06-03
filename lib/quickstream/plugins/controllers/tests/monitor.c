@@ -1,11 +1,3 @@
-// This controller module is part of a test in
-// tests/372_controller_parameter
-//
-// If you change this file you'll likely brake that test.  If you need to
-// edit this, make sure that that you also fix
-// tests/372_controller_parameter, without changing the nature of that
-// test.
-
 
 #include <stdio.h>
 

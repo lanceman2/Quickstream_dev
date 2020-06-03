@@ -115,4 +115,17 @@ sed quickbuild.make.org -e 's/^\s*\#.*$//g' -e '/^$/d' >> quickbuild.make.tmp
 rm quickbuild.make.org
 mv quickbuild.make.tmp quickbuild.make
 
+set +x
+
+cat <<EOF
+
+
+  Edit: config.make to change your installation PREFIX
+
+
+  Then: run 'make'
+
+
+EOF
+
 
