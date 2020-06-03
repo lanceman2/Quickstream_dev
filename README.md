@@ -7,7 +7,7 @@ data quickly flows between modules in a directed graph
 
 Current development is on Debian 9 and Ubuntu 18.04 systems.  It's in a
 pre-alpha state.  Install the [Required
-prerequisite packages][], and then run
+prerequisite packages][RequiredPrerequisites], and then run
 ```console
 make
 ```
@@ -31,7 +31,7 @@ We keep the current Doxygen generated manual in html at
 https://lanceman2.github.io/quickstream.doc/html/index.html
 
 
-## Required prerequisite packages
+## Required prerequisite packages [RequiredPrerequisites] ##
 
 Building and installing quickstream requires the following debian package
 prerequisites:
