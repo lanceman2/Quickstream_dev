@@ -340,12 +340,13 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  *  added to it.  Use 0 otherwise.
  *
  *  - QS_KEEP_AT_RESTART: By default the get callback is removed at each
- *  stream stop (rstart).  If flags includes the bit the get callback will
- *  be kept across restarts.
+ *  stream stop (restart).  If flags includes the bit the get callback will
+ *  be kept across restarts, assuming that the parameter is kept across
+ *  restarts.
  *
  *  - QS_KEEP_ONE: bit flag to mark parameter get callback to not get
- *  added more than once.  The address of the getCallback is what defines
- *  the callback.
+ *  added more than once.  The address of the \p getCallback is what
+ *  defines the callback.
  *
  * Calling users getCallback() function should not block.
  *
