@@ -6,8 +6,8 @@ data quickly flows between modules in a directed graph
 ## Development Status
 
 Current development is on Debian 9 and Ubuntu 18.04 systems.  It's in a
-pre-alpha state.  Install the [required prerequisite packages](## Required
-prerequisite packages), and then run
+pre-alpha state.  Install the [required prerequisite packages][# Required
+prerequisite packages], and then run
 ```console
 make
 ```
