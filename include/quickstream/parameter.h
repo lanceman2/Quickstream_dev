@@ -217,6 +217,8 @@ qsParameterDestroy(struct QsParameter *parameter);
  *
  * \param filter is a pointer to a filter.
  *
+ * \param pName is the name of the parameter.
+ *
  * \param flags if flags includes the bit QS_PNAME_REGEX \p pName will be
  * interpreted as a POSIX Regular Expression and all parameters with a
  * name matches the regular expression will be destroyed.  Set flags to 0

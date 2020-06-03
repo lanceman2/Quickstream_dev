@@ -12,7 +12,7 @@ ifeq ($(shell if pkg-config librtlsdr --exists; then echo yes; fi),yes)
 # 3.  build all [A-Z]*.c as a uninstalled test
 
 
-INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters/tests
+INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters/librtlsdr
 
 
 c_plugins := $(patsubst %.c, %, $(wildcard [a-z]*.c))

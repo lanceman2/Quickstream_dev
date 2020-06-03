@@ -415,7 +415,7 @@ struct QsFilter;
  * that is created in a given App has a unique ID, which is just a
  * counter that is always increasing as streams are created.
  *
- * \parameter filter that the that stream belongs to.
+ * \param filter that the that stream belongs to.
  *
  * \return the stream ID.
  */
