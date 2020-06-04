@@ -261,6 +261,13 @@ static struct QsOption
         "run the stream.  This readies the stream and runs it."
     },
 /*----------------------------------------------------------------------*/
+    { "--sleep", 'S', "SEC",            false,
+
+        "Sleep the main thread SEC seconds.  This can be handy "
+        "for development to delay running the next commands from"
+        " up and coming options."
+    },
+/*----------------------------------------------------------------------*/
     { "--stream", 's', 0,               false,
 
         "create another stream.  Each time this option is given another "

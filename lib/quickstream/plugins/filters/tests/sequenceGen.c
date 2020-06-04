@@ -10,23 +10,23 @@
 void help(FILE *f) {
 
     fprintf(f,
-        "This filter is a source.  This filter writes a fixed pseudo-random\n"
-        "sequence of one byte ascii characters in hex to all outputs.  Each\n"
-        "output has a different sequence which comes from seeding the\n"
-        "randomString_init() function with the output port numbers, 0, 1, 2,\n"
-        "and etc at each start().\n"
-        "\n"
-        "                  OPTIONS\n"
-        "\n"
-        "\n"
-        "    --maxWrite BYTES    default value %zu.  This is the number of\n"
-        "                        bytes read and written for each input() call.\n"
-        "\n"
-        "    --length LEN        Write LEN bytes total and than finish.\n"
-        "                        The default LEN is %zu.\n"
-        "\n"
-        "\n",
-        QS_DEFAULTMAXWRITE, DEFAULT_TOTAL_LENGTH);
+"This filter is a source.  This filter writes a fixed pseudo-random\n"
+"sequence of one byte ascii characters in hex to all outputs.  Each\n"
+"output has a different sequence which comes from seeding the\n"
+"randomString_init() function with the output port numbers, 0, 1, 2,\n"
+"and etc at each start().\n"
+"\n"
+"                  OPTIONS\n"
+"\n"
+"\n"
+"    --maxWrite BYTES    default value %zu.  This is the number of\n"
+"                        bytes read and written for each input() call.\n"
+"\n"
+"    --length LEN        Write LEN bytes total and than finish.\n"
+"                        The default LEN is %zu.\n"
+"\n"
+"\n",
+QS_DEFAULTMAXWRITE, DEFAULT_TOTAL_LENGTH);
 }
 
 

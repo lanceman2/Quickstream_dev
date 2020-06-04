@@ -70,6 +70,12 @@ _quickstream()
             COMPREPLY=( "Enter the number of worker threads" "" )
             return 0
             ;;
+
+        -S|--sleep)
+            COMPREPLY=( "Enter the number of seconds" "" )
+            return 0
+            ;;
+
         *)
             # Here we are done with all the non-filter list ARGS:
             return 0

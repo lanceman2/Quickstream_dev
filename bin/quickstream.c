@@ -611,7 +611,6 @@ int main(int argc, const char * const *argv) {
                 }
                 return qsFilterPrintHelp(arg, stdout);
 
-
             case 'H':
                 if(!arg) {
                     fprintf(stderr, "Bad --controller-help option\n\n");
@@ -649,7 +648,7 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "Bad --threads option\n\n");
                     return usage(STDERR_FILENO);
                 }
-                
+
                 {
                     int num = 0;
                     errno = 0;
@@ -668,6 +667,31 @@ int main(int argc, const char * const *argv) {
                         maxThreads[num-1] = val;
                         str = endptr;
                     }
+                }
+
+                ++i;
+                arg = 0;
+
+                break;
+
+            case 'S':
+
+                if(!arg) {
+                    fprintf(stderr, "Bad --sleep option\n\n");
+                    return usage(STDERR_FILENO);
+                }
+
+                {
+                    errno = 0;
+                    endptr = 0;
+                    double val = strtod(arg, &endptr);
+                    if(endptr == arg || val <= 0.0) {
+                        fprintf(stderr, "Bad --sleep option\n\n");
+                        return usage(STDERR_FILENO);
+                    }
+                    if(level >= 4)
+                        fprintf(stderr,"Sleeping %lg seconds\n", val);
+                    usleep( (useconds_t) (val * 1000000.0));
                 }
 
                 ++i;

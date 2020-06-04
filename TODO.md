@@ -4,7 +4,29 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 # Next
 
-- Finish controller bytesCounter.
+
+- X3DOM spectrum display.  May keep me from getting fired.
+  - use RTL-SDR ubs dongle.
+    - write I/Q source filter
+    - write fft filter
+    - write web TCP/IP controller
+    - write web TCP/IP sink
+    - write node JS server
+      - node controller server
+      - web launcher
+      - stream feed
+    - client test web page
+
+- BUG??  if a filters output length is dependent on the input size
+  how can is be sure that it will not output too much?  Answer:
+  The filter must reframe from reading all the input, if the input
+  is too long.
+
+- Fix the barfing of bash autocompletion due to the filter and
+  controller options in { }.
+
+
+- Add mention of Parameters to README.md
 
 - Need some kind to controller::preStart() call ordering
   otherwise they can't get called after preStart() in
@@ -12,11 +34,11 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 - make userData const in qsParameter*() functions.
 
+- Add idea of parameter to README.md
+
 - Add App function qsAppControllerRequire().  Crap!  How does that work?
 
 - Finish parameters owned by the controller.  And add a test (tests/).
-
-- Add contoller modules to bash completion.
 
 - Super modules.  Super modules are modules that load modules.
 
