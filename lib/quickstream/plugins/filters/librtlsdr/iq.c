@@ -16,7 +16,7 @@
 // By running:
 // quickstream -C bytesCounter -t 0 -f librtlsdr/iq -f nullSink -c -r
 // we managed to run with no read error with rate = 3200000
-// and just 0.7 to 1.3 % CPU usage on one thread and 0 on other.
+// and just 0.7 to 1.3 % CPU usage on one thread and 0 on the other.
 
 //#define DEFAULT_RATE   ((uint32_t) 2048000)
 //
@@ -45,7 +45,7 @@ void help(FILE *f) {
 "  NOTES:\n"
 "\n"
 "  This filter uses librtlsdr which launches another thread.  As\n"
-"  expected that thread they launch, for the most part, does nothing but\n"
+"  expected the thread they launch, for the most part, does nothing but\n"
 "  sleep.  Hence I do not like librtlsdr and libusb.\n"
 "  I think the sleeping thread spews to stderr if there are errors.\n"
 "  I'm guessing it's some kind of monitor thread.\n"
@@ -60,12 +60,16 @@ void help(FILE *f) {
 "               center frequency is %" PRIu32 " Hz.\n"
 "\n"
 "\n"
-"    --gain DB  set the dongle gain to DB dB.  The default gain is\n"
-"               %d dB.  We use -1 is for auto gain mode.\n"
+"    --gain DB  set the dongle gain to DB.  The default gain is\n"
+"               %d dB.  We use -1 is for auto gain mode.  We use the\n"
+"               rtl-sdr.h API therefore gain, DB, is in tenths of a dB,\n"
+"               115 means 11.5 dB.\n"
 "\n"
 "\n"
 "    --maxWrite BYTES  default value %zu.  This is the maximum number of\n"
-"                      written for each input() call.\n"
+"                      written for each input() call.  This is also the\n"
+"              number of bytes read using rtlsdr_read_sync() in the\n"
+"              input() call.\n"
 "\n"
 "\n"
 "    --num N   number of bytes to read per stream run.  The default is\n"
@@ -75,7 +79,11 @@ void help(FILE *f) {
 "\n"
 "\n"
 "    --rate HZ  set the dongle sample rate to HZ Hz.  The default sample\n"
-"               rate is %" PRIu32 " Hz.\n"
+"               rate is %" PRIu32 " Hz.  This uses the rtl-sdr API\n"
+"               therefore (from the RTL-SDR docs):\n"
+"               possible values are:\n"
+"                       225001 - 300000 Hz and 900001 - 3200000 Hz.\n"
+"               Sample loss is to be expected for rates > 2400000.\n"
 "\n"
 "\n",
     DEFAULT_FREQ, DEFAULT_GAIN,
@@ -126,6 +134,17 @@ int setRate(uint32_t rate) {
     return 0; //success
 }
 
+//return 0 on error, sample rate in Hz otherwise
+static inline
+uint32_t getRate(void) {
+
+    uint32_t r = rtlsdr_get_sample_rate(dev);
+
+    if(r == 0)
+        ERROR("rtlsdr_get_sample_rate() failed");
+    return r;
+}
+
 
 static inline
 int setFreq(uint32_t freq) {
@@ -138,6 +157,17 @@ int setFreq(uint32_t freq) {
         return -3; // error
     }
     return 0; //success
+}
+
+
+static inline
+uint32_t getFreq(void) {
+
+    uint32_t r = rtlsdr_get_center_freq(dev);
+
+    if(r == 0)
+        ERROR("rtlsdr_get_center_freq() failed");
+    return r;
 }
 
 
@@ -180,7 +210,7 @@ int construct(int argc, const char **argv) {
     num = qsOptsGetSizeT(argc, argv, "num", DEFAULT_NUM);
     maxWrite = qsOptsGetSizeT(argc, argv, "maxWrite", DEFAULT_MAXWRITE);
 
-    if(maxWrite < 1023) {
+    if(maxWrite < 1024) {
         ERROR("maxWrite (%zu) is too small", maxWrite);
         return -1;
     }
@@ -209,6 +239,8 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
     if((r = setRate(rate))) return r;
     if((r = setFreq(freq))) return r;
     if((r = setGain(gain))) return r;
+    // Something messed with errno.
+    errno = 0;
 
     if((r = rtlsdr_reset_buffer(dev))) {
         ERROR("rtlsdr_reset_buffer() failed");
@@ -218,6 +250,9 @@ int start(uint32_t numInPorts, uint32_t numOutPorts) {
     total = 0; // bytes
 
     qsCreateOutputBuffer(0/*output port*/, maxWrite/*maxWriteLen*/);
+
+    INFO("Settings: rate=%" PRIu32 " freq=%" PRIu32,
+            getRate(), getFreq());
 
     return 0; // success
 }
