@@ -39,6 +39,7 @@ prerequisites:
 ```shell
 build-essential
 libudev-dev
+fftw-dev
 graphviz
 imagemagick
 doxygen

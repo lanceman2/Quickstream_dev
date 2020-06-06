@@ -104,14 +104,15 @@ void StopRunningInput(struct QsStream *s, struct QsFilter *f,
 // Returns true if the filter, f, has conditions needed for it's input()
 // function to be called.
 //
-// This function passive, it does not change any state.
+// This function is passive, it does not change any state.
 //
 // There must be a stream job mutex lock to call this.
 static inline
 bool CheckFilterInputCallable(struct QsFilter *f) {
 
     if(f->unused == 0 || f->mark) 
-        // This filter has a full amount of working threads already.
+        // This filter has a full amount of working threads already,
+        // or f->mark has marked it as finished.
         return false;
 
     // If any outputs are clogged than we cannot call input() for filter,
@@ -139,7 +140,7 @@ bool CheckFilterInputCallable(struct QsFilter *f) {
 
     // If any input meets the threshold we can call input() for this
     // filter, f, we return true.  If this filter, f, decides that this
-    // one simple threshold condition is not enough than that filter's
+    // one simple threshold condition is not enough then that filter's
     // input() call can just return 0 and than this will try again later
     // when another feeding filter returns from an input() call and we do
     // this again.
@@ -188,7 +189,6 @@ PostInputCallback(const char *key, struct  ControllerCallback *cb,
 // holding a stream mutex lock.
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
-
 
 
     // At this point this filter/thread owns this job.
@@ -311,36 +311,35 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             // toward the start.
             r->readPtr -= r->buffer->mapLength;
     }
-    // We pretend we got the needed input if there are no inputs.
-    if(f->numInputs == 0) inputAdvanced = true;
 
+    // We pretend we got the needed input if there are no inputs (a
+    // source).
+    if(f->numInputs == 0) {
+        inputsFeeding = true;
+        inputAdvanced = true;
+    }
 
-    if(outputsHungry) {
+    if(outputsHungry && f->numInputs) {
         // Check if we have the any required input data thresholds,
         // but there's no point if an output reader is clogged;
         // hence the if(outputHungry).
         //
-        if(f->numInputs)
-            for(uint32_t i=f->numInputs-1; i!=-1; --i) {
+        for(uint32_t i=f->numInputs-1; i!=-1; --i) {
 
-                // TODO: Multi-threaded filter may not be able to extend
-                // the input in the reader from the reader readLength.
-                ASSERT(GetNumAllocJobsForFilter(s, f) == 1,
-                        "We need to write the multi-threaded"
-                        " filter code");
+            // TODO: Multi-threaded filter may not be able to extend
+            // the input in the reader from the reader readLength.
+            ASSERT(GetNumAllocJobsForFilter(s, f) == 1,
+                    "We need to write the multi-threaded"
+                    " filter code");
 
-                if(f->readers[i]->readLength >= f->readers[i]->threshold) {
-                    // The amount of input data left meets the needed
-                    // threshold in at least one input.  If the threshold
-                    // condition if more complex than the filter
-                    inputsFeeding = true;
-                    break;
-                }
+            if(f->readers[i]->readLength >= f->readers[i]->threshold) {
+                // The amount of input data left meets the needed
+                // threshold in at least one input.  If the threshold
+                // condition if more complex than the filter
+                inputsFeeding = true;
+                break;
             }
-        else
-            // This is a source filter so the amount of input data left
-            // always meets the needed threshold.
-            inputsFeeding = true;
+        }
     }
 
 
@@ -465,7 +464,6 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
 
     CheckUnlockFilter(f);
-
 
 
 

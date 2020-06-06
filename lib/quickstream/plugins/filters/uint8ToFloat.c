@@ -17,8 +17,9 @@ void help(FILE *f) {
 "                 OPTIONS\n"
 "\n"
 "\n"
-"  --maxWrite LEN  Set the maximum write promise to LEN bytes.\n"
-"                  The default value for LEN is %zu.\n"
+"  --maxWrite LEN  Set the maximum write promise to LEN bytes.  The\n"
+"                  default value for LEN is %zu.  The LEN will get\n"
+"                  rounded up to a multiple of sizeof(float).\n"
 "\n"
 "\n",
 QS_DEFAULTMAXWRITE
@@ -34,8 +35,8 @@ int construct(int argc, const char **argv) {
     maxWrite = qsOptsGetSizeT(argc, argv, "maxWrite", QS_DEFAULTMAXWRITE);
 
     if(maxWrite % sizeof(float))
-        // Make maxWrite a multiple of sizeof(float) by adding.
-        maxWrite += (sizeof(float) - maxWrite % sizeof(float));
+        // Make maxWrite closest multiple of sizeof(float) by adding.
+        maxWrite += sizeof(float) - maxWrite % sizeof(float);
 
     return 0; // success
 }
