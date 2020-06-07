@@ -57,25 +57,25 @@ int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],
         uint32_t numInputs, uint32_t numOutputs) {
 
-    size_t rdLen = lens[0];
-    size_t outLen = rdLen*(sizeof(float));
+    size_t numBytesIn = lens[0];
+    size_t outLen = numBytesIn*(sizeof(float));
 
     if(outLen > maxWrite)
         outLen = maxWrite;
 
-    rdLen = outLen/sizeof(float);
+    numBytesIn = outLen/sizeof(float);
 
     // Now the ratio of rdLen to outLen is 1 to 4.
     // And we will not overflow the output buffer.
 
     float *outBuf = qsGetOutputBuffer(0, maxWrite, 0);
-    float *outEnd = outBuf + outLen;
+    float *outEnd = outBuf + numBytesIn;
     uint8_t *in = buffers[0];
     while(outBuf < outEnd)
         // Copy and convert from byte to float.
         *(outBuf++) = *(in++);
 
-    qsAdvanceInput(0/*port*/, rdLen);
+    qsAdvanceInput(0/*port*/, numBytesIn);
     qsOutput(0/*port*/, outLen);
 
     return 0; // continue.

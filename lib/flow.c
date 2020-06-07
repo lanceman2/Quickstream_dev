@@ -174,19 +174,44 @@ PostInputCallback(const char *key, struct  ControllerCallback *cb,
 }
 
 
+//#define CRAP
 
+#ifdef CRAP // REMOVE THIS DEBUG CRAP
+// The stream mutex will protect these globals.  But this will brake if
+// there is more than one stream flowing at a time.
+static struct QsFilter *lastFilterToLeave = 0;
+static size_t lastAdvance = 0;
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+// This RunInput() does a lot of shit:
 //
-// Run input().
+//   1. Run input().
 //
-// Advance write and read buffer pointers.
+//   2. Advance write and read buffer pointers.
 //
-// Spawn jobs to other filters.
+//   3. Spawn jobs to neighbor filters.
 //
 // Returns true to signal call me again, and returns without holding a
 // stream mutex lock.
 //
+// OR ELSE
 // Returns false if we do not want to call it again and also returns while
 // holding a stream mutex lock.
+//
+//////////////////////////////////////////////////////////////////////////
+//
+// This simple function is analogous to the GNU radio scheduler code.
+//
+// Like GNU radio this function runs in the thread that calls work(),
+// which is input() for quickstream, but the threads that run this
+// function are not bound to a given filter, like GNU radio.
+//
+// quickstream does not run one thread per filter module, like GNU radio.
+// quickstream has much less functionality than GNU radio.  quickstream is
+// much simpler than GNU radio.
+//
 static inline
 bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
@@ -199,30 +224,49 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             j->isFlushing, f->numInputs, f->numOutputs);
 
 
-    // Note: all these for loop iteration is through just the number of
+    // Note: all these "for" loop iteration are through just the number of
     // inputs and outputs to and from the filter.  Usually there'll be
-    // just 1 or 2 inputs and 1 or 2 outputs.
+    // just 1 or 2 inputs and 1 or 2 outputs, so there's not a lot of
+    // looping for most cases.
     //
     // As this code matures maybe we can mash together more of these for
     // loops.
 
 
+    // If the return from input() was non-zero we will stop calling
+    // this input() until the next stream flow run (restart).
+
     // Both the inputs and the outputs must be "OK" in order to call
     // input() after this call.
     //
-    // If after all this looping/checking inputs and outputs we have all
-    // 3 of these bools true, we can then continue to call input() for
-    // filter, f.
-
-    // 1. One of the job->advanceLens[] must have have a non-zero value,
-    // otherwise there was no input consumed by the last input() call.
+    // If after all this looping/checking inputs and outputs we have all 3
+    // of these bools true (in addition to the non-zero input() return),
+    // we can then continue to call input() for filter, f.
+    //
+    // 1. inputAdvanced will be changed to true if:
+    //
+    //    a) one of the job->advanceLens[] has a non-zero value, otherwise
+    //       there was no input consumed by the last input() call, or 
+    //
+    //    b) there was added input data in at least one port since the
+    //       last input call, or
+    //
+    //    c) this filter is a source that has no input ports.
+    //
     bool inputAdvanced = false;
     //
-    // 2. inputsFeeding will be changed to true if one input threshold is
-    // met.
+    // 2. inputsFeeding will be changed to true if:
+    //
+    //    a) one input threshold is met, or
+    //
+    //    b) this is a source that has on input ports.
+    //
     bool inputsFeeding = false;
     //
-    // 3. outputsHungry will be changed to false if one output is full.
+    // 3. outputsHungry will be changed to false if one output is full; We
+    //    cannot continue to run input() if one output is full, because
+    //    that may cause a circular buffer overrun.
+    //
     bool outputsHungry = true;
 
 
@@ -285,11 +329,47 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
         struct QsReader *r = f->readers[i];
         // This should have been checked in qsAdvanceInput()
 
-        if(j->advanceLens[i] && inputAdvanced == false)
+        if((j->advanceLens[i]
+
+#if 1 // Turn to 0 to see the BUG in action.
+
+        // TODO: This CPP macro needs to be removed only after the test
+        // that shows this bug is added to the test/ suite.  i.e. write
+        // the test, run the test and watch if pass.  Then change the
+        // 1 to 0 in the CPP macro, re-compile, and than watch the test
+        // fail.  Than remove the #if #endif, leaving the next line of
+        // code in tacked and put these comments in the test.
+        //
+        // The current test that shows this bug uses librtlsdr and that
+        // package cannot be a required package, and so that test cannot
+        // be added to the tests/ suite.
+
+        // This added condition fixed a BUG that added 1 b) to the
+        // comments about the bool variable inputAdvanced.
+        //
+        // Yes, yes, performance of the filter would be a little better if
+        // a read threshold was added to the filter, but this needs to
+        // work without simple read thresholds.  And this added line lets
+        // us effectively have complex read thresholds that let the filter
+        // input() function decide when it wants to use the data that has
+        // been inputted to it.
+        //
+                    || f->readers[i]->readLength > j->inputLens[i]
+#endif
+                    ) && inputAdvanced == false)
             inputAdvanced = true;
+
+        // The last time we has the stream mutex lock this was true, but
+        // readLength may have changed while this thread was calling the
+        // filter, f, input() function:
+        // j->inputLens[i] = f->readers[i]->readLength;
+        //
+        // f->readers[i]->readLength may have increased.
 
         DASSERT(j->advanceLens[i] <= j->inputLens[i]);
         DASSERT(j->inputLens[i] <= f->readers[i]->readLength);
+ 
+        //j->inputLens[i] = f->readers[i]->readLength;
 
         if(j->inputLens[i] >= r->maxRead)
             // This filter module is not written correctly.
@@ -312,14 +392,14 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             r->readPtr -= r->buffer->mapLength;
     }
 
-    // We pretend we got the needed input if there are no inputs (a
-    // source).
+
     if(f->numInputs == 0) {
+        // We pretend we got the needed input if there are no inputs (a
+        // source).
         inputsFeeding = true;
         inputAdvanced = true;
-    }
 
-    if(outputsHungry && f->numInputs) {
+    } else if(outputsHungry) {
         // Check if we have the any required input data thresholds,
         // but there's no point if an output reader is clogged;
         // hence the if(outputHungry).
@@ -335,7 +415,8 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
             if(f->readers[i]->readLength >= f->readers[i]->threshold) {
                 // The amount of input data left meets the needed
                 // threshold in at least one input.  If the threshold
-                // condition if more complex than the filter
+                // condition if more complex than the filter with not
+                // eat the data we send by just returning 0.
                 inputsFeeding = true;
                 break;
             }
@@ -404,16 +485,39 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
 
     //  Add jobs to the stream job queue for source filters if there
     //  are extra threads or no jobs in the stream job queue.
-    if(numAddedWorkers < s->maxThreads - s->numThreads + s->numIdleThreads +
-            ((ret == false)?1:0) ||
+    if(numAddedWorkers < s->maxThreads - s->numThreads +
+            s->numIdleThreads + ((ret == false)?1:0) ||
             (s->jobFirst == 0 && ret)
-            /* We gain a thread if this function returns false*/)
+        /* We gain a thread if this function returns false*/)
         for(uint32_t i=s->numSources-1; i!=-1; --i) {
             if(CheckFilterInputCallable(s->sources[i])) {
                 FilterUnusedToStreamQ(s, s->sources[i]);
                 ++numAddedWorkers;
             }
         }
+
+
+#ifdef CRAP
+
+    // BUG fix.  We need to have the filter recheck it has got more data
+    // that it can read while it was in the input() call.  If it rejected
+    // the last input() data, but more data (just one byte) was added we
+    // need to recall input().
+
+    if(s->jobFirst == 0 && s->numThreads == s->numIdleThreads + 1 &&
+        ret == false)
+        ASSERT(0, "Last thread returning for filter=\"%s\" the" 
+                " filter before that was \"%s\" advanced=%zu",
+                f->name,
+                lastFilterToLeave->name, lastAdvance);
+
+    lastFilterToLeave = f;
+    if(j->advanceLens)
+        lastAdvance = j->advanceLens[0];
+    else
+        lastAdvance = -1;
+#endif
+
 
 
     if(ret == false && numAddedWorkers)
@@ -458,9 +562,9 @@ bool RunInput(struct QsStream *s, struct QsFilter *f, struct QsJob *j) {
     if(num > s->maxThreads - s->numThreads)
         num = s->maxThreads - s->numThreads;
 
-    if(num)
-        while(num--)
-            LaunchWorkerThread(s);
+
+    while(num--)
+        LaunchWorkerThread(s);
 
 
     CheckUnlockFilter(f);
@@ -551,12 +655,15 @@ struct QsJob *GetWork(struct QsStream *s) {
 
 // This is the first function called by worker threads.
 //
-void *RunningWorkerThread(struct QsStream *s) {
+void *RunningWorkerThread(struct QsWorkPermit *p) {
 
+    DASSERT(p);
+    struct QsStream *s = p->stream;
     DASSERT(s);
     DASSERT(s->maxThreads);
 
     // The life of a worker thread.
+
 
     // STREAM LOCK
     CHECK(pthread_mutex_lock(&s->mutex));
@@ -566,6 +673,10 @@ void *RunningWorkerThread(struct QsStream *s) {
     // counts after the stream mutex lock and the numThreads was counted
     // before in the master thread.
     ++s->numWorkerThreads;
+
+    INFO("Starting worker thread %" PRIu32
+            " (running %" PRIu32 " out of %" PRIu32 " max)",
+            p->id, s->numWorkerThreads, s->maxThreads);
 
     // The thing that created this thread must have counted the number of
     // threads in the stream, otherwise if we counted it here and there
@@ -577,9 +688,6 @@ void *RunningWorkerThread(struct QsStream *s) {
     // maxThreads.  We have the needed stream mutex lock to check this.
     DASSERT(s->numThreads <= s->maxThreads);
 
-    DSPEW("%" PRIu32 " worker threads are running (out of %" PRIu32
-            " max)",
-            s->numWorkerThreads, s->maxThreads);
 
     struct QsJob *j;
 
@@ -673,6 +781,8 @@ void *RunningWorkerThread(struct QsStream *s) {
 
     // STREAM UNLOCK
     CHECK(pthread_mutex_unlock(&s->mutex));
+
+    free(p);
 
     return 0; // We're dead now.  It was a good life for a worker/slave.
 }

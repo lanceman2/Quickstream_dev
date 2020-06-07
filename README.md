@@ -55,6 +55,9 @@ will are not required:
 librtlsdr-dev
 ```
 
+### TODO
+move some required prerequisite packages to optional prerequisite packages
+
 
 ## Building and Installing with GNU Autotools
 

@@ -5,6 +5,18 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 # Next
 
 
+- benchmark program that runs with quickstream and GNU radio and
+  directly together.
+
+- Add a neighboring filter mutex locking scheme:
+  - To cut down on inter-thread mutex lock contention
+    when there are a lot of worker threads.
+  - There would be two locks held between two filters when
+    in the job scheduling code:  flow.c:RunInput()
+
+- measure stream mutex lock contention.
+  - See if that is adding CPU usage when there are more threads.
+
 - X3DOM spectrum display.  May keep me from getting fired.
   - use RTL-SDR ubs dongle.
     - write I/Q source filter
@@ -22,8 +34,32 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
   The filter must reframe from reading all the input, if the input
   is too long.
 
+
+- Write a test that would fail if quickstream did not continue calling
+  input() because input was not advanced because a implicit threshold
+  condition is not reached.  See comments in flow.c in function RunInput()
+  near: line 243: bool inputAdvanced = false the b) clause was not
+  implemented and it was a hard BUG to find.
+
+
 - Fix the barfing of bash autocompletion due to the filter and
   controller options in { }.
+
+
+- Change the filter function name from input() to work().
+  This is a BIG edit every file and every comment/doc like change.
+  Reasons for using input():
+    - the word input() describes the main action of what's going on.
+      The word input() implies flow.
+    - the word work() is secondary compared to the word input().  Work is
+      not a required thing that needs to happen for this function.  Flow
+      is required more so than computation.  Compution (work) is not
+      required at all, but flow and therefore input() are required.
+    - it's already using input() in the current source code.
+  Reason for using work():
+    - work() is standard in GNU radio.  GNU radio is the current leader in
+      SDR.  As a result that eases adoption of quickstream.
+
 
 
 - Add mention of Parameters to README.md

@@ -163,9 +163,12 @@ int input(void *buffers[], const size_t lens[],
         uint32_t numInputs, uint32_t numOutputs) {
 
     size_t len = lens[0];
-    if(len < batchSize)
+    if(len < batchSize) {
         // We do not have enough data to act.
+        //DSPEW("Not enough data in len=%zu maxWrite=%zu batchSize=%zu",
+        //        len, maxWrite, batchSize);
         return 0;
+    }
 
     if(len > maxWrite)
         len = maxWrite;

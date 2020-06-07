@@ -618,9 +618,9 @@ struct QsFilter {
         //
         uint8_t *readPtr;
 
-        // readLength is the kept as the amount of data to the write
-        // pointer at this pass-through level.  Accessing readLength
-        // requires a stream mutex lock.
+        // readLength is the number of bytes to the write pointer at this
+        // pass-through level.  Accessing readLength requires a stream
+        // mutex lock.
         size_t readLength;
 
         // The filter that is reading.
@@ -890,9 +890,6 @@ extern
 void ReallocateFilterArgs(struct QsFilter *f, uint32_t num);
 
 
-extern
-void *RunningWorkerThread(struct QsStream *s);
-
 
 extern
 int StreamRemoveFilterConnections(struct QsStream *s, struct QsFilter *f);
@@ -954,20 +951,34 @@ GetNumAllocJobsForFilter(struct QsStream *s, struct QsFilter *f) {
 }
 
 
+struct QsWorkPermit {
+
+    // The stream that the thread will work for
+    struct QsStream *stream;
+
+    // This ID is from counting the number of threads that the stream has
+    // working for it.  id starts at 1.
+    uint32_t id;
+};
+
+
+extern
+void *RunningWorkerThread(struct QsWorkPermit *p);
+
+
 static inline
 void LaunchWorkerThread(struct QsStream *s) {
 
     // Stream does not have its' quota of worker threads.
     DASSERT(s->numThreads < s->maxThreads);
-
+    struct QsWorkPermit *p = malloc(sizeof(*p));
+    ASSERT(p, "malloc(%zu) failed", sizeof(*p));
+    p->stream = s;
+    p->id = (++s->numThreads);
     pthread_t thread;
     CHECK(pthread_create(&thread, 0/*attr*/,
-            (void *(*) (void *)) RunningWorkerThread, s));
-
-    ++s->numThreads;
-
-    DSPEW("Launching thread %" PRIu32 " (out of %" PRIu32 " max)",
-            s->numThreads, s->maxThreads);
+            (void *(*) (void *)) RunningWorkerThread, p));
+    // RunningWorkerThread() will free p.
 }
 
 

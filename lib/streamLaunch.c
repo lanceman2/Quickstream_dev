@@ -103,9 +103,15 @@ uint32_t nThreadFlow(struct QsStream *s) {
         DASSERT(s->numThreads == 0);
         s->numThreads = 1;
 
+        struct QsWorkPermit *p = malloc(sizeof(*p));
+        ASSERT(p, "malloc(%zu) failed", sizeof(*p));
+        p->stream = s;
+        p->id = 1;
+
         // This next call may take a while.  Here's where management
-        // goes to work. 
-        RunningWorkerThread(s);
+        // goes to work.  RunningWorkerThread() will free p.
+        //
+        RunningWorkerThread(p);
 
         // Just in case this state needs to be known.
         s->maxThreads = 0; // We lied.  maxThread really is 0.
