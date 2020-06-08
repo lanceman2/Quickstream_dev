@@ -5,8 +5,10 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 # Next
 
 
-- benchmark program that runs with quickstream and GNU radio and
-  directly together.
+- benchmark program that runs with quickstream and GNU radio and directly
+  together and separately; having them run side by side and connected to
+  each other.
+
 
 - Add a neighboring filter mutex locking scheme:
   - To cut down on inter-thread mutex lock contention
