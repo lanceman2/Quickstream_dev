@@ -38,7 +38,7 @@ https://lanceman2.github.io/quickstream.doc/html/index.html
 sudo apt install\
  build-essential\
  libudev-dev\
- fftw-dev\
+ libfftw3-dev\
  graphviz\
  imagemagick\
  doxygen\
