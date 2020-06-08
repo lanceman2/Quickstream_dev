@@ -13,8 +13,13 @@ SUBDIRS :=\
  bin\
  lib/quickstream/plugins/filters\
  lib/quickstream/plugins/controllers\
- share/bash-completion/completions\
- share/doc/quickstream
+ share/bash-completion/completions
+
+HAVE_DOXYGEN := $(shell if which doxygen > /dev/null; then echo yes; fi)
+
+ifeq ($(HAVE_DOXYGEN),yes)
+  SUBDIRS += share/doc/quickstream
+endif
 
 
 ifeq ($(strip $(subst cleaner, clean, $(MAKECMDGOALS))),clean)

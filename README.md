@@ -31,32 +31,71 @@ We keep the current Doxygen generated manual in html at
 https://lanceman2.github.io/quickstream.doc/html/index.html
 
 
-## Required prerequisite packages
+## Quick start
+
+
+```shell
+sudo apt install\
+ build-essential\
+ libudev-dev\
+ fftw-dev\
+ graphviz\
+ imagemagick\
+ doxygen\
+ librtlsdr-dev\
+ libasound2-dev
+```
+
+Go to the top quickstream source directory:
+
+```shell
+cd quickbuild
+```
+
+```shell
+make
+```
+
+You do not have to install this package to use all of it's functionality.
+Details on building and installing below.
+
+
+## Required, core, prerequisite packages
 
 Building and installing quickstream requires the following debian package
 prerequisites:
 
 ```shell
 build-essential
-libudev-dev
-fftw-dev
-graphviz
-imagemagick
-doxygen
 ```
 
 ## Optional prerequisite packages
 
 You can install the following debian package prerequisites, but they
-will are not required:
+will are not required to build the core of quickstream:
 
 
 ```shell
+libudev-dev
+fftw-dev
+graphviz
+imagemagick
+doxygen
 librtlsdr-dev
+libasound2-dev
 ```
 
-### TODO
-move some required prerequisite packages to optional prerequisite packages
+If you do want to generate documentation you will need the three packages:
+graphviz, imagemagick, and doxygen.   If you install any of these we
+recommend installing all three, otherwise some of the make/build scripts
+may fail.
+
+If you do not currently have a particular application that you need to
+make and/or you are not in the final optimising of your application, we
+recommend just installing all of these packages.  Then you will not have
+as much unexpected heart ache, at the cost of installing some packages,
+most of which you likely already have if you've got to this point in
+life.
 
 
 ## Building and Installing with GNU Autotools
@@ -216,7 +255,14 @@ If you wish to remove all files that are generated from the build scripts
 in this package, leaving you with just files that are from the repository
 and your added costume files, you can run *./RepoClean*.  Do not run
 *./RepoClean* if you need a clean tarball form of the package source,
-use *make distclean* for that.
+use *make distclean* for that, or just keep the tarball around for that.
+
+quickbuild does not does not have much in the line of options parsing,
+which is fine for quickstream developers, but not so good for users;
+hence GNU autotools is the preferred build/install method.  The optional
+dependences that for not found when building with quickbuild will cause it
+to exclude building what it can't automatically, but the GNU autotools
+method adds configuration options.
 
 
 ## quickstream is Generic
@@ -239,7 +285,8 @@ pipes don't care what kind of data flows through them.  The types of data
 that flows is up to you.  The typing of data flowing between particular
 filters is delegated to a higher protocol layer above quickstream.
 quickstream provides generic management for the connecting and running of
-filter streams.
+filter streams.  quickstream does not consider channels between filters to
+be typed.
 
 
 ## Restricting filters modules leads to user control and runtime optimisation
@@ -385,6 +432,12 @@ Or filter controller: That which changes the behavior of a filter
 module.
 
 
+### Parameter
+
+A single value or small data structure that can be shared between Filters
+and Controllers.
+
+
 ### Monitor
 
 Or filter monitor: That which monitors a filter, without changing how it
@@ -503,11 +556,13 @@ In the future benchmarking will tell.  TODO: Add links here...
 ![simple stream state](
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/simpleFlow.png)
 
+## A detailed quickstream Flow Graph
+
 ![complex stream state](
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/complexFlow.png)
 
 
-## Other graphviz dot images
+## Other graphviz dot quickstream development images
 
 ![job flow and related data structures](
 https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
@@ -574,8 +629,8 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
 - There will be no downloading of files in the build step.  Downloading
   may happen in the bootstrap step.  In building from a tarball release
   there will be no downloads or bootstrapping.  Packages that do this
-  make the job of distributing software very difficult, and suggest poor
-  quality.
+  make the job of distributing software very difficult, and are
+  suggestive of poor quality code.
 - Files in the source are located in the same relative path of files that
   they are most directly related to in the installed paths.
 - All filter modules do not share the global variable space that came from

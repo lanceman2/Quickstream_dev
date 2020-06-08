@@ -4,6 +4,8 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 # Next
 
+- finish adding quickbuild optional package checks in all Makefile files.
+  - See list of dependences in README.md
 
 - benchmark program that runs with quickstream and GNU radio and directly
   together and separately; having them run side by side and connected to
@@ -15,6 +17,7 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
     when there are a lot of worker threads.
   - There would be two locks held between two filters when
     in the job scheduling code:  flow.c:RunInput()
+  - maybe add it as another flow/run option.
 
 - measure stream mutex lock contention.
   - See if that is adding CPU usage when there are more threads.
