@@ -49,7 +49,7 @@ sudo apt install\
 Go to the top quickstream source directory:
 
 ```shell
-cd quickbuild
+cd quickstream
 ```
 
 ```shell
