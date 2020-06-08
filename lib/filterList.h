@@ -145,9 +145,6 @@ void DestroyFilter(struct QsStream *s, struct QsFilter *f) {
         // SetFreeValueOnDestroy thingy.
         qsDictionaryDestroy(f->parameters);
 
-    if(strcmp(f->name, "tests/passThrough") == 0)
-        qsDictionaryPrintDot(s->dict, stderr);
-
     ASSERT(0 == qsDictionaryRemove(s->dict, f->name),
             "Can't remove filter \"%s\" from source dict", f->name);
 
