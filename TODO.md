@@ -7,6 +7,11 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 - finish adding quickbuild optional package checks in all Makefile files.
   - See list of dependences in README.md
 
+- alsa sound filter sink (play).
+
+- and alsa record (source) filter.
+
+
 - benchmark program that runs with quickstream and GNU radio and directly
   together and separately; having them run side by side and connected to
   each other.
