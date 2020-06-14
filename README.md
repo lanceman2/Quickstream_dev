@@ -43,7 +43,8 @@ sudo apt install\
  imagemagick\
  doxygen\
  librtlsdr-dev\
- libasound2-dev
+ libasound2-dev\
+ python3-dev
 ```
 
 Go to the top quickstream source directory:
@@ -77,12 +78,13 @@ will are not required to build the core of quickstream:
 
 ```shell
 libudev-dev
-fftw-dev
+libfftw3-dev
 graphviz
 imagemagick
 doxygen
 librtlsdr-dev
 libasound2-dev
+python3-dev
 ```
 
 If you do want to generate documentation you will need the three packages:
