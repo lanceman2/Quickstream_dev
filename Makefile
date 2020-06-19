@@ -13,6 +13,7 @@ SUBDIRS :=\
  bin\
  lib/quickstream/plugins/filters\
  lib/quickstream/plugins/controllers\
+ lib/quickstream/plugins/run\
  share/bash-completion/completions
 
 HAVE_DOXYGEN := $(shell if which doxygen > /dev/null; then echo yes; fi)

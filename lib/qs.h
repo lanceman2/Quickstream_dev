@@ -174,6 +174,23 @@
 extern uint32_t _qsAppCount; // always increasing.
 
 struct QsDictionary;
+struct QsController;
+struct QsApp;
+
+
+struct QsScriptControllerLoader {
+
+    // Example: A DSO (dynamic shared object) that loads python
+    // scripts.  When the stream flows that scripts run as controllers,
+    // like the C/C++ controllers, but they are script (python) wrappers.
+    void *dlhandle;
+
+    void *(*loadControllerScript)(
+            const char *path, int argc, const char **argv);
+
+    char *scriptName;
+    char *scriptSuffix;
+};
 
 
 // App (QsApp) is the top level quickstream object.  It's a container for
@@ -197,6 +214,10 @@ struct QsApp {
     // stream IDs and controller IDs.
     uint32_t streamCount;
 
+    // A list of script controllers that run scripting languages like
+    // python or lua.  It's a list of struct QsScriptControllerLoader.
+    //
+    struct QsDictionary *scriptControllerLoaders;
 
     // List of controllers keyed by name.  TODO: This dictionary list may
     // not be needed.
@@ -1007,3 +1028,16 @@ extern
 void
 _qsParametersDictionaryDestory(struct QsStream *s);
 
+
+// filters and controllers are in this relative directory:
+#define MOD_PREFIX "/lib/quickstream/plugins/"
+// Portability
+#define DIR_CHAR '/'
+#define DIR_STR  "/"
+
+
+// The returned string must be free()ed or returns 0 if path is not found.
+// Used to find module files of different types.
+extern
+char *GetPluginPath(const char *prefix, const char *category,
+        const char *name, const char *suffix);

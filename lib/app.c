@@ -63,6 +63,8 @@ struct QsApp *qsAppCreate(void) {
     app->type = _QS_APP_TYPE;
     app->id = _qsAppCount++;
 
+    app->scriptControllerLoaders = qsDictionaryCreate();
+    DASSERT(app->scriptControllerLoaders);
     app->controllers = qsDictionaryCreate();
     DASSERT(app->controllers);
 
@@ -76,7 +78,6 @@ int qsAppDestroy(struct QsApp *app) {
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
     DASSERT(app->controllers);
 
-
     // Destroy the streams.  We assume they are not flowing.
     while(app->streams) qsStreamDestroy(app->streams);
 
@@ -84,12 +85,17 @@ int qsAppDestroy(struct QsApp *app) {
     // all the controllers.
     qsDictionaryDestroy(app->controllers);
 
+    // The SetFreeValueOnDestroy callbacks will cleanup
+    // all the scriptControllerLoaders.
+    qsDictionaryDestroy(app->scriptControllerLoaders);
+
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif
     // Now cleanup this app.
     free(app);
-    return 0; // success
+
+    return 0;
 }
 
 

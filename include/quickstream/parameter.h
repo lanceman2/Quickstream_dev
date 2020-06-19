@@ -103,6 +103,15 @@ extern "C" {
 #endif
 
 
+/** A struct used to send arguments string list like argc and argv.
+ *
+ */
+struct QsArgList {
+    int argc;
+    const char **argv;
+};
+
+
 /** parameter data type
  *
  * The quickstream parameter type defines how the user may handle the
@@ -127,7 +136,15 @@ enum QsParameterType {
     None = 1 /** A null type that has no data being passed. */,
     QsDouble = 2/** The void pointer points to a \c double. */,
     QsUint64 = 3/** The void pointer points to a \c uint64_t */,
-    QsNew = 4/** A type that has not been defined by the quickstream API
+    QsArgList = 4/** The void pointer points to a QsArgList.  The
+                  \ref QsArgList data may be allocated on the stack of
+                  the function that is calling qsParameterSet().  The
+                  first argument is the file path name, followed by
+                  option arguments, just like main(argc, argv)
+                  which we all know and love.  The use of the null
+                  terminating argv pointer is required only
+                  if the module requires it. **/,
+    QsNew = 5/** A type that has not been defined by the quickstream API
                that a user defines on their own.*/
 };
 
@@ -161,8 +178,8 @@ struct QsParameter;
  * qsParameter class does not provide queuing of set requests, all the
  * functions just call the callbacks while keeping it ordered and
  * synchronous, and if the user needs queuing the user can add it on top
- * of this interface without much work.   If setCallback() does block
- * quickstream will not brake, but it may become slowstream.
+ * of this interface without much work.   If setCallback() does block,
+ * quickstream may not brake, but it may become slowstream.
  *
  * \param cleanup is a clean-up function that is called to do things like
  * free memory associated with the parameter after the parameter is no

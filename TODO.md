@@ -4,6 +4,21 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 # Next
 
+- Python integration
+
+  - python controller module that loads .py files.
+    The quickstream program would indirectly load .py controller files
+    by using the python.so controller.  The python.so would be a proxey
+    for all the .py controller modules and a given App.
+  - python filter module  The quickstream program would indirectly load
+    .py filter files via the wrapper filter module python.so.  There would
+    be a one python.so filter loaded per .py each filter, unlike the
+    python controllers.
+
+
+- What does full duplex look like in this "stream paradigm".
+
+
 - finish adding quickbuild optional package checks in all Makefile files.
   - See list of dependences in README.md
 

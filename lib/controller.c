@@ -1,5 +1,4 @@
 #include <string.h>
-#include <alloca.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -17,8 +16,6 @@
 #include "debug.h"
 #include "Dictionary.h"
 #include "qs.h"
-#include "GetPath.h"
-#include "filterList.h"
 #include "LoadDSOFromTmpFile.h"
 
 
@@ -31,6 +28,96 @@ static void MakeKey(void) {
     CHECK(pthread_key_create(&_qsControllerKey, 0));
 }
 
+
+static
+void FreeScriptLoaderOnDestroy(struct QsScriptControllerLoader *loader) {
+
+    DASSERT(loader);
+
+    if(loader->dlhandle) {
+        // Looks like we loaded one or more python controllers.
+        void (*cleanup)(void) = dlsym(loader->dlhandle, "cleanup");
+        char *err = dlerror();
+        if(err) {
+            ERROR("no pyControllerLoader cleanup() provided:"
+                    " dlsym(,\"cleanup\") error: %s", err);
+            dlclose(loader->dlhandle);
+        } else {
+            cleanup();
+        }
+        WARN();
+    }
+}
+
+
+
+// Returns the scriptControllerLoader if it is loaded now, or if it is
+// already successfully loaded from before, else returns 0.
+//
+static inline
+struct QsScriptControllerLoader *
+CheckLoadScriptLoader(struct QsApp *app, const char *loaderModuleName) {
+
+    struct QsScriptControllerLoader *loader =
+        qsDictionaryFind(app->scriptControllerLoaders, loaderModuleName);
+    if(loader) return loader;
+
+    char *scriptLoaderPath = GetPluginPath(MOD_PREFIX, "run/",
+            loaderModuleName, ".so");
+    DASSERT(scriptLoaderPath);
+
+    void *dlhandle = dlopen(scriptLoaderPath, RTLD_NOW | RTLD_LOCAL);
+    if(!dlhandle) {
+        ERROR("Failed to dlopen(\"%s\",): %s", scriptLoaderPath, dlerror());
+        goto fail;
+    }
+    dlerror(); // clear error
+    int (*initialize)(void) = dlsym(dlhandle, "initialize");
+    char *err = dlerror();
+    if(err) {
+        ERROR("Module at path=\"%s\" no initialize() provided:"
+                " dlsym(,\"help\") error: %s", scriptLoaderPath, err);
+        goto fail;
+    }
+    // Call the modules first function.
+    if(initialize()) {
+        ERROR("%s initialize() failed", scriptLoaderPath);
+        goto fail;
+    }
+    dlerror(); // clear error
+    void *(*loadControllerScript)(const char *path, int argc,
+            const char **argv) = dlsym(dlhandle, "loadControllerScript");
+    err = dlerror();
+    if(err) {
+        ERROR("Module at path=\"%s\" no loadControllerScript() provided:"
+                " dlsym(,\"loadControllerScript\") error: %s",
+                scriptLoaderPath, err);
+        goto fail;
+    }
+
+    WARN("loaded module %s", scriptLoaderPath);
+ 
+    free(scriptLoaderPath);
+
+    loader = malloc(sizeof(*loader));
+    ASSERT(loader, "malloc(%zu) failed", sizeof(*loader));
+
+    loader->dlhandle = dlhandle;
+    loader->loadControllerScript = loadControllerScript;
+    struct QsDictionary *d;
+    qsDictionaryInsert(app->scriptControllerLoaders, loaderModuleName,
+                loader, &d);
+    qsDictionarySetFreeValueOnDestroy(d,
+            (void (*)(void *)) FreeScriptLoaderOnDestroy);
+
+    return loader; // success
+
+fail:
+    if(dlhandle)
+        dlclose(dlhandle);
+    free(scriptLoaderPath);
+    return 0; // error
+}
 
 
 
@@ -121,35 +208,36 @@ DictionaryDestroyController(struct QsController *c) {
 
 
 static
-int FindControllerCallback(const char *key, void *value,
-            void *dlhandle) {
+int FindControllerCallback(const char *key, struct QsController *c,
+            void **dlhandle) {
 
-    struct QsController *c = value;
-
-    if(c->dlhandle == dlhandle) {
-        dlclose(dlhandle);
-        c->dlhandle = 0;
+    if(c->dlhandle == *dlhandle) {
+        // Not unique.  Close it.
+        dlclose(*dlhandle);
+        *dlhandle = 0;
         return 1; // found it.
     }
-
     return 0;
 }
 
-
-static inline bool
-FindControllerHandle(struct QsApp *app, struct QsController *c) {
+// Make sure the dlhandle is not in the list of controllers in app.
+void *
+GetUniqueControllerHandle(struct QsApp *app,  void **dlhandle,
+        const char *path) {
     DASSERT(app);
-    DASSERT(c);
-    DASSERT(c->dlhandle);
+    DASSERT(dlhandle);
+    DASSERT(*dlhandle);
 
-    qsDictionaryForEach(app->controllers, FindControllerCallback,
-            c->dlhandle);
+    qsDictionaryForEach(app->controllers,
+            (int (*)(const char *, void *, void *))
+                FindControllerCallback, dlhandle);
 
-    if(c->dlhandle == 0)
-        // The same controller module was loaded already.
-        return true; // it was found.
+    if(*dlhandle == 0)
+        // Try to load it from a copy of the DSO file.
+        return LoadDSOFromTmpFile(path);
 
-    return false;
+    // It's was unique to begin with.
+    return *dlhandle;
 }
 
 
@@ -157,7 +245,8 @@ int qsControllerPrintHelp(const char *fileName, FILE *f) {
 
     if(f == 0) f = stderr;
 
-    char *path = GetPluginPath("controllers/", fileName);
+    char *path = GetPluginPath(MOD_PREFIX, "controllers/",
+            fileName, ".so");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
@@ -204,6 +293,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     char *name = 0;
     char *name_mem = 0;
+    char *path = 0;
 
     if(loadName && *loadName) {
         if(qsDictionaryFind(app->controllers, loadName)) {
@@ -264,11 +354,12 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 #define TRYS      10002
 
     int i;
-    for(i=2; i<10002; ++i) {
+    for(i=2; i<TRYS; ++i) {
         if(qsDictionaryFind(app->controllers, name_mem) == 0)
             break;
         sprintf(name_mem, "%s-%d", name, i);
     }
+    c->name = name_mem;
 
     if(i == TRYS) {
         // This should not happen.
@@ -276,34 +367,63 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         goto cleanup;
     }
 
-    c->name = name_mem;
-
-    char *path = GetPluginPath("controllers/", fileName);
-
+    path = GetPluginPath(MOD_PREFIX, "controllers/", fileName, ".so");
+    DASSERT(path);
 
     void *dlhandle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
+    // The way we tell if this dlhandle is to a file that we already
+    // loaded is if we got the same dlhandle returned before and it's
+    // in the app list already.
+
+    if(dlhandle && !(dlhandle = GetUniqueControllerHandle(app, &dlhandle,
+                    path)))
+        // Could not get a unique dlhandle.
+        goto cleanup; // fail
+
+
+    if(!dlhandle) {
+
+        // Okay the loading a DSO failed, so lets see if this is a
+        // scripting language file in this path.
+
+        // Load controllers from scripting a language.
+        //
+        // TODO: add other languages, other than python.
+        // Like LUA.
+        //
+
+        // CASE PYTHON:
+        //
+        struct QsScriptControllerLoader *loader = 
+            CheckLoadScriptLoader(app, "pythonControllerLoader");
+        if(!loader)
+            goto cleanup;
+
+        // This is not a loadable DSO (dynamic share object) plugin.
+        // And so, it's not a regular compiled DSO from C or C++.
+        free(path);
+        path = GetPluginPath(MOD_PREFIX, "controllers/", fileName, ".py");
+        // If this is a usable thing:
+        // This may be a python module.  That's what we define, at this
+        // point, as the only none failure option.
+        // If that's the case, we need to consider looking for a file with
+        // the .py suffix.
+        //
+        // But first we need to have plugin that loads python plugins.
+        // Sounds indirect and it is.  We needed to keep quickstream from
+        // requiring python.  Python is optional.  quickstream can run
+        // without python being installed.
+        if(!(dlhandle = loader->loadControllerScript(path, argc, argv)))
+            goto cleanup;
+    }
+
     if(!dlhandle) {
         ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
-        free(path);
         goto cleanup;
     }
-    c->dlhandle = dlhandle;
 
-    if(FindControllerHandle(app, c)) {
-        //
-        // This DSO (dynamic shared object) file is already loaded.  So we
-        // must copy the DSO file to a temp file and load that.  Otherwise
-        // we will have just the one plugin loaded, but referred to by two
-        // (or more) controllers, which is not what we want.  The temp file
-        // will be automatically removed when the process exits.
-        //
-        c->dlhandle = dlhandle = LoadDSOFromTmpFile(path);
-        if(!dlhandle) {
-            free(path);
-            goto cleanup;
-        }
-    }
+    c->dlhandle = dlhandle;
 
     // If these functions are not present, that's okay, they are
     // optional.
@@ -333,7 +453,6 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     ASSERT(qsDictionaryInsert(app->controllers, c->name, c, &d) == 0);
     DASSERT(d);
-
     qsDictionarySetFreeValueOnDestroy(d,
             (void (*)(void *)) DictionaryDestroyController);
 
@@ -403,19 +522,20 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
     INFO("Successfully loaded module Controller %s with name \"%s\"",
             path, c->name);
-
     free(path);
 
     return c; // success
 
 cleanup:
 
+    DASSERT(c);
+    if(path)
+        free(path);
     if(c->name)
         free(c->name);
     free(c);
     return 0; // failure
 }
-
 
 
 /*

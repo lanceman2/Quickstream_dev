@@ -1,6 +1,10 @@
 #ifndef __qscontroller_h__
 #define __qscontroller_h__
 
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+
 
 /** \file
  *
@@ -45,12 +49,16 @@
 
 #ifndef __cplusplus
 
+
 // TODO:
 // For C++ code we define different versions of construct(), preStart(),
 // postStart(), preStop(), postStop(), destroy(), and help(); that wrap
 // the C++ filter module base QsController that is declared in
 // controller.hpp.
 
+
+struct QsFilter;
+struct QsStream;
 
 
 /** optional constructor function

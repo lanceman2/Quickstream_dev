@@ -1,3 +1,20 @@
+#include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <alloca.h>
+#include <dlfcn.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <pthread.h>
+#include <stdatomic.h>
+
+
+#include "debug.h"
+#include "qs.h"
+
 //
 // Returned malloc() memory must be free()ed.
 // or 0 if it's not found.
@@ -7,9 +24,9 @@
 // This returns a value if we can access it with the composed path.
 //
 //
-static inline char *GetPluginPathFromEnv(const char *envs,
+static char *GetPluginPathFromEnv(const char *envs,
         const char *category,
-        const char *name)
+        const char *name, const char *suffix)
 {
     char *env = 0;
     size_t envLen = 0;
@@ -65,8 +82,10 @@ static inline char *GetPluginPathFromEnv(const char *envs,
 
     // len = strlen("$env" + '/' + category + name + ".so")
     // More than long enough.
+    size_t suffixLen = strlen(suffix);
+
     const ssize_t len = envLen + strlen(category) +
-            strlen(name) + 5/* for '//' and ".so" and '\0' */;
+            strlen(name) + suffixLen + 3 /* for '//' and '\0' */;
 
     // In case it's stupid long...
     DASSERT(len > 0 && len < 1024*1024);
@@ -74,26 +93,21 @@ static inline char *GetPluginPathFromEnv(const char *envs,
     char *buf = (char *) malloc(len);
     ASSERT(buf, "malloc(%zu) failed", len);
 
-    const char *suffix;
-    if(!strcmp(&name[strlen(name)-3], ".so"))
+    if(!strcmp(&name[strlen(name)-suffixLen], suffix))
+        // The name already has suffix in it, so we will repurpose suffix.
         suffix = "";
-    else
-        suffix = ".so";
 
     // So now envPaths[] is an array of strings that is Null terminated.
-    for(char **path = envPaths; *path; ++path)
-    {
+    for(char **path = envPaths; *path; ++path) {
         snprintf(buf, len, "%s/%s%s%s", *path, category, name, suffix);
 
-        if(access(buf, R_OK) == 0)
-        {
+        if(access(buf, R_OK) == 0) {
             // No memory leaks here:
             free(envPaths);
             free(env);
             // The user of this function must free buf.
             return buf; // success, we can access this file.
-        }
-        else
+        } else
             errno = 0;
     }
 
@@ -104,11 +118,6 @@ static inline char *GetPluginPathFromEnv(const char *envs,
     return 0; // failed to access a file in "that path".
 }
 
-// Portability
-#define DIR_CHAR '/'
-#define DIR_STR  "/"
-
-#define PRE "/lib/quickstream/plugins/"
 
 //
 // A thread-safe path finder that looks at /proc/self which is the same as
@@ -118,21 +127,26 @@ static inline char *GetPluginPathFromEnv(const char *envs,
 // example: category = "filters/"
 //
 // The returned pointer must be free()ed.
-static inline char *GetPluginPath(const char *category, const char *name)
+static inline
+char *_GetPluginPath(const char *prefix, const char *category,
+        const char *name, const char *suffix)
 {
     DASSERT(name && strlen(name) >= 1);
-    
+
+    size_t suffixLen = strlen(suffix);
+    DASSERT(suffix && suffixLen);
+
     if(name[0] == DIR_CHAR) {
         char *path;
         // We where given full path starting with '/'.
         size_t len = strlen(name);
-        if(len > 3 && strcmp(&name[len-3], ".so") == 0)
-            // There is a ".so" suffix.
+        if(len > suffixLen && strcmp(&name[len-suffixLen], suffix) == 0)
+            // There is a  (like ".so") suffix.
             path = strdup(name);
         else {
-            // There is no ".so" suffix, so we add it.
-            path = malloc(len + 4);
-            snprintf(path, len + 4, "%s.so", name);
+            // There is no (like ".so") suffix, so we add it.
+            path = malloc(len + suffixLen + 1);
+            snprintf(path, len + suffixLen + 1, "%s%s", name, suffix);
         }
         // This is the full path.
         return path;
@@ -143,15 +157,25 @@ static inline char *GetPluginPath(const char *category, const char *name)
     char *buf;
 
     if(strcmp(category, "filters/") == 0) {
-        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category, name)))
+        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category,
+                        name, suffix)))
             return buf;
-        if((buf = GetPluginPathFromEnv("QS_FILTER_PATH", "", name)))
+        if((buf = GetPluginPathFromEnv("QS_FILTER_PATH", "",
+                        name, suffix)))
             return buf;
-    }
-    else if(strcmp(category, "controllers/") == 0) {
-        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category, name)))
+    } else if(strcmp(category, "controllers/") == 0) {
+        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category,
+                        name, suffix)))
             return buf;
-        if((buf = GetPluginPathFromEnv("QS_CONTROLLER_PATH", "", name)))
+        if((buf = GetPluginPathFromEnv("QS_CONTROLLER_PATH", "",
+                        name, suffix)))
+            return buf;
+    } else if(strcmp(category, "run/") == 0) {
+        if((buf = GetPluginPathFromEnv("QS_MODULE_PATH", category,
+                        name, suffix)))
+            return buf;
+        if((buf = GetPluginPathFromEnv("QS_RUN_PATH", "",
+                        name, suffix)))
             return buf;
     } else
         ASSERT(0, "category != \"filters/\" or \"controllers/\" Need "
@@ -160,8 +184,9 @@ static inline char *GetPluginPath(const char *category, const char *name)
 
     // postLen = strlen("/lib/quickstream/plugins/" + category + name)
     const ssize_t postLen =
-        strlen(PRE) + strlen(category) +
-        strlen(name) + 5/* for '/' and ".so" and '\0' */;
+        strlen(prefix) + strlen(category) +
+            /* for '/' and suffix (like ".so") and '\0' */
+        strlen(name) + suffixLen + 2;
     DASSERT(postLen > 0 && postLen < 1024*1024);
     ssize_t bufLen = 128 + postLen;
     buf = (char *) malloc(bufLen);
@@ -193,32 +218,53 @@ static inline char *GetPluginPath(const char *category, const char *name)
     ASSERT(buf[rl] == '/');
     buf[rl] = '\0'; // null terminate string
 
-    // Now
+    // Now (for example):
     //
-    //     buf = "/home/lance/installed/quickstream-1.0b4"
+    //     buf = "/home/joe/installed/quickstream-1.0b4"
     // 
     //  or
     //     
-    //     buf = "/home/lance/git/quickstream"
+    //     buf = "/home/joe/git/quickstream"
     //
 
-    // Now just add the postfix to buf.
+    // Now just add the suffix to buf.
     //
     // If we counted chars correctly strcat() should be safe.
 
-    DASSERT(strlen(buf) + strlen(PRE) +
+    DASSERT(strlen(buf) + strlen(prefix) +
             strlen(category) +
             strlen(name) + 1 < (size_t) bufLen);
 
-    strcat(buf, PRE);
+    strcat(buf, prefix);
     strcat(buf, category);
     strcat(buf, name);
 
     // Reuse the bufLen variable.
 
     bufLen = strlen(buf);
-    if(strcmp(&buf[bufLen-3], ".so"))
-        strcat(buf, ".so");
+    if(strcmp(&buf[bufLen-suffixLen], suffix))
+        strcat(buf, suffix);
 
     return buf;
+}
+
+
+// This is the only exposed interface in this file.
+//
+char *GetPluginPath(const char *prefix, const char *category,
+        const char *name, const char *suffix) {
+
+    char *ret = _GetPluginPath(prefix, category, name, suffix);
+
+    DASSERT(ret);
+
+    // ret should be a malloc() allocated string a full path to a file, or
+    // a best guess of that, but at this point we are not sure the file
+    // exists and what type it is.   If dlopen() succeeds in opening it
+    // then it's a DSO (dynamic shared object) that works with dlopen()
+    // and that may be all we need to know.  If the python C API can run
+    // the file as a script than it's a python script, or it fails and it
+    // is not.  Simple enough.
+
+    return ret;
 }

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -e
+
+source testsEnv
+
+
+set -x
+../bin/quickstream -v 5\
+ -C bytesCounter { --report-period 0.03 }\
+ -C bytesRate\
+ -C tests/pythonMonitor.ll\
+ -f tests/sequenceGen.so {\
+ --maxWrite 1000\
+ --length 80003 }\
+ -f tests/sequenceCheck\
+ -f tests/sequenceCheck\
+ -c -t 1 -r
+
+
+set +x
+echo "$0 SUCCESS"

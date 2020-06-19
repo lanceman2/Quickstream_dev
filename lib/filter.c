@@ -19,7 +19,6 @@
 #include "Dictionary.h"
 #include "qs.h"
 #include "filterList.h"
-#include "GetPath.h"
 #include "filterAPI.h"
 #include "LoadDSOFromTmpFile.h"
 
@@ -28,7 +27,7 @@ int qsFilterPrintHelp(const char *filterName, FILE *f) {
 
     if(f == 0) f = stderr;
 
-    char *path = GetPluginPath("filters/", filterName);
+    char *path = GetPluginPath(MOD_PREFIX, "filters/", filterName, ".so");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
@@ -125,9 +124,9 @@ struct QsFilter *qsStreamFilterLoad(struct QsStream *s,
         return 0;
     }
 
-
-    char *path = GetPluginPath("filters/", fileName);
-
+    // fileName may or may not have a suffix already.
+    //
+    char *path = GetPluginPath(MOD_PREFIX, "filters/", fileName, ".so");
 
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 
