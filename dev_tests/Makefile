@@ -41,6 +41,15 @@ clock_gettime_SOURCES := clock_gettime.c
 regex_SOURCES := regex.c
 
 
+PY_CPPFLAGS := $(shell python3-config --includes)
+PY_LDFLAGS := $(shell python3-config --embed --libs)
+
+
+pythonRun_SOURCES := pythonRun.c
+pythonRun_CPPFLAGS := $(PY_CPPFLAGS)
+pythonRun_LDFLAGS := $(PY_LDFLAGS)
+
+
 
 # Add extra clean files for this directory.
 CLEANFILES := $(wildcard *.tmp)

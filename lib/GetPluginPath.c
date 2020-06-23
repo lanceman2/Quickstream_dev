@@ -189,14 +189,14 @@ char *_GetPluginPath(const char *prefix, const char *category,
         strlen(name) + suffixLen + 2;
     DASSERT(postLen > 0 && postLen < 1024*1024);
     ssize_t bufLen = 128 + postLen;
-    buf = (char *) malloc(bufLen);
+    buf = malloc(bufLen);
     ASSERT(buf, "malloc(%zu) failed", bufLen);
     ssize_t rl = readlink("/proc/self/exe", buf, bufLen);
     ASSERT(rl > 0, "readlink(\"/proc/self/exe\",,) failed");
     while(rl + postLen >= bufLen)
     {
         DASSERT(bufLen < 1024*1024); // it should not get this large.
-        buf = (char *) realloc(buf, bufLen += 128);
+        buf = realloc(buf, bufLen += 128);
         ASSERT(buf, "realloc() failed");
         rl = readlink("/proc/self/exe", buf, bufLen);
         ASSERT(rl > 0, "readlink(\"/proc/self/exe\",,) failed");

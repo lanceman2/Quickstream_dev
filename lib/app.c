@@ -89,12 +89,13 @@ int qsAppDestroy(struct QsApp *app) {
     // all the scriptControllerLoaders.
     qsDictionaryDestroy(app->scriptControllerLoaders);
 
+    WARN();
+
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif
     // Now cleanup this app.
     free(app);
-
     return 0;
 }
 

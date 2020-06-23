@@ -38,14 +38,13 @@ void FreeScriptLoaderOnDestroy(struct QsScriptControllerLoader *loader) {
         // Looks like we loaded one or more python controllers.
         void (*cleanup)(void) = dlsym(loader->dlhandle, "cleanup");
         char *err = dlerror();
-        if(err) {
+        if(err)
             ERROR("no pyControllerLoader cleanup() provided:"
                     " dlsym(,\"cleanup\") error: %s", err);
-            dlclose(loader->dlhandle);
-        } else {
+        else
             cleanup();
-        }
         WARN();
+        dlclose(loader->dlhandle);
     }
 }
 
@@ -402,8 +401,19 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
         // This is not a loadable DSO (dynamic share object) plugin.
         // And so, it's not a regular compiled DSO from C or C++.
-        free(path);
-        path = GetPluginPath(MOD_PREFIX, "controllers/", fileName, ".py");
+        free(path); // We'll reuse path as the python module file.
+
+        // Python 3.8.2 BUG: Py_Initialize() and Py_InitializeEx() require
+        // the PYTHONPATH environment variable to be set or we cannot run
+        // any python script from C.
+        path = strdup(fileName);
+        size_t len = strlen(path);
+        if(len > 3 && path[len-1] == 'y' && path[len-2] == 'p' &&
+                path[len-3] == '.')
+            // Python does not like the .py suffix in the python
+            // module filename.
+            path[len-3] = '\0';
+
         // If this is a usable thing:
         // This may be a python module.  That's what we define, at this
         // point, as the only none failure option.

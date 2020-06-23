@@ -6,10 +6,10 @@ source testsEnv
 
 
 set -x
-../bin/quickstream -v 5\
+../bin/quickstream -v 3\
  -C bytesCounter { --report-period 0.03 }\
  -C bytesRate\
- -C tests/pythonMonitor.ll\
+ -C pythonMonitor.py\
  -f tests/sequenceGen.so {\
  --maxWrite 1000\
  --length 80003 }\
