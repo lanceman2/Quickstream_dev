@@ -225,6 +225,18 @@ void AllocateFilterJobsAndMutex(struct QsStream *s, struct QsFilter *f) {
 }
 
 
+static inline
+void JoinThreads(struct QsStream *s) {
+
+    for(struct QsThread *t = &s->threads[s->maxThreads-1];
+            t>=s->threads; --t)
+        if(t->hasLaunched) {
+            CHECK(pthread_join(t->thread, 0));
+            t->hasLaunched = false;
+        }
+}
+
+
 int qsStreamWait(struct QsStream *s) {
 
     DASSERT(_qsMainThread == pthread_self(), "Not main thread");
@@ -242,6 +254,8 @@ int qsStreamWait(struct QsStream *s) {
         //
         // UNLOCK stream mutex
         CHECK(pthread_mutex_unlock(&s->mutex));
+
+        JoinThreads(s);
         return 1;
     }
 
@@ -264,6 +278,8 @@ int qsStreamWait(struct QsStream *s) {
 
     // UNLOCK stream mutex
     CHECK(pthread_mutex_unlock(&s->mutex));
+
+    JoinThreads(s);
 
     return 0; // yes we did wait.
 }

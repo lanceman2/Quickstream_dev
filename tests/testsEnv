@@ -16,10 +16,11 @@ return
 #
 # Note: it would appear that libpthreads will not pass valgrind tests.  We
 # need to look at the test results and determine if there is there is
-# anything that can be done to quickstream code to correct valgrind tests.
-# I assert that libpthreads cannot pass this valgrind test, when pthreads
-# return the pthread memory does not get freed immediately and so if the
-# program exits before that, valgrind says there is a memory leak.
+# anything that can be done to quickstream code due to valgrind tests.
+# Looks like the memory from pthreads that run do not necessarily get
+# freed as soon as the pthreads return.  This lazy pthread cleanup could
+# be due to an optimization that helps the programs run faster overall,
+# but have the side effect of making the valgrind tests fail some times.
 #
 
 
@@ -30,6 +31,7 @@ if which valgrind ; then
  --leak-check=full\
  --trace-children=yes\
  --show-leak-kinds=all\
+ --errors-for-leak-kinds=all\
  --error-exitcode=1\
  ../bin/quickstream"
 else

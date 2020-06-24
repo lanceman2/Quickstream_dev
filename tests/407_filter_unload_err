@@ -9,7 +9,7 @@ set -x
 set +e
 
 # This needs to fail.
-if echo "Hello" |  $QS_RUN\
+if echo "Hello" |  ../bin/quickstream\
  -f tests/unload { --return -1 }\
  -f stdin\
  -f stdout\

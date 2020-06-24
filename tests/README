@@ -4,8 +4,8 @@ Just run ./run_tests to run all the tests in this directory.  If the test
 is successful ./run_tests will return exist status 0.
 
 If you have valgrind installed and in your path you can edit the file
-testsEnv and make all the tests run with valgrind.  The tests running with
-valgrind takes a lot more time.
+testsEnv and make most the tests run with valgrind, checking for memory
+leaks.  The tests running with valgrind takes a lot more time.
 
 Running `./run_tests` will write temporary files this directory.  Running
 `make clean` will remove these temporary files.

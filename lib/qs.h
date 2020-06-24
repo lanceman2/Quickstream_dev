@@ -370,7 +370,10 @@ struct QsStream {
     struct QsFilter *filters;
 
     // Allocated pthread_t array that is of length maxThreads.
-    pthread_t *threads;
+    struct QsThread {
+        pthread_t thread;
+        bool hasLaunched;
+    } * threads;
     // maxThreads=0 means do not start any.  maxThreads does not change at
     // flow/run time, so we need no mutex to access it.
     uint32_t maxThreads; // We will not create more pthreads than this.
@@ -998,13 +1001,18 @@ void LaunchWorkerThread(struct QsStream *s) {
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     p->stream = s;
     p->id = (++s->numThreads);
-    CHECK(pthread_create(&s->threads[p->id-1], 0/*attr*/,
+    CHECK(pthread_create(&s->threads[p->id-1].thread, 0/*attr*/,
             (void *(*) (void *)) RunningWorkerThread, p));
     // RunningWorkerThread() will free p.
+    s->threads[p->id-1].hasLaunched = true;
 
-    // We'll let pthread memory automatically be freed when
-    // they return from RunningWorkerThread().
-    CHECK(pthread_detach(s->threads[p->id-1]));
+    // We pthread_join() in qsStreamWait() in streamLaunch.c
+    //
+    // Calling pthread_join() helps valgrind tests should less memory
+    // leaks, as compared to pthread_detach() because detached pthreads
+    // can be at the end of the  RunningWorkerThread() when the main
+    // thread exits, causing valgrind to see the worker pthread memory as
+    // being a leak at exit time.
 }
 
 

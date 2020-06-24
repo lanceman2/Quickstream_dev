@@ -784,5 +784,6 @@ void *RunningWorkerThread(struct QsWorkPermit *p) {
 
     free(p);
 
+
     return 0; // We're dead now.  It was a good life for a worker/slave.
 }
