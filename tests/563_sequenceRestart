@@ -5,7 +5,7 @@ set -e
 source testsEnv
 
 # A complex flow graph
-../bin/quickstream\
+$QS_RUN\
  -v 2\
  -f tests/sequenceGen { --length 10000 }\
  -f tests/sequenceCheck { --maxWrite=1001 }\

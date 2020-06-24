@@ -6,7 +6,7 @@ source testsEnv
 
 
 set -x
-../bin/quickstream -v 3\
+$QS_RUN -v 3\
  -C bytesCounter { --report-period 0.03 }\
  -C bytesRate\
  -C tests/monitor\

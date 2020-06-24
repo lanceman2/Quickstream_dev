@@ -12,7 +12,7 @@ out=$0.OUT.tmp
 dd if=/dev/urandom count=1300 of=$in
 
 # A complex flow graph with 2 very different streams.
-../bin/quickstream\
+$QS_RUN\
  -v 3\
  -f tests/sequenceGen { --length 302000 }\
  -f tests/sequenceCheck { --maxWrite=1001 }\

@@ -800,9 +800,21 @@ int main(int argc, const char * const *argv) {
     if(level >= 4) // info
         fprintf(stderr, "Done parsing command-line arguments\n");
 
+    int ret = 0;
+
     if(app)
         // This will destroy all streams.
-        return qsAppDestroy(app);
+        ret = qsAppDestroy(app);
 
-    return 0;
+
+    // The point of freeing stuff is to keep valgrind tests happy.
+    free(maxThreads);
+    if(streams)
+        free(streams);
+    if(filters)
+        free(filters);
+    if(controllers)
+        free(controllers);
+
+    return ret;
 }

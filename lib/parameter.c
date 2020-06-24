@@ -188,6 +188,8 @@ qsParameterDestroyForFilter(struct QsFilter *f, const char *pName,
                         void *userData)) MarkForRemoval,
                 &rm);
 
+    regfree(&rm.regex);
+
     int count = 0;
     // Now look for "marks", they are in a stack list to remove.
     struct QsParameter *p = rm.stack;

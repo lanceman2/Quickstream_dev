@@ -6,7 +6,7 @@ source testsEnv
 
 
 set -x
-../bin/quickstream\
+$QS_RUN\
  -C tests/parameter\
  -f tests/sequenceGen.so { --name seq --maxWrite 128 --length 1000 }\
  -f stdout\

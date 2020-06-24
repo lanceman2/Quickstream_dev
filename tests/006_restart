@@ -4,7 +4,7 @@ set -e
 
 source testsEnv
 
-../bin/quickstream\
+$QS_RUN\
  -v 2\
  -f tests/sequenceGen { --length 1000000 }\
  -f tests/sequenceCheck\

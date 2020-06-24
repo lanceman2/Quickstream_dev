@@ -369,6 +369,8 @@ struct QsStream {
     // linked list.
     struct QsFilter *filters;
 
+    // Allocated pthread_t array that is of length maxThreads.
+    pthread_t *threads;
     // maxThreads=0 means do not start any.  maxThreads does not change at
     // flow/run time, so we need no mutex to access it.
     uint32_t maxThreads; // We will not create more pthreads than this.
@@ -996,10 +998,13 @@ void LaunchWorkerThread(struct QsStream *s) {
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     p->stream = s;
     p->id = (++s->numThreads);
-    pthread_t thread;
-    CHECK(pthread_create(&thread, 0/*attr*/,
+    CHECK(pthread_create(&s->threads[p->id-1], 0/*attr*/,
             (void *(*) (void *)) RunningWorkerThread, p));
     // RunningWorkerThread() will free p.
+
+    // We'll let pthread memory automatically be freed when
+    // they return from RunningWorkerThread().
+    CHECK(pthread_detach(s->threads[p->id-1]));
 }
 
 

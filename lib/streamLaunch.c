@@ -285,6 +285,12 @@ int qsStreamLaunch(struct QsStream *s, uint32_t maxThreads) {
     s->flags |= _QS_STREAM_LAUNCHED;
 
     s->maxThreads = maxThreads;
+    DASSERT(s->threads == 0);
+    if(s->maxThreads) {
+        s->threads = calloc(maxThreads, sizeof(*s->threads));
+        ASSERT(s->threads, "calloc(%" PRIu32 ",%zu) failed",
+                maxThreads, sizeof(*s->threads));
+    }
 
     // TODO: remove pthreads synchronization calls in this code for the
     // case then s->maxThreads = 0 and s->maxThreads = 1.

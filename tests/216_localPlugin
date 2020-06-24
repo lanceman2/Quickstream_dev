@@ -2,7 +2,7 @@
 
 set -e
 
-
+source testsEnv
 
 in=$0.IN.tmp
 out=$0.OUT.tmp
@@ -12,8 +12,9 @@ out=$0.OUT.tmp
 dd if=/dev/urandom count=1300 of=$in
 
 
-QS_FILTER_PATH=/foo/bar:./filters:../lib/quickstream/plugins/filters/.libs\
- ../bin/quickstream\
+export QS_FILTER_PATH=/foo/bar:./filters:../lib/quickstream/plugins/filters/.libs
+
+$QS_RUN\
  --verbose 5\
  -f stdin\
  -f my_stdout\

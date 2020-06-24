@@ -12,7 +12,7 @@ source testsEnv
 # This test lets us know that controllers do not have to do anything.
 
 set -x
-echo "Hello123" | ../bin/quickstream -C tests/empty -f stdin -f stdout -c -t 1 -r
+echo "Hello123" | $QS_RUN -C tests/empty -f stdin -f stdout -c -t 1 -r
 
 set +x
 echo "$0 SUCCESS"

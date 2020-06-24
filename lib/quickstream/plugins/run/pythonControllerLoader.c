@@ -52,6 +52,7 @@
 // This file provides the scriptControllerLoader interface
 // which we define in this header file:
 #include "scriptControllerLoader.h"
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 
@@ -158,13 +159,19 @@ SetEnvPythonPath(void) {
 // This gets called once.
 int initialize(void) {
 
-    WARN();
-
     SetEnvPythonPath();
 
+    //size_t l = 0;
+    //wchar_t *programName = Py_DecodeLocale("quickstream", &l);
+    //Py_SetProgramName(programName);
+    // Is this supposed to be calling now.
+    //PyMem_RawFree(programName);
+    
     // Py_Initialize() will not work, we need to keep python from
     // catching signals, and Py_InitializeEx(0) does that.
     Py_InitializeEx(0);
+
+    PyEval_InitThreads();
 
     return 0; // success
 }
@@ -182,22 +189,22 @@ void *loadControllerScript(const char *pyPath, int argc,
     DASSERT(pyPath);
     DASSERT(pyPath[0]);
 
-    WARN("Loading controller python module \"%s\"", pyPath);
+    DSPEW("Loading controller python module \"%s\"", pyPath);
 
     // We open a C DSO python wrapper.
     char *dsoPath = GetPluginPath(MOD_PREFIX, "run/",
             "pythonController", ".so");
+WARN("dsoPath=\"%s\"", dsoPath);
     void *dlhandle = dlopen(dsoPath, RTLD_NOW | RTLD_LOCAL);
 
+WARN();
+
     if(!dlhandle) {
-        ERROR("dlopen(\"%s\",) failed", dsoPath);
+        ERROR("dlopen(\"%s\",) failed: %s", dsoPath, dlerror());
         goto fail;
     }
 
-#ifdef QS_SPEW_DEBUG
-    if(dlhandle)
-        DSPEW("loaded \"%s\"", dsoPath);
-#endif
+    WARN("loaded \"%s\"", dsoPath);
 
     // Call pyInit(pyPath) so it may get the python script loaded and
     // ready.
@@ -233,7 +240,9 @@ void cleanup(void) {
 
     // TODO: this crashes the program with stderr spew:
     // free(): invalid pointer
+    
     Py_FinalizeEx();
+    
     // We don't get past the above call.
 
     WARN();

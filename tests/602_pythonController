@@ -6,7 +6,7 @@ source testsEnv
 
 
 set -x
-../bin/quickstream -v 3\
+$QS_RUN -v 3\
  -C bytesCounter { --report-period 0.03 }\
  -C bytesRate\
  -C pythonMonitor.py\
@@ -15,7 +15,7 @@ set -x
  --length 80003 }\
  -f tests/sequenceCheck\
  -f tests/sequenceCheck\
- -c -t 1 -r
+ -c -t 0 -r
 
 
 set +x

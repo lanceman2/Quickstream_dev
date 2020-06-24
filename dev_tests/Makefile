@@ -37,16 +37,18 @@ Dictionary_test_SOURCES := Dictionary_test.c ../lib/Dictionary.c ../lib/debug.c
 
 clock_gettime_SOURCES := clock_gettime.c
 
+valgrind_test_SOURCES := valgrind_test.c
+
 
 regex_SOURCES := regex.c
 
-
-PY_CPPFLAGS := $(shell python3-config --includes)
-PY_LDFLAGS := $(shell python3-config --embed --libs)
+PY_LIBDIR := $(shell pkg-config python-3.7 --variable=libdir)
+PY_CFLAGS := $(shell pkg-config python-3.7 --cflags)
+PY_LDFLAGS := $(shell pkg-config python-3.7 --libs) -Wl,-rpath -Wl,$(PY_LIBDIR)
 
 
 pythonRun_SOURCES := pythonRun.c
-pythonRun_CPPFLAGS := $(PY_CPPFLAGS)
+pythonRun_CPPFLAGS := $(PY_CFLAGS)
 pythonRun_LDFLAGS := $(PY_LDFLAGS)
 
 

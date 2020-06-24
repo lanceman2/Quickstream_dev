@@ -24,7 +24,7 @@ main(int argc, char *argv[])
 
     // PYTHON 3.8.2 BUG: So long as PYTHONPATH is not set we cannot load
     // ./multiply.py
-#if 1
+#if 0
     setenv("PYTHONPATH", ".:..:", 1);
 #endif
     // skips initialization registration of signal handlers.
@@ -49,9 +49,9 @@ main(int argc, char *argv[])
         pFunc = PyObject_GetAttrString(pModule, argv[2]);
         /* pFunc is a new reference */
 
-        if (pFunc && PyCallable_Check(pFunc)) {
+        if(pFunc && PyCallable_Check(pFunc)) {
             pArgs = PyTuple_New(argc - 3);
-            for (i = 0; i < argc - 3; ++i) {
+            for(i = 0; i < argc - 3; ++i) {
                 pValue = PyLong_FromLong(atoi(argv[i + 3]));
                 if (!pValue) {
                     Py_DECREF(pArgs);
@@ -62,7 +62,11 @@ main(int argc, char *argv[])
                 /* pValue reference stolen here: */
                 PyTuple_SetItem(pArgs, i, pValue);
             }
-            pValue = PyObject_CallObject(pFunc, pArgs);
+            if(argc <= 3)
+                pValue = PyObject_CallObject(pFunc, 0);
+            else
+                pValue = PyObject_CallObject(pFunc, pArgs);
+
             Py_DECREF(pArgs);
             if (pValue != NULL) {
                 printf("Result of call: %ld\n", PyLong_AsLong(pValue));
@@ -89,8 +93,12 @@ main(int argc, char *argv[])
         fprintf(stderr, "Failed to load \"%s\"\n", argv[1]);
         return 1;
     }
+
     if (Py_FinalizeEx() < 0) {
+
         return 120;
     }
+
+    fprintf(stderr, "Py_FinalizeEx() success\n");
     return 0;
 }

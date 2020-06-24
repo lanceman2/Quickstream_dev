@@ -89,8 +89,6 @@ int qsAppDestroy(struct QsApp *app) {
     // all the scriptControllerLoaders.
     qsDictionaryDestroy(app->scriptControllerLoaders);
 
-    WARN();
-
 #ifdef DEBUG
     memset(app, 0, sizeof(*app));
 #endif

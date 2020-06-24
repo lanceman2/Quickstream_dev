@@ -7,7 +7,7 @@ source testsEnv
 
 set -x
 echo "Hello123" |\
-../bin/quickstream\
+$QS_RUN\
  -f tests/unload\
  -f stdin\
  -f stdout\

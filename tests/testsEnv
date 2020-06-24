@@ -6,3 +6,32 @@ if [ -f ../makefile ] ; then
     export QS_FILTER_PATH=../lib/quickstream/plugins/filters/.libs:.
 fi
 
+
+QS_RUN="../bin/quickstream"
+
+# comment out this return to run with valgrind
+return
+
+
+#
+# Note: it would appear that libpthreads will not pass valgrind tests.  We
+# need to look at the test results and determine if there is there is
+# anything that can be done to quickstream code to correct valgrind tests.
+# I assert that libpthreads cannot pass this valgrind test, when pthreads
+# return the pthread memory does not get freed immediately and so if the
+# program exits before that, valgrind says there is a memory leak.
+#
+
+
+
+if which valgrind ; then
+  QS_RUN="valgrind\
+ --tool=memcheck\
+ --leak-check=full\
+ --trace-children=yes\
+ --show-leak-kinds=all\
+ --error-exitcode=1\
+ ../bin/quickstream"
+else
+  QS_RUN="../bin/quickstream"
+fi

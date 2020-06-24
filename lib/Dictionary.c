@@ -410,7 +410,7 @@ char *Compress(const char *suffix, size_t count_in) {
     size_t len = 0;
     size_t count = count_in;
 
-    while(*s++) {
+    while(*s) {
  
         if(IsCharacter(s, count)) {
             count += 4;

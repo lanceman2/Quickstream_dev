@@ -11,7 +11,7 @@ out=$0.OUT.tmp
 
 dd if=/dev/urandom count=1300 of=$in
 
-../bin/quickstream\
+$QS_RUN\
  -v 2\
  -f stdin\
  -f tests/copy\

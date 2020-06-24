@@ -1,3 +1,9 @@
+import time
 
-def testPrint():
-    print("Hello World")
+def help():
+    t = 1
+    while(True):
+        if(t > 6):
+            break
+        t += 1
+        print(" +++++++++++++++++++++++++++++++++++++++++++++++++ Help World")

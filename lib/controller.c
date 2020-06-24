@@ -45,7 +45,14 @@ void FreeScriptLoaderOnDestroy(struct QsScriptControllerLoader *loader) {
             cleanup();
         WARN();
         dlclose(loader->dlhandle);
+        WARN();
     }
+    WARN();
+#ifdef DEBUG
+    memset(loader, 0, sizeof(*loader));
+#endif
+    free(loader);
+    WARN();
 }
 
 

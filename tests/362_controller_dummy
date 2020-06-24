@@ -9,7 +9,7 @@ out=$(basename $0).OUT.tmp
 
 
 set -x
-echo "Hello123" | ../bin/quickstream -C tests/dummy -f stdin -f stdout -c -t 1 -r > $out
+echo "Hello123" | $QS_RUN -C tests/dummy -f stdin -f stdout -c -t 1 -r > $out
 
 diff $compare $out
 set +x

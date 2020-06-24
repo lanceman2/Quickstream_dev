@@ -17,7 +17,9 @@ dd if=/dev/urandom count=30 2> /dev/null | hexdump > $in
 # input() functions, checking the buffer advancement for the extreme case
 # with a single byte input() at a time.
 #
-../bin/quickstream -v 2 -f stdin\
+
+$QS_RUN\
+ -v 4 -f stdin\
  -f tests/copy\
  -f tests/copy\
  -f tests/copy\
