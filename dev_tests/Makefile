@@ -42,9 +42,9 @@ valgrind_test_SOURCES := valgrind_test.c
 
 regex_SOURCES := regex.c
 
-PY_LIBDIR := $(shell pkg-config python-3.7 --variable=libdir)
-PY_CFLAGS := $(shell pkg-config python-3.7 --cflags)
-PY_LDFLAGS := $(shell pkg-config python-3.7 --libs) -Wl,-rpath -Wl,$(PY_LIBDIR)
+PY_LIBDIR := $(shell pkg-config python3 --variable=libdir)
+PY_CFLAGS := $(shell pkg-config python3 --cflags)
+PY_LDFLAGS := -L$(PY_LIBDIR) -lpython3.8 -Wl,-rpath -Wl,$(PY_LIBDIR)
 
 
 pythonRun_SOURCES := pythonRun.c

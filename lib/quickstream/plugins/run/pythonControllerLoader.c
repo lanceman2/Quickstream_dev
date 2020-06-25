@@ -161,12 +161,11 @@ int initialize(void) {
 
     SetEnvPythonPath();
 
-    //size_t l = 0;
-    //wchar_t *programName = Py_DecodeLocale("quickstream", &l);
-    //Py_SetProgramName(programName);
-    // Is this supposed to be calling now.
-    //PyMem_RawFree(programName);
-    
+    size_t l = 0;
+    wchar_t *programName = Py_DecodeLocale("quickstream", &l);
+    Py_SetProgramName(programName);
+    PyMem_RawFree(programName);
+
     // Py_Initialize() will not work, we need to keep python from
     // catching signals, and Py_InitializeEx(0) does that.
     Py_InitializeEx(0);
@@ -194,17 +193,14 @@ void *loadControllerScript(const char *pyPath, int argc,
     // We open a C DSO python wrapper.
     char *dsoPath = GetPluginPath(MOD_PREFIX, "run/",
             "pythonController", ".so");
-WARN("dsoPath=\"%s\"", dsoPath);
     void *dlhandle = dlopen(dsoPath, RTLD_NOW | RTLD_LOCAL);
-
-WARN();
 
     if(!dlhandle) {
         ERROR("dlopen(\"%s\",) failed: %s", dsoPath, dlerror());
         goto fail;
     }
 
-    WARN("loaded \"%s\"", dsoPath);
+    INFO("loaded \"%s\"", dsoPath);
 
     // Call pyInit(pyPath) so it may get the python script loaded and
     // ready.
@@ -236,14 +232,10 @@ fail:
 // cleaned-up.
 void cleanup(void) {
 
-    WARN();
-
-    // TODO: this crashes the program with stderr spew:
-    // free(): invalid pointer
-    
+    // valgrind shows libpython3 to have a lot of memory leaks.  Good
+    // thing we'll likely be exiting the program soon after this.
+    //
     Py_FinalizeEx();
-    
-    // We don't get past the above call.
 
-    WARN();
+    INFO();
 }

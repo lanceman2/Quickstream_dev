@@ -4,10 +4,25 @@
 // Run 'make' and
 // ./pythonRun multiply  multiply 3 4
 
+#define _GNU_SOURCE
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#undef _GNU_SOURCE
 
 //#define PY_SSIZE_T_CLEAN
 #include <Python.h>
+
+wchar_t *
+CharToWChar(const char *str) {
+
+    size_t l = strlen(str) + 1;
+    wchar_t *ret = malloc(sizeof(*ret) * l);
+    mbstowcs(ret, str, l);
+    return ret;
+}
+
 
 int
 main(int argc, char *argv[])
@@ -38,6 +53,13 @@ main(int argc, char *argv[])
     pName = PyUnicode_DecodeFSDefault(argv[1]);
     /* Error checking of pName left out */
     fprintf(stderr, "pName=%p\n", pName);
+
+    //char *pwd = get_current_dir_name();
+    char *pwd = strdup("foo:.");
+    wchar_t *cwd = CharToWChar(pwd);
+    free(pwd);
+    PySys_SetPath(cwd);
+    free(cwd);
 
     pModule = PyImport_Import(pName);
 

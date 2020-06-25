@@ -43,11 +43,8 @@ void FreeScriptLoaderOnDestroy(struct QsScriptControllerLoader *loader) {
                     " dlsym(,\"cleanup\") error: %s", err);
         else
             cleanup();
-        WARN();
         dlclose(loader->dlhandle);
-        WARN();
     }
-    WARN();
 #ifdef DEBUG
     memset(loader, 0, sizeof(*loader));
 #endif
@@ -101,7 +98,7 @@ CheckLoadScriptLoader(struct QsApp *app, const char *loaderModuleName) {
         goto fail;
     }
 
-    WARN("loaded module %s", scriptLoaderPath);
+    INFO("loaded module %s", scriptLoaderPath);
  
     free(scriptLoaderPath);
 
