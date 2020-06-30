@@ -103,11 +103,12 @@ extern "C" {
 #endif
 
 
-/** A struct used to send arguments string list like argc and argv.
- *
+/** struct used to send arguments string list like argc and argv.
  */
 struct QsArgList {
+    /** size of argv string array */
     int argc;
+    /** array of arguments strings */
     const char **argv;
 };
 
@@ -141,7 +142,7 @@ enum QsParameterType {
                   the function that is calling qsParameterSet().  The
                   first argument is the file path name, followed by
                   option arguments, just like main(argc, argv)
-                  which we all know and love.  The use of the null
+                  which we all know.  The use of the null
                   terminating argv pointer is required only
                   if the module requires it. **/,
     QsNew = 5/** A type that has not been defined by the quickstream API

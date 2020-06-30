@@ -528,7 +528,11 @@ int main(int argc, const char * const *argv) {
 
                 filters[numFilters-1] = qsStreamFilterLoad(stream,
                         arg, name, fargc, (const char **) fargv);
-                if(!filters[numFilters-1]) return 1; // error
+
+                if(!filters[numFilters-1]) {
+                    qsAppDestroy(app);
+                    return 1; // error
+                }
 
                 // next
                 arg = 0;
@@ -597,7 +601,10 @@ int main(int argc, const char * const *argv) {
 
                 controllers[numControllers-1] = qsAppControllerLoad(app,
                         arg, name, fargc, (const char **) fargv);
-                if(!controllers[numControllers-1]) return 1; // error
+                if(!controllers[numControllers-1]) {
+                    qsAppDestroy(app);
+                    return 1; // error
+                }
 
                 // next
                 arg = 0;
@@ -616,8 +623,10 @@ int main(int argc, const char * const *argv) {
                     fprintf(stderr, "Bad --controller-help option\n\n");
                     return usage(STDERR_FILENO);
                 }
-                return qsControllerPrintHelp(arg, stdout);
-
+                if(!app) {
+                    app = qsAppCreate();
+                }
+                return qsAppControllerPrintHelp(app, arg, stdout);
 
             case 'R':
 

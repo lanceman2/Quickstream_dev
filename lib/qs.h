@@ -185,8 +185,7 @@ struct QsScriptControllerLoader {
     // like the C/C++ controllers, but they are script (python) wrappers.
     void *dlhandle;
 
-    void *(*loadControllerScript)(
-            const char *path, int argc, const char **argv);
+    void *(*loadControllerScript)(const char *path, struct QsApp *app);
 
     char *scriptName;
     char *scriptSuffix;

@@ -84,9 +84,13 @@ class QsFilter {
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
+static class QsFilter *f;
+
 extern "C" {
 
-static class QsFilter *f;
+// We wrap all the C++ class QsFilter base methods with C wrapper
+// functions.  And so the libquickstream filter module loader will
+// just call these C wrappers, and that's how it works.
 
 int input(void *buffers[], const size_t lens[],
         const bool isFlushing[],

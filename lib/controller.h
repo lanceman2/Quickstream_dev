@@ -11,4 +11,4 @@
 extern
 void *
 GetUniqueControllerHandle(struct QsApp *app, void **dlhandle,
-        const char path);
+        const char *path);

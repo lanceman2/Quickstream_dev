@@ -17,6 +17,7 @@
 #include "Dictionary.h"
 #include "qs.h"
 #include "LoadDSOFromTmpFile.h"
+#include "controller.h"
 
 
 // Used to find which Controller module calling functions in the
@@ -88,8 +89,8 @@ CheckLoadScriptLoader(struct QsApp *app, const char *loaderModuleName) {
         goto fail;
     }
     dlerror(); // clear error
-    void *(*loadControllerScript)(const char *path, int argc,
-            const char **argv) = dlsym(dlhandle, "loadControllerScript");
+    void *(*loadControllerScript)(const char *, struct QsApp *) =
+        dlsym(dlhandle, "loadControllerScript");
     err = dlerror();
     if(err) {
         ERROR("Module at path=\"%s\" no loadControllerScript() provided:"
@@ -223,6 +224,7 @@ int FindControllerCallback(const char *key, struct QsController *c,
     return 0;
 }
 
+
 // Make sure the dlhandle is not in the list of controllers in app.
 void *
 GetUniqueControllerHandle(struct QsApp *app,  void **dlhandle,
@@ -244,20 +246,74 @@ GetUniqueControllerHandle(struct QsApp *app,  void **dlhandle,
 }
 
 
-int qsControllerPrintHelp(const char *fileName, FILE *f) {
+// Get a dlhandle to a pythonController.
+// If successful replace the path_ret with the path used to the python
+// script.
+//
+static void *
+GetPythonControllerScriptHandle(struct QsApp *app, const char *fileName,
+        char **path_ret) {
+
+    struct QsScriptControllerLoader *loader =
+        CheckLoadScriptLoader(app, "pythonControllerLoader");
+    if(!loader)
+        return 0;
+
+    // This is not a loadable DSO (dynamic share object) plugin.
+    // And so, it's not a regular compiled DSO from C or C++.
+
+    char *path = strdup(fileName);
+    size_t len = strlen(path);
+    if(len > 3 && path[len-1] == 'y' && path[len-2] == 'p' &&
+            path[len-3] == '.')
+        // Python does not like the .py suffix in the python
+        // module filename.
+        path[len-3] = '\0';
+
+    // If this is a usable thing:
+    // This may be a python module.  That's what we define, at this
+    // point as the only known option.
+    // If that's the case, we need to consider looking for a file with
+    // the .py suffix.
+    //
+    // But first we need to have plugin that loads python plugins.
+    // Sounds indirect and it is.  We needed to keep quickstream from
+    // requiring python.  Python is optional.  quickstream can run
+    // without python being installed.
+    //
+    void *dlhandle = loader->loadControllerScript(path, app);
+    if(path_ret) {
+        if(*path_ret)
+            free(*path_ret);
+        *path_ret = path;
+    } else
+        free(path);
+    return dlhandle;
+}
+
+
+
+int qsAppControllerPrintHelp(struct QsApp *app,
+        const char *fileName, FILE *f) {
 
     if(f == 0) f = stderr;
 
     char *path = GetPluginPath(MOD_PREFIX, "controllers/",
             fileName, ".so");
 
+    // CASE DSO
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    if(!handle)
+        // CASE Python module
+        handle = GetPythonControllerScriptHandle(app, fileName, 0);
+
 
     if(!handle) {
         ERROR("Failed to dlopen(\"%s\",): %s", path, dlerror());
         free(path);
         return 1; // error
     }
+    free(path);
 
     dlerror(); // clear error
     void (*help)(FILE *) = dlsym(handle, "help");
@@ -271,11 +327,10 @@ int qsControllerPrintHelp(const char *fileName, FILE *f) {
         return 1; // error
     }
 
-    fprintf(f, "\ncontroller path=%s\n\n", path);
+    fprintf(f, "\n---- %s help ----\n\n", fileName);
     help(f);
 
     dlclose(handle);
-    free(path);
     return 0; // success
 }
 
@@ -384,7 +439,6 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         // Could not get a unique dlhandle.
         goto cleanup; // fail
 
-
     if(!dlhandle) {
 
         // Okay the loading a DSO failed, so lets see if this is a
@@ -396,39 +450,10 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         // Like LUA.
         //
 
-        // CASE PYTHON:
+        // try CASE PYTHON module:
         //
-        struct QsScriptControllerLoader *loader = 
-            CheckLoadScriptLoader(app, "pythonControllerLoader");
-        if(!loader)
-            goto cleanup;
-
-        // This is not a loadable DSO (dynamic share object) plugin.
-        // And so, it's not a regular compiled DSO from C or C++.
-        free(path); // We'll reuse path as the python module file.
-
-        // Python 3.8.2 BUG: Py_Initialize() and Py_InitializeEx() require
-        // the PYTHONPATH environment variable to be set or we cannot run
-        // any python script from C.
-        path = strdup(fileName);
-        size_t len = strlen(path);
-        if(len > 3 && path[len-1] == 'y' && path[len-2] == 'p' &&
-                path[len-3] == '.')
-            // Python does not like the .py suffix in the python
-            // module filename.
-            path[len-3] = '\0';
-
-        // If this is a usable thing:
-        // This may be a python module.  That's what we define, at this
-        // point, as the only none failure option.
-        // If that's the case, we need to consider looking for a file with
-        // the .py suffix.
-        //
-        // But first we need to have plugin that loads python plugins.
-        // Sounds indirect and it is.  We needed to keep quickstream from
-        // requiring python.  Python is optional.  quickstream can run
-        // without python being installed.
-        if(!(dlhandle = loader->loadControllerScript(path, argc, argv)))
+        dlhandle = GetPythonControllerScriptHandle(app, fileName, &path);
+        if(!dlhandle)
             goto cleanup;
     }
 

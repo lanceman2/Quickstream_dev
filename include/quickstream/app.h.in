@@ -188,7 +188,8 @@ int qsControllerUnload(struct QsController *controller);
  * \return 0 is help() is found and called.
  */
 extern
-int qsControllerPrintHelp(const char *filename, FILE *file);
+int qsAppControllerPrintHelp(struct QsApp *app, const char *filename,
+        FILE *file);
 
 
 

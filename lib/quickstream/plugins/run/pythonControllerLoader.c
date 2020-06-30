@@ -27,6 +27,34 @@
  * TODO: How do the compiled .pyc files come about?
  * Can we use them?  Are they always in the same directory
  * as the .py files?
+ *
+ *
+ *************************************************************************
+ *
+ *  Why do we have pythonControllerLoader.so and pythonController.so?
+ *
+ *************************************************************************
+ *
+ *  We needed a controller from pythonController.so for each Python module
+ *  that is loaded.   Each loaded pythonController.so has it's own C state
+ *  data that is associated with the python file that it loads.  This
+ *  makes each loaded pythonController.so run independently with different
+ *  C global data and that's simpler than code that keeps lists of the
+ *  loaded objects.  The plugin DSO lists is already taken care of in
+ *  QsApp.  We do not need to write that functionality again.   The cost
+ *  is loading another module DSO file, but the total code written is
+ *  less; and it could be argued that it is less complex.
+ *
+ *  We needed there to be one code that initializes the python
+ *  interrupter, that being pythonControllerLoader.so.
+ *  pythonControllerLoader.so is just one version of a controller script
+ *  loader.   We plan to make other controller script loaders, like for
+ *  example one that can load LUA.  LUA may be better than python for this
+ *  kind of stuff: https://www.lua.org/  Lua is a lightweight, high-level,
+ *  multi-paradigm programming language designed primarily for embedded
+ *  use in applications.  Python is clearly not lightweight.
+ *
+ *************************************************************************
  */
 
 #include <string.h>
@@ -48,6 +76,8 @@
 #include "../../../Dictionary.h"
 #include "../../../qs.h"
 #include "../../../LoadDSOFromTmpFile.h"
+#include "../../../controller.h"
+
 
 // This file provides the scriptControllerLoader interface
 // which we define in this header file:
@@ -55,7 +85,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-
+#if 0
 // Returns malloc allocated memory that must be free()ed.
 static char *
 GetInstalledControllerPath(const char *suffix) {
@@ -100,66 +130,17 @@ GetInstalledControllerPath(const char *suffix) {
 
     return buf;
 }
+#endif
 
 
-static void
-SetEnvPythonPath(void) {
+// List of Python controller modules loaded
+static
+struct ModuleList *moduleList = 0;
 
-    // Python 3.8.2 BUG: Py_Initialize() and Py_InitializeEx() require the
-    // PYTHONPATH environment variable to be set or we cannot run any
-    // python script from C.  It will not even let us use the full path of
-    // the python script file.  We figured this out the hard way by trial
-    // and error.
-
-    // We concatenate env variables in this order: ., $QS_MODULE_PATH,
-    // $QS_CONTROLLER_PATH, $PYTHONPATH, and then
-    // PATH_TO_THE_RUNNING_PROGRAM/../lib/quickstream/plugins/controllers
-    // where PATH_TO_THE_RUNNING_PROGRAM comes from
-    // readlink(\"/proc/self/exe\",,); we put all them together with a ';'
-    // separator in PYTHONPATH.
-    //
-    // TODO: Given this python BUG, if the full path of the python script
-    // is given this is not likely to work.
-
-    char *modEnv = getenv("QS_MODULE_PATH");
-    char *conEnv = getenv("QS_CONTROLLER_PATH");
-    char *pyEnv = getenv("PYTHONPATH");
-    char *instPath = GetInstalledControllerPath(
-            "/lib/quickstream/plugins/controllers");
-
-    size_t len = 2;
-    if(modEnv) len += strlen(modEnv) + 1;
-    if(conEnv) len += strlen(conEnv) + 1;
-    if(pyEnv) len += strlen(pyEnv) + 1;
-    len += strlen(instPath) + 1;
-
-    char *pyPath = malloc(len);
-    char *mem = pyPath;
-    ASSERT(pyPath, "malloc(%zu) failed", len);
-
-    *(pyPath++) = '.';
-
-    if(modEnv)
-        pyPath += sprintf(pyPath, ":%s", modEnv);
-    if(conEnv)
-        pyPath += sprintf(pyPath, ":%s", conEnv);
-     if(pyEnv)
-        pyPath += sprintf(pyPath, ":%s", pyEnv);
-    sprintf(pyPath, ":%s", instPath);
-
-    ASSERT(setenv("PYTHONPATH", mem, 1) == 0);
-
-    WARN("PYTHONPATH=\"%s\"", mem);
-
-    free(mem);
-    free(instPath);
-}
 
 
 // This gets called once.
 int initialize(void) {
-
-    SetEnvPythonPath();
 
     size_t l = 0;
     wchar_t *programName = Py_DecodeLocale("quickstream", &l);
@@ -169,8 +150,6 @@ int initialize(void) {
     // Py_Initialize() will not work, we need to keep python from
     // catching signals, and Py_InitializeEx(0) does that.
     Py_InitializeEx(0);
-
-    PyEval_InitThreads();
 
     return 0; // success
 }
@@ -182,8 +161,7 @@ int initialize(void) {
 // that is pythonController.so.  pythonController.so will wrap the
 // python script file in path.
 //
-void *loadControllerScript(const char *pyPath, int argc,
-        const char **argv) {
+void *loadControllerScript(const char *pyPath, struct QsApp *app) {
 
     DASSERT(pyPath);
     DASSERT(pyPath[0]);
@@ -195,28 +173,42 @@ void *loadControllerScript(const char *pyPath, int argc,
             "pythonController", ".so");
     void *dlhandle = dlopen(dsoPath, RTLD_NOW | RTLD_LOCAL);
 
-    if(!dlhandle) {
+    if(dlhandle && 
+            // This will load a tmp copy if it has too, to make it a
+            // unique dlhandle.  dlopen() will return the same handle if
+            // it loads the same file again.
+            !(dlhandle = GetUniqueControllerHandle(app,
+                    &dlhandle, dsoPath))) {
         ERROR("dlopen(\"%s\",) failed: %s", dsoPath, dlerror());
         goto fail;
     }
 
     INFO("loaded \"%s\"", dsoPath);
 
-    // Call pyInit(pyPath) so it may get the python script loaded and
-    // ready.
+    // Call pyInit(pyPath, dict) so it may get the python script loaded
+    // and ready.
     dlerror(); // clear error
-    int (*pyInit)(const char *) = dlsym(dlhandle, "pyInit");
+    int (*pyInit)(const char *, struct ModuleList **) =
+        dlsym(dlhandle, "pyInit");
     char *err = dlerror();
     if(err) {
         ERROR("dlsym(,\"pyInit\") failed: %s", err);
         goto fail;
     }
 
-    if(pyInit(pyPath))
+    if(pyInit(pyPath, &moduleList))
         goto fail;
 
     free(dsoPath);
 
+    // This returned handle will be the controller handle that with have
+    // the standard controller functions: construct(), destroy(),
+    // preStart(), postStart(), preStop(), postStop(), and help().
+    // 
+    // This returned handle the loaded DSO is just like all the other controllers
+    // DSO plugins.  The difference is that there can be only one
+    // pythonControllerLoader.so that is loaded, because there can only be
+    // one Python interpreter.
     return dlhandle;
 
 fail:
@@ -236,6 +228,10 @@ void cleanup(void) {
     // thing we'll likely be exiting the program soon after this.
     //
     Py_FinalizeEx();
+
+    DASSERT(moduleList == 0,
+            "All the python controller modules "
+            "have not been unloaded");
 
     INFO();
 }

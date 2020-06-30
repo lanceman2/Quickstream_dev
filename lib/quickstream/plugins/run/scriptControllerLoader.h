@@ -6,6 +6,6 @@
 
 int initialize(void);
 
-void *loadControllerScript(const char *path, int argc, const char **argv);
+void *loadControllerScript(const char *path, struct QsApp *app);
 
 void cleanup(void);

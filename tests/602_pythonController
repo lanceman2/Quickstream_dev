@@ -6,10 +6,11 @@ source testsEnv
 
 
 set -x
-$QS_RUN -v 4\
+$QS_RUN -v 5\
  -C bytesCounter { --report-period 0.03 }\
  -C bytesRate\
- -C pythonMonitor.py\
+ -C tests/hello { --foo bar }\
+ -C tests/hello.py { --name hellO --call 88 }\
  -f tests/sequenceGen.so {\
  --maxWrite 1000\
  --length 80003 }\
