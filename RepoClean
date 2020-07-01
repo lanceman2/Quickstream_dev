@@ -173,6 +173,10 @@ cd -
 rm -rf tests/qb_build/ tests/filters/qb_build/ tests/tests
 rm -f tests/*.tmp tests/filters/my_stdout.so
 
+# Remove files from running tests
+rm -rf lib/quickstream/plugins/controllers/tests/__pycache__/
+
+
 
 # Remove some files from tests/interactive_tests/
 

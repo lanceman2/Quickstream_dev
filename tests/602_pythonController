@@ -4,6 +4,19 @@ set -e
 
 source testsEnv
 
+if [ ! -x ../lib/quickstream/plugins/run/pythonController.so ] ; then
+
+    cat << EOF
+
+  Python 3.8 library was not found.
+
+  So we make this test pass by default.
+
+$0 SUCCESS
+EOF
+    exit
+fi
+
 
 set -x
 $QS_RUN -v 5\
