@@ -330,23 +330,34 @@ quickstream just provides a data streaming utility.  So if you put the
 wrong type of data into your pipe-line, you get what you pay for.  The API
 (application programming interface) is also minimalistic, in that you do
 not need to waste so much time figuring out what functions and/or classes
-to use to do a particular task, the choose should be obvious.
+to use to do a particular task, the choose should be obvious (at this
+level).
 
-The intent is to construct a flow stream of filters.  The filters do not
-necessarily concern themselves with their neighboring filters; the filters
-just read input from input ports and write output to output ports, not
-necessarily knowing what is writing to them or what is reading from them;
-at least that is the mode of operation at this protocol (quickstream API)
-level.  The user may add more structure to that if they need to.  It's
-like the other UNIX abstractions like sockets, file streams, and pipes, in
-that the type of data is of no concern in this quickstream APIs.
+The intent is to construct a flow stream between filters.  The filters do
+not necessarily concern themselves with their neighboring filters; the
+filters just read input from input ports and write output to output ports,
+not necessarily knowing what is writing to them or what is reading from
+them; at least that is the mode of operation at this protocol (quickstream
+API) level.  The user may add more structure to that if they need to.
+It's like the other UNIX abstractions like sockets, file streams, and
+pipes, in that the type of data is of no concern in this quickstream
+API.
+
+The default implementation a "quickstream" program runs as a single
+process and an on the fly adjustable number of worker threads.  The user
+may restrict the number of worker threads at or below a user specified
+maximum, which may be zero.  Having zero worker threads means that the
+main thread will run the stream flow.  Having one worker thread means that
+the one worker thread, only, will run the stream flow; but in that case
+the main thread will be available for other tasks while the stream is
+flowing/running.
 
 
 ## Terminology
 
 ### Stream
 
-The directed graph that data flows in.  
+The directed graph that data flows in.   Nodes in the graph are called filters.
 
 
 #### Stream states
