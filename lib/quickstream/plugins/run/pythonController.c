@@ -77,12 +77,14 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
     if(result) {
         int ret = (int) PyLong_AsLong(result);
 
+#if 0
         if(ret == -1) {
             PyObject *ex = PyErr_Occurred();
             if(ex){
                 // Python exceptions suck.
                 //
-                // TODO: check exception was "no return value".
+                // TODO: check exception was "no return value" or
+                // something like that.
                 //
                 // This will happen if no value was returned from calling
                 // the python function.  Set the default return value,
@@ -93,6 +95,7 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
                         " this.  No int returned from Python function");
             }
         }
+#endif
 
         if(ret) {
             FreePyFunc(pFunc);

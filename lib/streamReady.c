@@ -359,66 +359,97 @@ SetupInputPorts(struct QsStream *s, struct QsFilter *f, bool ret) {
 }
 
 
+// For calling the controllers callbacks:
+//
+//   preStart()
+//   postStart()
+//   preStop()
+//   postStop()
+//
+//
+//  Callback return value:
+//
+//    >= 2   stop calling the callbacks for the rest of the filters
+//           and remove the callback for the rest of the program.
+//
+//    = 1    stop calling the callback for the rest of the filters 
+//
+//    = 0    keep calling with the next filter.
+//
+//    <= -1  bail the program error, stop calling and etc.
+//
+// Returns false to keep going.
+// Returns true to bail on the running program.
+//
 static inline
-int preStop_callback(struct QsController *c, struct QsStream *s) {
+bool pSt_callback(struct QsController *c, struct QsStream *s,
+        const char *funcName,  uint32_t type,
+        int (*func)(struct QsStream *, struct QsFilter *,
+            uint32_t, uint32_t),
+        int (**funcHdl)(struct QsStream *, struct QsFilter *,
+            uint32_t, uint32_t)) {
 
-    if(c->preStop) {
+    if(!func) return false; // no callback to call.
 
-        DASSERT(c->mark == 0);
-        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
-        c->mark = _QS_IN_PRESTOP;
-        CHECK(pthread_setspecific(_qsControllerKey, c));
+    DASSERT(c->mark == 0);
+    DASSERT(pthread_getspecific(_qsControllerKey) == 0);
+    c->mark = type;
+    CHECK(pthread_setspecific(_qsControllerKey, c));
 
-        int ret = 0;
+    int ret = 0;
 
-        for(struct QsFilter *f=s->filters; f; f = f->next) {
-            ret = c->preStop(s, f, f->numInputs, f->numOutputs);
-            if(ret)
-                break;
-        }
-
-        CHECK(pthread_setspecific(_qsControllerKey, 0));
-        c->mark = 0;
-
-        if(ret < 0) {
-            ERROR("Controller \"%s\" preStop() returned (%d) error",
-                    c->name, ret);
-            ASSERT(0, "Write more code here to handle this error case");
-        }
+    for(struct QsFilter *f=s->filters; f; f = f->next) {
+        ret = func(s, f, f->numInputs, f->numOutputs);
+        if(ret)
+            break;
     }
-    return 0;
+
+    CHECK(pthread_setspecific(_qsControllerKey, 0));
+    c->mark = 0;
+
+    if(ret < 0) {
+        ERROR("Controller \"%s\"::%s() returned (%d) error",
+                c->name, funcName, ret);
+        ASSERT(0, "Write more code here to handle this error case");
+        // We need the caller to handle this error.
+        return true;
+    }
+
+    if(ret > 2) {
+        // Non fatal "remove the callback" return value.
+        NOTICE("Removing %s::%s() callback", c->name,
+                funcName);
+        // signal to remove this callback.
+        *funcHdl = 0;
+    }
+    return false;
 }
 
 
 static inline
-int postStop_callback(struct QsController *c, struct QsStream *s) {
-
-    if(c->postStop) {
-
-        DASSERT(c->mark == 0);
-        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
-        c->mark = _QS_IN_POSTSTOP;
-        CHECK(pthread_setspecific(_qsControllerKey, c));
-
-        int ret = 0;
-
-        for(struct QsFilter *f=s->filters; f; f = f->next) {
-            ret = c->postStop(s, f, f->numInputs, f->numOutputs);
-            if(ret)
-                break;
-        }
-
-        CHECK(pthread_setspecific(_qsControllerKey, 0));
-        c->mark = 0;
-
-        if(ret < 0) {
-            ERROR("Controller \"%s\" postStop() returned (%d) error",
-                    c->name, ret);
-            ASSERT(0, "Write more code here to handle this error case");
-        }
-    }
-    return 0;
+bool preStop_callback(struct QsController *c, struct QsStream *s) {
+    return pSt_callback(c, s, "preStop", _QS_IN_PRESTOP,
+            c->preStop, &(c->preStop));
 }
+
+static inline
+bool postStop_callback(struct QsController *c, struct QsStream *s) {
+    return pSt_callback(c, s, "postStop", _QS_IN_POSTSTOP,
+            c->postStop, &(c->postStop));
+}
+
+static inline
+bool preStart_callback(struct QsController *c, struct QsStream *s) {
+    return pSt_callback(c, s, "preStart", _QS_IN_PRESTART,
+            c->preStart, &(c->preStart));
+}
+
+static inline
+bool postStart_callback(struct QsController *c, struct QsStream *s) {
+    return pSt_callback(c, s, "postStart", _QS_IN_POSTSTART,
+            c->postStart, &(c->postStart));
+}
+
 
 
 struct ControllerCallbackRemover {
@@ -550,69 +581,6 @@ int qsStreamStop(struct QsStream *s) {
 
     return 0; // success
 }
-
-
-static
-int preStart_callback(struct QsController *c, struct QsStream *s) {
-
-    if(c->preStart) {
-
-        DASSERT(c->mark == 0);
-        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
-        c->mark = _QS_IN_PRESTART;
-        CHECK(pthread_setspecific(_qsControllerKey, c));
-
-        int ret = 0;
-
-        for(struct QsFilter *f=s->filters; f; f = f->next) {
-            ret = c->preStart(s, f, f->numInputs, f->numOutputs);
-            if(ret)
-                break;
-        }
-
-        CHECK(pthread_setspecific(_qsControllerKey, 0));
-        c->mark = 0;
-
-        if(ret < 0) {
-            ERROR("Controller \"%s\" preStart() returned (%d) error",
-                    c->name, ret);
-            ASSERT(0, "Write more code here to handle this error case");
-        }
-    }
-    return 0;
-}
-
-
-static
-int postStart_callback(struct QsController *c, struct QsStream *s) {
-
-    if(c->postStart) {
-
-        DASSERT(c->mark == 0);
-        DASSERT(pthread_getspecific(_qsControllerKey) == 0);
-        c->mark = _QS_IN_POSTSTART;
-        CHECK(pthread_setspecific(_qsControllerKey, c));
-
-        int ret = 0;
-
-        for(struct QsFilter *f=s->filters; f; f = f->next) {
-            ret = c->postStart(s, f, f->numInputs, f->numOutputs);
-            if(ret)
-                break;
-        }
-
-        CHECK(pthread_setspecific(_qsControllerKey, 0));
-        c->mark = 0;
-
-        if(ret < 0) {
-            ERROR("Controller \"%s\" postStart() returned (%d) error",
-                    c->name, ret);
-            ASSERT(0, "Write more code here to handle this error case");
-        }
-    }
-    return 0;
-}
-
 
 
 int qsStreamReady(struct QsStream *s) {
