@@ -92,7 +92,7 @@ recommend installing all three, otherwise some of the make/build scripts
 may fail.
 
 If you do not currently have a particular application that you need to
-make and/or you are not in the final optimising of your application, we
+make and/or you are not in the final optimizing of your application, we
 recommend just installing all of these packages.  Then you will not have
 as much unexpected heart ache, at the cost of installing some packages,
 most of which you likely already have if you've got to this point in
@@ -290,7 +290,7 @@ filter streams.  quickstream does not consider channels between filters to
 be typed.
 
 
-## Restricting filters modules leads to user control and runtime optimisation
+## Restricting filters modules leads to user control and runtime optimization
 
 quickstream restricts filter interfaces so that it may provide an
 abstraction layer so that it may vary how it distributes threads and
