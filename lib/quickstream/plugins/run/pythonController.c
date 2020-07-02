@@ -4,6 +4,14 @@
 // This module should be able to work with more than one stream running.
 
 
+// You've got to know what threads call what function in this file.  There
+// is the main thread calls construct() and destroy(), and there are an
+// arbitrary number of worker threads calling *Start() and *Stop().  So
+// ya, more to it then it looks.  You must know the quickstream thread/run
+// model and the Python interpter thread/run model, the infamous Python
+// Global Interpreter Lock (GIL).
+
+
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,12 +34,105 @@
 #include "../../../qs.h"
 
 // pythonController.h declares interface functions that the
-// pythonControllerLoader will use that we define in this file;
-// in addition to the common controller interface functions.
+// pythonControllerLoader will use that we define in this file; in
+// addition to the common controller interface functions: help(),
+// contruct(), destroy(), preStart(), postStart(), preStop(), and
+// postStop().
 #include "pythonController.h"
 
 
 static PyObject *pModule = 0;
+
+// Pointers to python callback functions that the module can optionally
+// implement.  They are 0 is they are not implemented.
+//
+static PyObject *pPreStartFunc = 0;
+static PyObject *pPostStartFunc = 0;
+static PyObject *pPreStopFunc = 0;
+static PyObject *pPostStopFunc = 0;
+
+
+static inline
+PyObject *GetPyFunc(const char *name) {
+    PyObject *pFunc = PyObject_GetAttrString(pModule, name);
+    if(pFunc && !PyCallable_Check(pFunc)) {
+        Py_DECREF(pFunc);
+        return 0;
+    }
+    return pFunc;
+}
+
+static inline void FreePyFunc(PyObject *pFunc) {
+    if(pFunc) Py_DECREF(pFunc);
+}
+
+
+static int
+CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
+
+    DASSERT(pFunc);
+    DASSERT(pFuncHdl);
+
+    PyObject *result = PyObject_CallObject(pFunc, (PyObject *) args);
+    if(result) {
+        int ret = (int) PyLong_AsLong(result);
+
+        if(ret == -1) {
+            PyObject *ex = PyErr_Occurred();
+            if(ex){
+                // Python exceptions suck.
+                //
+                // TODO: check exception was "no return value".
+                //
+                // This will happen if no value was returned from calling
+                // the python function.  Set the default return value,
+                // since the python did not return anything.
+                ret = 0;
+                ERROR();
+                ASSERT(0, "This code can't deal with"
+                        " this.  No int returned from Python function");
+            }
+        }
+
+        if(ret) {
+            FreePyFunc(pFunc);
+            *pFuncHdl = 0;
+        }
+
+        NOTICE("Python func() returned %d", ret);
+        Py_DECREF(result);
+        return ret;
+    }
+
+    // If this was no return value we default to keep calling
+    // the callback.
+    return 0;
+}
+
+int preStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
+    if(!pPreStartFunc) return 1; // remove callback
+    return CallPyFunc(pPreStartFunc, 0, &pPreStartFunc);
+}
+
+int postStart(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
+    if(!pPostStartFunc) return 1; // remove callback
+    return CallPyFunc(pPostStartFunc, 0, &pPostStartFunc);
+}
+
+int preStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
+    if(!pPreStopFunc) return 1; // remove callback
+    return CallPyFunc(pPreStopFunc, 0, &pPreStopFunc);
+}
+
+int postStop(struct QsStream *stream, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
+    if(!pPostStopFunc) return 1; // remove callback
+    return CallPyFunc(pPostStopFunc, 0, &pPostStopFunc);
+}
+
 
 #define DIR_SEP '/'
 
@@ -143,22 +244,25 @@ PyObject *LoadTmpCopy(const char *path) {
 }
 
 
-// Note: Only the main thread will access this pointer.
+// Note: Only the main thread will write this pointer.  Others can only
+// read it (???).
 //
 static
 struct ModuleList **moduleList = 0;
 
 
-// This is a C quickstream controller module with one extra method,
-// pyInit().  We could have gotten the python module file from the
-// construct() arguments, but then this would have the interface of a
-// regular quickstream plugin DSO and this is not a regular quickstream
-// plugin DSO.  This can't work as a regular quickstream plugin DSO, since
-// the Python interpreter must be initialize before calling this.
+// This is a C quickstream controller module with one extra method
+// exposed, pyInit().  We could have gotten the python module file from
+// the construct() arguments, but then this would NOT have the interface
+// of a regular quickstream plugin DSO (dynamic shared object), and so,
+// this is not quite a regular quickstream plugin DSO.  This can't work as
+// a regular quickstream plugin DSO, since the Python interpreter must be
+// initialized before calling this.
 //
 // We don't have this DSO plugin initialize the Python interpreter so that
 // this DSO is closer to being a regular controller DSO with separate
-// global C data, that can be loaded many times as temporary copies.
+// global C data, that can be loaded many times using temporary copies, as
+// we do with regular C DSO plugins.
 //
 int pyInit(const char *moduleName, struct ModuleList **moduleList_in) {
 
@@ -213,6 +317,7 @@ void help(FILE *file) {
 
     if(pFunc && PyCallable_Check(pFunc)) {
         PyObject *pValue = PyObject_CallObject(pFunc, 0);
+
         WARN();
         if(pValue)
             Py_DECREF(pValue);
@@ -227,22 +332,26 @@ void help(FILE *file) {
 }
 
 
-
 // https://stackoverflow.com/questions/21031856/python-embedding-passing-list-from-c-to-python-function
 // Generic controller interface construct() function.
 //
 int construct(int argc, const char **argv) {
 
+    pPreStartFunc = GetPyFunc("preStart");
+    pPostStartFunc = GetPyFunc("postStart");
+    pPreStopFunc = GetPyFunc("preStop");
+    pPostStopFunc = GetPyFunc("postStop");
+
     PyObject *pFunc = PyObject_GetAttrString(pModule, "construct");
 
     int ret = 0; // default return value.
-    
+
     if(pFunc && PyCallable_Check(pFunc)) {
     
         // args = [ arglist ] = [[argv[0], argv[1], ...]]
         PyObject *args = PyList_New(argc);
         ASSERT(args);
-        for (Py_ssize_t i = 0; i < argc; ++i) {
+        for(Py_ssize_t i = 0; i < argc; ++i) {
             PyObject *item = PyUnicode_FromString(argv[i]);
             // arg steals the reference to item, so we do not Py_DECREF()
             // it.
@@ -267,17 +376,15 @@ int construct(int argc, const char **argv) {
 }
 
 
-int postStart(struct QsStream *stream, struct QsFilter *f,
-        uint32_t numInports, uint32_t numOutports) {
-
-
-    return 1; // > 0  means do not call again until another start.
-}
-
 
 // Generic controller interface destroy() function.
 //
 int destroy(void) {
+
+    FreePyFunc(pPreStartFunc);
+    FreePyFunc(pPostStartFunc);
+    FreePyFunc(pPreStopFunc);
+    FreePyFunc(pPostStopFunc);
 
     if(pModule) {
         DASSERT(*moduleList);
