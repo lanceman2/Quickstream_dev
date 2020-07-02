@@ -15,6 +15,10 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
     be a one python.so filter loaded per .py each filter, unlike the
     python controllers.
 
+- passing FILE to python controller help() function.  Currently is just
+  assumes that file is stdout using print.  This will always work for the
+  current quickstream binary, but the API let you use FILE being any
+  (libc) stream file.
 
 - What does full duplex look like in this "stream paradigm".
 

@@ -91,7 +91,8 @@ GetPyModule(char *path_in) {
 static
 PyObject *LoadTmpCopy(const char *path) {
 
-    INFO("Python script from %s was loaded before, loading a copy", path);
+    INFO("Python script from %s was loaded before, "
+            "loading a copy", path);
     char tmpFilename[63];
     strcpy(tmpFilename, "/tmp/qs_XXXXXX.py");
     int tmpFd = mkstemps(tmpFilename, 3);
@@ -164,7 +165,8 @@ int pyInit(const char *moduleName, struct ModuleList **moduleList_in) {
     moduleList = moduleList_in;
 
     WARN("moduleName=\"%s\"", moduleName);
-    char *modPath = GetPluginPath(MOD_PREFIX, "controllers/", moduleName, ".py");
+    char *modPath = GetPluginPath(MOD_PREFIX, "controllers/",
+            moduleName, ".py");
 
     pModule = GetPyModule(modPath);
 

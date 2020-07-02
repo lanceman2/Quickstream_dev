@@ -122,21 +122,30 @@ _quickstream()
     local mods=()
 
     for mod_dir in ${mod_dirs[@]} ; do
-        for i in $mod_dir/*.so ; do
-            if [ ! -f "$i" ] ; then
-                continue
-            fi
-            mod="$(basename ${i%%.so})" || return 0
-            mods+=($mod)
-            #echo "mod=${mod}"
-        done
-        for i in $mod_dir/*/*.so ; do
-            if [ ! -f "$i" ] ; then
-                continue
-            fi
-            mod="$(basename $(dirname $i))/$(basename ${i%%.so})" || return 0
-            mods+=($mod)
-            #echo "mod=${mod}"
+        for suf in .py .so ; do
+            for i in $mod_dir/*${suf} ; do
+                if [ ! -f "$i" ] ; then
+                    continue
+                fi
+                # Since we have difference module file types,
+                # it may be good to show the file type via the
+                # suffix, instead of removing the suffix.
+                # We could also have modules with the same name
+                # but with a different suffix (.so or .py).
+                #mod="$(basename ${i%%${suf}})" || return 0
+                mod="$(basename ${i})" || return 0
+                mods+=($mod)
+                #echo "mod=${mod}"
+            done
+            for i in $mod_dir/*/*${suf} ; do
+                if [ ! -f "$i" ] ; then
+                    continue
+                fi
+                #mod="$(basename $(dirname $i))/$(basename ${i%%${suf}})" || return 0
+                mod="$(basename $(dirname $i))/$(basename ${i})" || return 0
+                mods+=($mod)
+                #echo "mod=${mod}"
+            done
         done
     done
 

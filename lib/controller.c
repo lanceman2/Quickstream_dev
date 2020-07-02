@@ -313,7 +313,6 @@ int qsAppControllerPrintHelp(struct QsApp *app,
         free(path);
         return 1; // error
     }
-    free(path);
 
     dlerror(); // clear error
     void (*help)(FILE *) = dlsym(handle, "help");
@@ -326,6 +325,7 @@ int qsAppControllerPrintHelp(struct QsApp *app,
         dlclose(handle);
         return 1; // error
     }
+    free(path);
 
     fprintf(f, "\n---- %s help ----\n\n", fileName);
     help(f);
