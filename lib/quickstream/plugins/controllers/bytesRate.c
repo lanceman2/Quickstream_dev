@@ -51,11 +51,10 @@ void help(FILE *f) {
 "                 stream performance.\n"
 "\n"
 "\n"
-"  --report-period SECONDS  The quickest this will update byte rates\n"
-"                           is the rate had which the byteCounter is\n"
-"                 reported.  The default report period is %lg seconds.\n"
-"                 If the stream runs in a time less than this period\n"
-"                 then you will get no measurements.\n"
+"  --report-period SECONDS  Set the time between reports.  The\n"
+"                           default report period is %lg seconds.\n"
+"                 If the stream runs in a time less than this\n"
+"                 period then you will get no measurements.\n"
 "\n",
     DEFAULT_PERIOD);
 }
