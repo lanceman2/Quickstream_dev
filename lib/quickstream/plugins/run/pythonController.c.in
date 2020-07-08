@@ -151,11 +151,15 @@ int postStop(struct QsStream *stream, struct QsFilter *f,
 //   p = "/home/joe/module"
 //   returns "foo"
 //
+// Or
+//   p = "./foo.py
+//   returns "foo" and p = "."
+//
+//
 static inline
 char *base_dirname(char *p) {
 
     DASSERT(p);
-    DASSERT(p[0] == DIR_SEP);
 
     size_t l = strlen(p);
     DASSERT(l > 3);

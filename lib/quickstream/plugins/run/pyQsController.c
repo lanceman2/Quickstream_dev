@@ -7,10 +7,8 @@
  * python controller modules may call in python.  This is linked with the
  * pythonControllerLoader.so module and so each python controller module
  * that is loaded gets a shared instance of this code.  It's like the code
- * in this file is a singleton, you get one instance of this code.
- *
- * Methods in the python qsController object may make objects that are
- * only accessible in the individual python controller scripts.
+ * in this file is a singleton, you get one instance of this code.  If
+ * distinct data is needed for a python module we must allocate it.
  *
  * PYTHONPATH or calling PySys_SetPath() is not needed to load this
  * module, because it is linked with the running program at run-time in
