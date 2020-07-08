@@ -1,37 +1,48 @@
 import time
+import inspect
+import qsController
 
 count = 0
 
-#def dprint(func, args, ...):
-#    print(__file__ + func + "()" + args)
+def dspew():
+    global count
+    count += 1
+    print(" ++++++++++ Python module " + __file__ + ":" +
+            inspect.stack()[1][3] + "() count=" +
+            repr(count))
 
 
 def help():
-    t = 1
-    while(True):
-        if(t > 6):
-            break
-        t += 1
-        print(" ++++++++++ Hello Python module Help" + repr(t))
+    dspew()
 
 
 def construct(args):
-    global count
-    count += 1
-    print("construct(" + ",".join(args) + ") count=" + repr(count))
+    dspew()
     return 0 # success
 
 
 def preStart():
-    global count
-    count += 1
-    print("+++++++++++++++++++preStart() count=" + repr(count))
+    dspew()
+    print("+++++++++++++++++++preStart() count=" + repr(count) +
+            "numargs=" +
+            repr(qsController.numargs()))
+    return 0
+
+def postStart():
+    dspew()
+    return 0
+
+def preStop():
+    dspew()
+    return 0
+
+def postStop():
+    dspew()
     return 0
 
 
+
 def destroy():
-    global count
-    count += 1
-    print("destroy() count=" + repr(count))
+    dspew()
     return 0 # success
 

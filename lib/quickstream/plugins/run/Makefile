@@ -17,9 +17,14 @@ pythonControllerLoader.so_LDFLAGS := $(PY_LDFLAGS)
 pythonController.so_CPPFLAGS := $(PY_CFLAGS)
 pythonController.so_LDFLAGS := $(PY_LDFLAGS)
 
+PYTHON_BUILTIN_MODULE_PATH :=\
+ $(shell pkg-config python3 --variable=libdir)/python$(shell pkg-config python3 --modversion)
+
+IN_VARS := PYTHON_BUILTIN_MODULE_PATH
+
 
 ifneq ($(PY_LIBDIR),)
-pythonControllerLoader.so_SOURCES := pythonControllerLoader.c
+pythonControllerLoader.so_SOURCES := pythonControllerLoader.c pyQsController.c
 pythonController.so_SOURCES := pythonController.c
 else
 $(warning pkg-config did not find libpython-3.8 -\

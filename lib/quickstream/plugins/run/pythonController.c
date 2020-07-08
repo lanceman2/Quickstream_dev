@@ -1,3 +1,5 @@
+/* This is a generated file */
+
 // quickstream controller module that add a byte counter for every filter
 // input and output port.
 //
@@ -77,6 +79,8 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
     if(result) {
         int ret = (int) PyLong_AsLong(result);
 
+    // TODO: figure out how to see what is returned from the python
+    // function call.
 #if 0
         if(ret == -1) {
             PyObject *ex = PyErr_Occurred();
@@ -111,6 +115,7 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
     // the callback.
     return 0;
 }
+
 
 int preStart(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
@@ -173,6 +178,22 @@ char *base_dirname(char *p) {
 }
 
 
+// Python does not know where to find built-in modules like "inspect" if
+// we call PySys_SetPath() without directories of the installed default
+// python modules.  We see the python "inspect" in
+// /usr/local/Python-3.8.3-try-3/lib/python3.8/inspect.py
+// directory /usr/local/Python-3.8.3-try-3/lib/python3.8
+//
+/* echo "$(pkg-config python3 --variable=libdir)/python$(pkg-config python3\
+ --modversion)"
+
+ We can add to it as the need arises.
+
+ */
+
+#define PYTHON_BUILTIN_MODULE_PATH "/usr/local/encap/Python-3.8.3-try-3/lib/python3.8"
+
+
 static inline
 PyObject *
 GetPyModule(char *path_in) {
@@ -180,14 +201,28 @@ GetPyModule(char *path_in) {
     char *dir = strdup(path_in);
     char *modFile = base_dirname(dir);
 
+    // Setting the environment variable PYTHONPATH must be done
+    // before Py_Initialize*(), so we need to use PySys_SetPath().
+    // setenv("PYTHONPATH", dir, 1);
+
+    char *pypath = malloc(strlen(dir) +
+            strlen(PYTHON_BUILTIN_MODULE_PATH) + 2);
+    ASSERT(pypath, "malloc() failed");
+    sprintf(pypath, "%s:%s", dir, PYTHON_BUILTIN_MODULE_PATH);
+
+    WARN("pypath=\"%s\"", pypath);
+
     // Pain in the ass wide char crap.
-    wchar_t *path = Py_DecodeLocale(dir, 0);
+    wchar_t *path = Py_DecodeLocale(pypath, 0);
     PySys_SetPath(path);
     Py_DECREF(path);
+
     PyObject *pName = PyUnicode_DecodeFSDefault(modFile);
     PyObject *pModule = PyImport_Import(pName);
     Py_DECREF(pName);
+    free(pypath);
     free(dir);
+
     return pModule;
 }
 
@@ -389,6 +424,16 @@ int destroy(void) {
     FreePyFunc(pPreStopFunc);
     FreePyFunc(pPostStopFunc);
 
+    int ret = 0;
+    PyObject *pDestroyFunc = GetPyFunc("destroy");
+
+    if(pDestroyFunc) {
+
+        ret = CallPyFunc(pDestroyFunc, 0, &pDestroyFunc);
+
+        FreePyFunc(pDestroyFunc);
+    }
+
     if(pModule) {
         DASSERT(*moduleList);
         // Remove python module from the list (stack).
@@ -412,5 +457,5 @@ int destroy(void) {
     }
 
     WARN();
-    return 0;
+    return ret;
 }

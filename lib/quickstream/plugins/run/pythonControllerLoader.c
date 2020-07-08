@@ -52,7 +52,8 @@
  *  example one that can load LUA.  LUA may be better than python for this
  *  kind of stuff: https://www.lua.org/  Lua is a lightweight, high-level,
  *  multi-paradigm programming language designed primarily for embedded
- *  use in applications.  Python is clearly not lightweight.
+ *  use in applications.  We don't think that python is as lightweight as
+ *  LUA, and python was not initially designed for embedding like LUA.
  *
  *************************************************************************
  */
@@ -67,6 +68,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 
 // The public installed user interfaces:
 #include "../../../../include/quickstream/app.h"
@@ -77,13 +81,13 @@
 #include "../../../qs.h"
 #include "../../../LoadDSOFromTmpFile.h"
 #include "../../../controller.h"
+#include "pyQsController.h"
 
 
 // This file provides the scriptControllerLoader interface
 // which we define in this header file:
 #include "scriptControllerLoader.h"
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+
 
 #if 0
 // Returns malloc allocated memory that must be free()ed.
@@ -139,13 +143,22 @@ struct ModuleList *moduleList = 0;
 
 
 
-// This gets called once.
+// This gets called once pre quickstream process.
 int initialize(void) {
 
     size_t l = 0;
     wchar_t *programName = Py_DecodeLocale("quickstream", &l);
     Py_SetProgramName(programName);
     PyMem_RawFree(programName);
+
+    // Add the quickstream controller python module API to the python
+    // scripts that are loaded.  The loaded python scripts may call
+    //
+    //   import qsController
+    //
+    // and get the (one) quickstream controller python object.
+    //
+    PyImport_AppendInittab("qsController", &qsPyControllerInitAPI);
 
     // Py_Initialize() will not work, we need to keep python from
     // catching signals, and Py_InitializeEx(0) does that.
@@ -155,7 +168,7 @@ int initialize(void) {
 }
 
 
-// This get called more than once.
+// This gets called more than once.
 //
 // This need to return the handle from dlopen() of a controller module
 // that is pythonController.so.  pythonController.so will wrap the
@@ -204,11 +217,22 @@ void *loadControllerScript(const char *pyPath, struct QsApp *app) {
     // This returned handle will be the controller handle that with have
     // the standard controller functions: construct(), destroy(),
     // preStart(), postStart(), preStop(), postStop(), and help().
+    //
+    // The python module has these functions as an option.
     // 
-    // This returned handle the loaded DSO is just like all the other controllers
-    // DSO plugins.  The difference is that there can be only one
-    // pythonControllerLoader.so that is loaded, because there can only be
-    // one Python interpreter.
+    // This returned handle the loaded DSO is just like all the other
+    // controllers DSO plugins.  The difference is that there can be only
+    // one pythonControllerLoader.so that is loaded, because there can
+    // only be one Python interpreter.  That's just our simple design.
+    //
+    //
+    //     * one interpreter loader: pythonControllerLoader.so, and
+    //
+    //     * one controller loader for each python controller:
+    //       pythonController.so.  It's replicated each time it loads
+    //       a python script.
+    //
+    //
     return dlhandle;
 
 fail:
@@ -235,3 +259,5 @@ void cleanup(void) {
 
     INFO();
 }
+
+

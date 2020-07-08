@@ -43,7 +43,8 @@ sudo apt install\
  doxygen\
  librtlsdr-dev\
  libasound2-dev\
- python3-dev
+ python3-dev\
+ libssl-dev
 ```
 
 Go to the top quickstream source directory:
