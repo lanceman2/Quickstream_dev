@@ -62,6 +62,7 @@ PyObject *GetPyFunc(const char *name) {
     return pFunc;
 }
 
+
 static inline void FreePyFunc(PyObject *pFunc) {
     if(pFunc) Py_DECREF(pFunc);
 }
@@ -189,7 +190,7 @@ char *base_dirname(char *p) {
 /* echo "$(pkg-config python3 --variable=libdir)/python$(pkg-config python3\
  --modversion)"
 
- We can add to it as the need arises.
+    We can add to it as the need arises.
 
  */
 
