@@ -118,6 +118,9 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
 
 int preStart(struct QsStream *stream, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
+
+ERROR();
+
     if(!pPreStartFunc) return 1; // remove callback
     return CallPyFunc(pPreStartFunc, 0, &pPreStartFunc);
 }
@@ -343,7 +346,7 @@ int pyInit(const char *moduleName, struct ModuleList **moduleList_in) {
     l->pModule = pModule;
     *moduleList = l;
 
-    ERROR("Loaded python \"%s\": %p", moduleName, pModule);
+    DSPEW("Loaded python \"%s\": %p", moduleName, pModule);
 
     return 0;
 }
@@ -443,7 +446,6 @@ int destroy(void) {
         struct ModuleList *prev = 0;
         struct ModuleList *l;
         for(l = *moduleList; l; l = l->next) {
-            ERROR("l->next=%p  prev=%p", l->next, prev);
             if(pModule == l->pModule) {
                 if(prev)
                     prev->next = l->next;

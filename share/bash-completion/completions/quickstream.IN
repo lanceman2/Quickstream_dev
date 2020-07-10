@@ -59,8 +59,8 @@ _quickstream()
             modtype=filters
             ;;
 
-        -C|--controllers|-H|--controller-help)
-            # We'll get a list of filters below
+        -C|--controller|-H|--controller-help)
+            # We'll get a list of controllers below
             modtype=controllers
             ;;
 

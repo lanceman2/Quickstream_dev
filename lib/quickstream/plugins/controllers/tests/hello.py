@@ -7,7 +7,7 @@ count = 0
 def dspew():
     global count
     count += 1
-    print(" ++++++++++ Python module " + __file__ + ":" +
+    print("         ++++++++++ Python module " + __file__ + ":" +
             inspect.stack()[1][3] + "() count=" +
             repr(count))
 
