@@ -1,13 +1,18 @@
 
 INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/run
 
-# Looks like python3.8-config is broken.  It seems to assume that the
+# PY_VER := 3.8 or whatever.
+#
+PY_VER := $(shell pkg-config python3 --modversion)
+
+# Looks like python3-config is broken.  It seems to assume that the
 # prefix is always /usr/local
 #
 # Looks like pkg-config may work, but not like it should.
-PY_LIBDIR := $(shell pkg-config python-3.8 --variable=libdir)
-PY_CFLAGS := $(shell pkg-config python-3.8 --cflags)
-PY_LDFLAGS := -L$(PY_LIBDIR) -lpython3.8 -Wl,-rpath -Wl,$(PY_LIBDIR)
+#
+PY_LIBDIR := $(shell pkg-config python-$(PY_VER) --variable=libdir)
+PY_CFLAGS := $(shell pkg-config python-$(PY_VER) --cflags)
+PY_LDFLAGS := -L$(PY_LIBDIR) -lpython$(PY_VER) -Wl,-rpath -Wl,$(PY_LIBDIR)
 
 
 pythonControllerLoader.so_CPPFLAGS := $(PY_CFLAGS)
@@ -18,16 +23,16 @@ pythonController.so_CPPFLAGS := $(PY_CFLAGS)
 pythonController.so_LDFLAGS := $(PY_LDFLAGS)
 
 PYTHON_BUILTIN_MODULE_PATH :=\
- $(shell pkg-config python3 --variable=libdir)/python$(shell pkg-config python3 --modversion)
+ $(shell pkg-config python3 --variable=libdir)/python$(PY_VER)
 
 IN_VARS := PYTHON_BUILTIN_MODULE_PATH
 
 
-ifneq ($(PY_LIBDIR),)
+ifneq ($(PY_VER),)
 pythonControllerLoader.so_SOURCES := pythonControllerLoader.c pyQsController.c
 pythonController.so_SOURCES := pythonController.c
 else
-$(warning pkg-config did not find libpython-3.8 -\
+$(warning pkg-config did not find libpython-VERSION -\
  pythonControllerLoader.so and pythonController.so will not be built)
 endif
 
