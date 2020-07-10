@@ -44,3 +44,6 @@ CPPFLAGS := -DDEBUG -DSPEW_LEVEL_DEBUG
 
 # C compiler option flags
 CFLAGS := -g -Wall -Werror
+
+# C++ compiler option flags
+CXXFLAGS := -g -Wall -Werror

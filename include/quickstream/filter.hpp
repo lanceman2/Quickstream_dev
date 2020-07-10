@@ -118,6 +118,7 @@ int destroy(void) {
 
     delete f;
     f = 0;
+    return 0;
 }
 
 
