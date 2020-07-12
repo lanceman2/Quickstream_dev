@@ -1,18 +1,18 @@
 /*
  * This file provides the C code that extends the "embedded Python"
  * controllers; that is quickstream controllers that are python files that
- * are loaded by quickstream and run as controllers.
+ * are loaded by quickstream and run as controllers.  This so loaded
+ * python scripts may "import pyQsController" to get the python that
+ * this file adds.
+ *
+ * The python code that this file creates is not added to python scripts
+ * without the script calling "import pyQsController".
  *
  * Specifically, this file provides the python callable functions that
- * python controller modules may call in python.  This is linked with the
- * pythonControllerLoader.so module and so each python controller module
- * that is loaded gets a shared instance of this code.  It's like the code
- * in this file is a singleton, you get one instance of this code.  If
- * distinct data is needed for a python module we must allocate it.
+ * python controller modules may call in python.
  *
- * PYTHONPATH or calling PySys_SetPath() is not needed to load this
- * module, because it is linked with the running program at run-time in
- * pythonControllerLoader.so.
+ * The controller DSO pythonController.so adds the directory that this
+ * file is in to the PYTHON PATH (python module searching path).
  *
  *************************************************************************
  */
