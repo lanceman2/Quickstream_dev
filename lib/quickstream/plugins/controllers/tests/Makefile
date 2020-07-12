@@ -31,4 +31,7 @@ $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call makeSOURCES,$(targ),,.c)))
 $(foreach targ,$(BUILD_NO_INSTALL),$(eval $(call ADDlib,$(targ),)))
 
 
+CLEANDIRS := __pycache__
+
+
 include $(root)/quickbuild.make

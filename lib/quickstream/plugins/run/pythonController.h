@@ -17,4 +17,5 @@ struct ModuleList {
 
 // The script wrapper must have this.  This could have python objects
 // added to its' arguments, hence we call it pyInit.
-int pyInit(const char *pyPath, struct ModuleList **moduleList);
+int pyInit(const char *pyPath, struct ModuleList **moduleList,
+        const char *controllerDSODir);

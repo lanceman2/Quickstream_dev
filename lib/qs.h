@@ -164,6 +164,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
+
 // In many cases, especially at stream flow-time, we use a data structure
 // call an array for the fastest possible access to data in these data
 // structures.  The cost of using an array is realloc()ing at
@@ -359,7 +360,7 @@ struct QsStream {
     //
     // We want the use to be able to set this in a signal handler so to
     // not deadlock a mutex we really need atomic setting and getting.
-    atomic_int isSourcing;
+    volatile int isSourcing;
 
     // A Dictionary list of the filters keyed by filter name.
     struct QsDictionary *dict;
@@ -935,9 +936,9 @@ void StreamSetFilterMarks(struct QsStream *s, bool val) {
 
     if(s->numSources) {
         // Case stream has data structures build for running the flow.
-        for(uint32_t i=s->numSources-1; i!=-1; --i)
+        for(uint32_t i=s->numSources-1; i!=((uint32_t)-1); --i)
             s->sources[i]->mark = val;
-        for(uint32_t i=s->numConnections-1; i!=-1; --i)
+        for(uint32_t i=s->numConnections-1; i!=((uint32_t)-1); --i)
             s->connections[i].to->mark = val;
         return;
     }
@@ -996,7 +997,7 @@ void LaunchWorkerThread(struct QsStream *s) {
 
     // Stream does not have its' quota of worker threads.
     DASSERT(s->numThreads < s->maxThreads);
-    struct QsWorkPermit *p = malloc(sizeof(*p));
+    struct QsWorkPermit *p = (struct QsWorkPermit *) malloc(sizeof(*p));
     ASSERT(p, "malloc(%zu) failed", sizeof(*p));
     p->stream = s;
     p->id = (++s->numThreads);

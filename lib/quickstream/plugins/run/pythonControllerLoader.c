@@ -81,60 +81,11 @@
 #include "../../../qs.h"
 #include "../../../LoadDSOFromTmpFile.h"
 #include "../../../controller.h"
-#include "pyQsController.h"
 
 
 // This file provides the scriptControllerLoader interface
 // which we define in this header file:
 #include "scriptControllerLoader.h"
-
-
-#if 0
-// Returns malloc allocated memory that must be free()ed.
-static char *
-GetInstalledControllerPath(const char *suffix) {
-
-    // postLen = strlen("/lib/quickstream/plugins/controllers")
-    const ssize_t postLen = strlen(suffix) + 1;
-    DASSERT(postLen);
-    DASSERT(postLen < 1024*1024);
-
-    ssize_t bufLen = 128 + postLen;
-    char *buf = (char *) malloc(bufLen);
-    ASSERT(buf, "malloc(%zu) failed", bufLen);
-    ssize_t rl = readlink("/proc/self/exe", buf, bufLen);
-    ASSERT(rl > 0, "readlink(\"/proc/self/exe\",,) failed");
-    while(rl + postLen >= bufLen)
-    {
-        DASSERT(bufLen < 1024*1024); // it should not get this large.
-        buf = realloc(buf, bufLen += 128);
-        ASSERT(buf, "realloc() failed");
-        rl = readlink("/proc/self/exe", buf, bufLen);
-        ASSERT(rl > 0, "readlink(\"/proc/self/exe\",,) failed");
-    }
-
-    buf[rl] = '\0';
-    //
-    // Now buf = path to program binary.
-    //
-    // Now strip off to after "/bin/qs_runner" (Linux path separator)
-    // Or "/testing_crap/crap_runner"
-    // by backing up two '/' chars.
-    //
-    --rl;
-    while(rl > 5 && buf[rl] != '/') --rl; // one '/'
-    ASSERT(buf[rl] == '/');
-    --rl;
-    while(rl > 5 && buf[rl] != '/') --rl; // two '/'
-    ASSERT(buf[rl] == '/');
-    buf[rl] = '\0'; // null terminate string
-    // Now add the suffix.
-    // So long as we counted correctly strcat() is safe.
-    strcat(&buf[rl], suffix);
-
-    return buf;
-}
-#endif
 
 
 // List of Python controller modules loaded
@@ -150,15 +101,6 @@ int initialize(void) {
     wchar_t *programName = Py_DecodeLocale("quickstream", &l);
     Py_SetProgramName(programName);
     PyMem_RawFree(programName);
-
-    // Add the quickstream controller python module API to the python
-    // scripts that are loaded.  The loaded python scripts may call
-    //
-    //   import qsController
-    //
-    // and get the (one) quickstream controller python object.
-    //
-    PyImport_AppendInittab("qsController", &qsPyControllerInitAPI);
 
     // Py_Initialize() will not work, we need to keep python from
     // catching signals, and Py_InitializeEx(0) does that.
@@ -201,7 +143,7 @@ void *loadControllerScript(const char *pyPath, struct QsApp *app) {
     // Call pyInit(pyPath, dict) so it may get the python script loaded
     // and ready.
     dlerror(); // clear error
-    int (*pyInit)(const char *, struct ModuleList **) =
+    int (*pyInit)(const char *, struct ModuleList **, const char *) =
         dlsym(dlhandle, "pyInit");
     char *err = dlerror();
     if(err) {
@@ -209,7 +151,19 @@ void *loadControllerScript(const char *pyPath, struct QsApp *app) {
         goto fail;
     }
 
-    if(pyInit(pyPath, &moduleList))
+#define DIR_CHAR  '/'
+
+    // We borrow that dsoPath to use as the DSO directory so we may tell
+    // the controller DSO what directory it is in.
+    char *s = dsoPath + strlen(dsoPath);
+    DASSERT(*s == '\0');
+    --s;
+    while(s != dsoPath && *s != DIR_CHAR) --s;
+    DASSERT(*s == DIR_CHAR);
+    *s = '\0';
+    // dsoPath now is just the directory.
+
+    if(pyInit(pyPath, &moduleList, dsoPath))
         goto fail;
 
     free(dsoPath);

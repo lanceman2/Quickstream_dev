@@ -199,6 +199,17 @@ char *base_dirname(char *p) {
 
 #define PYTHON_BUILTIN_MODULE_PATH "@PYTHON_BUILTIN_MODULE_PATH@"
 
+// Note: Only the main thread will write this pointer.  Others can only
+// read it (???).
+//
+static
+struct ModuleList **moduleList = 0;
+
+
+/* where this DSO is at run-time*/
+char *dsoDir = 0;
+
+
 
 static inline
 PyObject *
@@ -212,9 +223,16 @@ GetPyModule(char *path_in) {
     // setenv("PYTHONPATH", dir, 1);
 
     char *pypath = malloc(strlen(dir) +
-            strlen(PYTHON_BUILTIN_MODULE_PATH) + 2);
+            strlen(PYTHON_BUILTIN_MODULE_PATH) +
+            strlen(dsoDir) +
+            3);
     ASSERT(pypath, "malloc() failed");
-    sprintf(pypath, "%s:%s", dir, PYTHON_BUILTIN_MODULE_PATH);
+    sprintf(pypath, "%s:%s:%s", dir,
+            /* python is too stupid to find it's built in modules.*/
+            PYTHON_BUILTIN_MODULE_PATH,
+            dsoDir/* needed in PYHTONPATH for finding
+                     python module pyQsController which should be
+                     in the directory where this compiled module is.*/);
 
     WARN("pypath=\"%s\"", pypath);
 
@@ -288,13 +306,6 @@ PyObject *LoadTmpCopy(const char *path) {
 }
 
 
-// Note: Only the main thread will write this pointer.  Others can only
-// read it (???).
-//
-static
-struct ModuleList **moduleList = 0;
-
-
 // This is a C quickstream controller module with one extra method
 // exposed, pyInit().  We could have gotten the python module file from
 // the construct() arguments, but then this would NOT have the interface
@@ -308,13 +319,17 @@ struct ModuleList **moduleList = 0;
 // global C data, that can be loaded many times using temporary copies, as
 // we do with regular C DSO plugins.
 //
-int pyInit(const char *moduleName, struct ModuleList **moduleList_in) {
+int pyInit(const char *moduleName, struct ModuleList **moduleList_in,
+        const char *dsoDir_in/* where this DSO is*/) {
 
     moduleList = moduleList_in;
 
     WARN("moduleName=\"%s\"", moduleName);
     char *modPath = GetPluginPath(MOD_PREFIX, "controllers/",
             moduleName, ".py");
+
+    dsoDir = strdup(dsoDir_in);
+    ASSERT(dsoDir, "strdup() failed");
 
     pModule = GetPyModule(modPath);
 
@@ -459,6 +474,11 @@ int destroy(void) {
         DASSERT(l);
         Py_DECREF(pModule);
         pModule = 0;
+    }
+
+    if(dsoDir) {
+        free(dsoDir);
+        dsoDir = 0;
     }
 
     WARN();

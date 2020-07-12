@@ -1,6 +1,6 @@
 import time
 import inspect
-import qsController
+import pyQsController
 
 count = 0
 
@@ -23,13 +23,11 @@ def construct(args):
 
 def preStart():
     dspew()
-    print("+++++++++++++++++++preStart() count=" + repr(count) +
-            "numargs=" +
-            repr(qsController.numargs()))
     return 0
 
 def postStart():
     dspew()
+    print(pyQsController.getVersion())
     return 0
 
 def preStop():
@@ -39,7 +37,6 @@ def preStop():
 def postStop():
     dspew()
     return 0
-
 
 
 def destroy():

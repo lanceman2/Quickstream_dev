@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <stdatomic.h>
+//#include <stdatomic.h>
 #include <pthread.h>
 #include <dlfcn.h>
 #include <sys/types.h>
@@ -34,57 +34,42 @@
 // The public installed user interfaces:
 #include "../../../../include/quickstream/app.h"
 
+
+extern "C" {
+
 // Private interfaces.
 #include "../../../debug.h"
 #include "../../../Dictionary.h"
 #include "../../../qs.h"
 #include "../../../LoadDSOFromTmpFile.h"
 #include "../../../controller.h"
-#include "pyQsController.h"
 
 // This file provides the scriptControllerLoader interface
 // which we define in this header file:
 #include "scriptControllerLoader.h"
 
+} // extern "C"
 
-void foo(void) {
 
+#include <pybind11/pybind11.h>
+
+
+namespace py = pybind11;
+
+
+const char *getVersion(void){
+
+    DSPEW();
+
+    return QS_VERSION;
 }
 
+/**
+ * Generate the python bindings for this C++ function
+ */
+PYBIND11_MODULE(pyQsController, m) {
+    m.doc() = "Get quickstream version as a string";
 
-// module state:
-static int numargs=0;
-
-
-
-/* Return the number of arguments of the application command line */
-// implements method qsContoller::numargs()
-//
-static PyObject*
-qsController_numargs(PyObject *self, PyObject *args)
-{
-    if(!PyArg_ParseTuple(args, ":numargs"))
-        return NULL;
-    return PyLong_FromLong(numargs++);
-}
-
-static PyMethodDef qsMethods[] = {
-    {"numargs", qsController_numargs, METH_VARARGS,
-     "Return the number of arguments received by the process."},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyModuleDef qsModule = {
-    PyModuleDef_HEAD_INIT, "qsController", NULL, -1, qsMethods,
-    NULL, NULL, NULL, NULL
-};
-
-
-// This is exposed to pythonControllerLoader.c
-//
-PyObject* qsPyControllerInitAPI(void)
-{
-    WARN("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& numargs=%d", numargs++);
-
-    return PyModule_Create(&qsModule);
+    m.def("getVersion", &getVersion,
+            "Get quickstream version as a string");
 }
