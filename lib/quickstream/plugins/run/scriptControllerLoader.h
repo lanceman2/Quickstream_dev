@@ -6,6 +6,7 @@
 
 int initialize(void);
 
-void *loadControllerScript(const char *path, struct QsApp *app);
+void *loadControllerScript(const char *path, struct QsApp *app,
+        struct QsController *c);
 
 void cleanup(void);

@@ -160,7 +160,7 @@ static int CreateByteRateParameter(struct QsStream *s,
                 const void *value, void *streamOrApp,
                 const char *ownerName, const char *pName,
                 enum QsParameterType type, void *userData))
-            GetBytesCountCallback,
+            GetBytesCountCallback, 0,
             br /*userData*/, 0);
 
     return 0;

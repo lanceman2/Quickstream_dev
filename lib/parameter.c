@@ -50,8 +50,12 @@ const char *GetTypeString(enum QsParameterType type) {
 
         case QsDouble:
             return "double";
+        case QsUint64:
+            return "uint64_t";
+        case QsArgList:
+            return "ArgList";
         default:
-            ASSERT(0, "Unknown enum QsParameterType");
+            ASSERT(0, "Unknown enum QsParameterType: %d", type);
             return 0;
     }
 }
@@ -65,6 +69,7 @@ struct GetCallback {
             void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData);
+    void (*cleanup)(void *);
     void *userData;
     uint32_t flags;
 };
@@ -100,20 +105,27 @@ static void FreeParameter(struct QsParameter *p) {
 
     DASSERT(p);
     DASSERT(p->pName);
-    DSPEW("Freeing Parameter \"%s\"", p->pName);
+    DSPEW("Freeing Parameter \"%s:%s\"", p->filterName, p->pName);
 
     if(p->cleanup)
         p->cleanup(p->pName, p->userData);
 
-    free(p->pName);
     if(p->getCallbacks) {
         DASSERT(p->numGetCallbacks);
+
+        for(size_t i=0; i<p->numGetCallbacks; ++i) {
+            if(p->getCallbacks[i].flags & QS_FREE_USERDATA && p->userData)
+                free(p->getCallbacks[i].userData);
+            if(p->getCallbacks[i].cleanup)
+                p->getCallbacks[i].cleanup(p->getCallbacks[i].userData);
+        }
 #ifdef DEBUG
         memset(p->getCallbacks, 0, p->numGetCallbacks *
                 sizeof(*p->getCallbacks));
 #endif
         free(p->getCallbacks);
     }
+    free(p->pName);
 
 #ifdef DEBUG
     memset(p, 0, sizeof(*p));
@@ -370,14 +382,7 @@ qsParameterCreate(const char *pName, enum QsParameterType type,
 
     // else: Create this parameter owned by a controller.
     //
-    struct QsController *c = pthread_getspecific(_qsControllerKey);
-    DASSERT(c);
-    DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
-            c->mark == _QS_IN_CDESTROY ||
-            c->mark == _QS_IN_PRESTART ||
-            c->mark == _QS_IN_POSTSTART ||
-            c->mark == _QS_IN_PRESTOP ||
-            c->mark == _QS_IN_POSTSTOP);
+    struct QsController *c = GetController();
 
     if(!c) {
         ERROR("qsParameterCreate() cannot find object");
@@ -409,6 +414,7 @@ AddGetCallback(struct QsParameter *p, const char *filterName,
             void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
+        void (*cleanup)(void *),
         void *userData, uint32_t flags) {
     
     DASSERT(p);
@@ -440,6 +446,7 @@ AddGetCallback(struct QsParameter *p, const char *filterName,
             (num+1)*sizeof(*p->getCallbacks));
     struct GetCallback *gc = p->getCallbacks + num;
     gc->getCallback = getCallback;
+    gc->cleanup = cleanup;
     gc->userData = userData;
     gc->flags = flags;
     ++p->numGetCallbacks;
@@ -459,6 +466,7 @@ struct Check_AddGetCallback_args {
             void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData);
+    void (*cleanup)(void *);
     void *userData;
     uint32_t flags;
 };
@@ -476,11 +484,13 @@ int Check_AddGetCallback(const char *pName, struct QsParameter *p,
     if(regexec(&args->regex, pName, 0, NULL, 0) == 0) {
         // This parameter name matches the regular expression.
         AddGetCallback(p, args->filterName, pName, p->type,
-                args->getCallback, args->userData, args->flags);
+                args->getCallback, args->cleanup,
+                args->userData, args->flags);
         ++args->numParameters;
     }
     return 0; // keep going.
 }
+
 
 
 int qsParameterGet(void *as, const char *filterName,
@@ -490,6 +500,7 @@ int qsParameterGet(void *as, const char *filterName,
             void *streamOrApp,
             const char *filterName, const char *pName, 
             enum QsParameterType type, void *userData),
+        void (*cleanup)(void *userData),
         void *userData, uint32_t flags) {
 
     DASSERT(as);
@@ -515,7 +526,7 @@ int qsParameterGet(void *as, const char *filterName,
         }
 
         return AddGetCallback(p, filterName, pName, type, getCallback,
-                userData, flags);
+                cleanup, userData, flags);
     }
 
     // This could be getting many parameters via a parameter name regular
@@ -528,6 +539,7 @@ int qsParameterGet(void *as, const char *filterName,
     args.filterName = filterName;
     args.numParameters = 0;
     args.getCallback = getCallback;
+    args.cleanup = cleanup;
     args.userData = userData;
     args.flags = flags;
 

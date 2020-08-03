@@ -186,7 +186,8 @@ struct QsScriptControllerLoader {
     // like the C/C++ controllers, but they are script (python) wrappers.
     void *dlhandle;
 
-    void *(*loadControllerScript)(const char *path, struct QsApp *app);
+    void *(*loadControllerScript)(const char *path, struct QsApp *app,
+            struct QsController *c);
 
     char *scriptName;
     char *scriptSuffix;
@@ -1054,3 +1055,22 @@ _qsParametersDictionaryDestory(struct QsStream *s);
 extern
 char *GetPluginPath(const char *prefix, const char *category,
         const char *name, const char *suffix);
+
+
+// To get the controller C object when we are calling one of the
+// controller module standard controller functions.
+//
+static inline struct QsController *GetController(void) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
+    struct QsController *c = (struct QsController *)
+        pthread_getspecific(_qsControllerKey);
+    DASSERT(c);
+    DASSERT(c->mark == _QS_IN_CCONSTRUCT ||
+            c->mark == _QS_IN_CDESTROY ||
+            c->mark == _QS_IN_PRESTART ||
+            c->mark == _QS_IN_POSTSTART ||
+            c->mark == _QS_IN_PRESTOP ||
+            c->mark == _QS_IN_POSTSTOP);
+    return c;
+}

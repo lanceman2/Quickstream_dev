@@ -20,6 +20,15 @@
 #include "controller.h"
 
 
+// Used to pass the current controller that is being constructed or having
+// construct(), destroy(), preStart(), postStart(), preStop(), or
+// postStop() called in a controller script module.  TODO: maybe this
+// could be removed and replaced by using _qsControllerKey and it's pre
+// thread data.  but this is only assessed in a the main thread so...
+struct QsController *currentController = 0;
+
+
+
 // Used to find which Controller module calling functions in the
 // controller API.
 pthread_key_t _qsControllerKey;
@@ -89,7 +98,8 @@ CheckLoadScriptLoader(struct QsApp *app, const char *loaderModuleName) {
         goto fail;
     }
     dlerror(); // clear error
-    void *(*loadControllerScript)(const char *, struct QsApp *) =
+    void *(*loadControllerScript)(const char *, struct QsApp *,
+            struct QsController *c) =
         dlsym(dlhandle, "loadControllerScript");
     err = dlerror();
     if(err) {
@@ -252,7 +262,7 @@ GetUniqueControllerHandle(struct QsApp *app,  void **dlhandle,
 //
 static void *
 GetPythonControllerScriptHandle(struct QsApp *app, const char *fileName,
-        char **path_ret) {
+        char **path_ret, struct QsController *c) {
 
     struct QsScriptControllerLoader *loader =
         CheckLoadScriptLoader(app, "pythonControllerLoader");
@@ -281,7 +291,7 @@ GetPythonControllerScriptHandle(struct QsApp *app, const char *fileName,
     // requiring python.  Python is optional.  quickstream can run
     // without python being installed.
     //
-    void *dlhandle = loader->loadControllerScript(path, app);
+    void *dlhandle = loader->loadControllerScript(path, app, c);
     if(path_ret) {
         if(*path_ret)
             free(*path_ret);
@@ -305,7 +315,8 @@ int qsAppControllerPrintHelp(struct QsApp *app,
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if(!handle)
         // CASE Python module
-        handle = GetPythonControllerScriptHandle(app, fileName, 0);
+        handle = GetPythonControllerScriptHandle(app, fileName, 0,
+                0/*no controller, just help*/);
 
 
     if(!handle) {
@@ -444,7 +455,8 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
         // Okay the loading a DSO failed, so lets see if this is a
         // scripting language file in this path.
 
-        // Load controllers from scripting a language.
+        // Load controllers from scripting a language.  The scripting
+        // modules use the same path, but with a different file suffix.
         //
         // TODO: add other languages, other than python.
         // Like LUA.
@@ -452,7 +464,7 @@ struct QsController *qsAppControllerLoad(struct QsApp *app,
 
         // try CASE PYTHON module:
         //
-        dlhandle = GetPythonControllerScriptHandle(app, fileName, &path);
+        dlhandle = GetPythonControllerScriptHandle(app, fileName, &path, c);
         if(!dlhandle)
             goto cleanup;
     }

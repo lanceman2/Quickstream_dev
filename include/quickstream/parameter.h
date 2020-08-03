@@ -313,8 +313,10 @@ qsParameterCreateForFilter(struct QsFilter *filter,
 /** bit flag to mark keeping parameter get callback across restarts. */
 #define QS_KEEP_AT_RESTART (02)
 /** bit flag to mark parameter get callback to not get added more than
- * once. */
+ * once for a given parameter. */
 #define QS_KEEP_ONE        (04)
+/** free get callback user data */
+#define QS_FREE_USERDATA   (010)
 
 /** Register a callback to get a parameter value from outside the filter
  * module
@@ -349,7 +351,10 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  * getCallback() is called any time the parameter changes, which is when
  * qsParameterSet() is called.  getCallback() maybe called in a thread
  * that may be different than the thread being used by the caller.
- *
+ * 
+ * \param cleanup a callback function that is called when the
+ * parameter is destroyed.  \p cleanup maybe 0 to be unset.
+ * 
  * \param userData is passed to the getCallback() every time it is called.
  *
  * \param flags
@@ -368,6 +373,10 @@ qsParameterCreateForFilter(struct QsFilter *filter,
  *  added more than once.  The address of the \p getCallback is what
  *  defines the callback.
  *
+ *  - QS_FREE_USERDATA: bit flag to mark that when the get callback is
+ *  removed, and also when the parameter is destroyed, the user data will
+ *  be freed by calling \c free(userData).
+ *
  * Calling users getCallback() function should not block.
  *
  * If the getCallback returns non-zero the callback will be removed.
@@ -381,7 +390,9 @@ int qsParameterGet(void *streamOrApp, const char *ownerName,
         int (*getCallback)(
             const void *value, void *streamOrApp,
             const char *ownerName, const char *pName, 
-            enum QsParameterType type, void *userData), void *userData,
+            enum QsParameterType type, void *userData),
+        void (*cleanup)(void *userData),
+        void *userData,
         uint32_t flags);
 
 

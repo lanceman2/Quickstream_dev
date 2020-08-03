@@ -18,4 +18,9 @@ struct ModuleList {
 // The script wrapper must have this.  This could have python objects
 // added to its' arguments, hence we call it pyInit.
 int pyInit(const char *pyPath, struct ModuleList **moduleList,
-        const char *controllerDSODir);
+        const char *controllerDSODir, struct QsController *c);
+
+// declared in pythonControllerLoader.c
+extern
+struct QsController *currentController;
+

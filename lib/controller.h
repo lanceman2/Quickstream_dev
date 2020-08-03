@@ -12,3 +12,7 @@ extern
 void *
 GetUniqueControllerHandle(struct QsApp *app, void **dlhandle,
         const char *path);
+
+
+// controller.c
+extern struct QsController *currentController;

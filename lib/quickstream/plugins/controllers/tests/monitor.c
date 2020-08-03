@@ -44,7 +44,7 @@ int postStart(struct QsStream *s, struct QsFilter *f,
     ASSERT(qsParameterGet(s, qsFilterName(f),
                 "^.*$"/*parameter name egex*/,
                 Any/*any type*/,
-                getCallback, 0, 
+                getCallback, 0, 0,
                 QS_PNAME_REGEX | QS_KEEP_AT_RESTART | QS_KEEP_ONE
                 ) >= 0);
 

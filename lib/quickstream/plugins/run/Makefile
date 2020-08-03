@@ -39,9 +39,10 @@ IN_VARS := PYTHON_BUILTIN_MODULE_PATH
 
 
 ifneq ($(PYBIND11_CPPFLAGS),)
-pyQsController.so_SOURCES := pyQsController.cpp
+pyQsController.so_SOURCES := pyQsController.c
 pythonControllerLoader.so_SOURCES := pythonControllerLoader.c
 pythonController.so_SOURCES := pythonController.c
+CLEANFILES := pythonController.c
 else
 $(warning pkg-config did not find libpython-VERSION -\
  pythonControllerLoader.so, pyQsController.so\

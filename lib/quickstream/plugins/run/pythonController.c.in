@@ -1,15 +1,15 @@
-// quickstream controller module that add a byte counter for every filter
-// input and output port.
+// This is the C calling python.
 //
-// This module should be able to work with more than one stream running.
+// pyQSController.c is the python that will call C.
 
 
-// You've got to know what threads call what function in this file.  There
-// is the main thread calls construct() and destroy(), and there are an
-// arbitrary number of worker threads calling *Start() and *Stop().  So
-// ya, more to it then it looks.  You must know the quickstream thread/run
-// model and the Python interpter thread/run model, the infamous Python
-// Global Interpreter Lock (GIL).
+// You've got to know what threads call what function in this file.  The
+// main thread calls construct(), destroy(), preStart(), postStart(),
+// preStop() and, postStop().
+
+// This is the C wrapper module that executes a python script.
+// This module is loaded as a new independent instance each time it is
+// loaded.
 
 
 #include <string.h>
@@ -32,6 +32,8 @@
 #include "../../../../include/quickstream/parameter.h"
 #include "../../../debug.h"
 #include "../../../qs.h"
+#include "../../../controller.h"
+
 
 // pythonController.h declares interface functions that the
 // pythonControllerLoader will use that we define in this file; in
@@ -39,6 +41,7 @@
 // contruct(), destroy(), preStart(), postStart(), preStop(), and
 // postStop().
 #include "pythonController.h"
+
 
 
 static PyObject *pModule = 0;
@@ -69,12 +72,22 @@ static inline void FreePyFunc(PyObject *pFunc) {
 
 
 static int
-CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
+CallPyFunc(PyObject *pFunc, PyObject *args, PyObject **pFuncHdl) {
 
     DASSERT(pFunc);
     DASSERT(pFuncHdl);
 
-    PyObject *result = PyObject_CallObject(pFunc, (PyObject *) args);
+    DASSERT(currentController == 0);
+
+    // This is how we let the pyQsController and the python module
+    // know what the current controller C object is.
+    // We only have the main thread now, so this global is cool.
+    currentController = GetController();
+
+    PyObject *result = PyObject_CallObject(pFunc, args);
+
+    currentController = 0;
+
     if(result) {
         int ret = (int) PyLong_AsLong(result);
 
@@ -105,7 +118,7 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
             *pFuncHdl = 0;
         }
 
-        NOTICE("Python func() returned %d", ret);
+        //NOTICE("Python func() returned %d", ret);
         Py_DECREF(result);
         return ret;
     }
@@ -116,31 +129,55 @@ CallPyFunc(PyObject *pFunc, void *args, PyObject **pFuncHdl) {
 }
 
 
-int preStart(struct QsStream *stream, struct QsFilter *f,
+static inline
+int CallPSt(PyObject *pFunc, PyObject **pFuncHdl,
+        struct QsStream *stream, struct QsFilter *filter,
         uint32_t numInputs, uint32_t numOutputs) {
+    
+    if(!pFunc) return 1; // remove callback
 
-ERROR();
+    char str[18];
+    snprintf(str, 18, "stream-%" PRIu32, stream->id);
+ 
+    PyObject *s = PyCapsule_New(stream, str, 0);
+    PyObject *f = PyCapsule_New(filter, filter->name, 0);
 
-    if(!pPreStartFunc) return 1; // remove callback
-    return CallPyFunc(pPreStartFunc, 0, &pPreStartFunc);
+    //ERROR(" &&&&&&&&&&&&&&& filter=%p", filter);
+
+    PyObject *args = Py_BuildValue("(OOII)", s, f, numInputs, numOutputs);
+
+    int ret = CallPyFunc(pFunc, args, pFuncHdl);
+
+    Py_DECREF(args);
+    Py_DECREF(f);
+    Py_DECREF(s);
+
+    return ret;
 }
 
-int postStart(struct QsStream *stream, struct QsFilter *f,
+
+int preStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
-    if(!pPostStartFunc) return 1; // remove callback
-    return CallPyFunc(pPostStartFunc, 0, &pPostStartFunc);
+    return CallPSt(pPreStartFunc, &pPreStartFunc,
+            s, f, numInputs, numOutputs);
 }
 
-int preStop(struct QsStream *stream, struct QsFilter *f,
+int postStart(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
-    if(!pPreStopFunc) return 1; // remove callback
-    return CallPyFunc(pPreStopFunc, 0, &pPreStopFunc);
+    return CallPSt(pPostStartFunc, &pPostStartFunc,
+            s, f, numInputs, numOutputs);
 }
 
-int postStop(struct QsStream *stream, struct QsFilter *f,
+int preStop(struct QsStream *s, struct QsFilter *f,
         uint32_t numInputs, uint32_t numOutputs) {
-    if(!pPostStopFunc) return 1; // remove callback
-    return CallPyFunc(pPostStopFunc, 0, &pPostStopFunc);
+    return CallPSt(pPreStopFunc, &pPreStopFunc,
+            s, f, numInputs, numOutputs);
+}
+
+int postStop(struct QsStream *s, struct QsFilter *f,
+        uint32_t numInputs, uint32_t numOutputs) {
+    return CallPSt(pPostStopFunc, &pPostStopFunc,
+            s, f, numInputs, numOutputs);
 }
 
 
@@ -299,7 +336,7 @@ PyObject *LoadTmpCopy(const char *path) {
     pModule = GetPyModule(tmpFilename);
 
     if(unlink(tmpFilename))
-        // There is no big reason to fuss to much.
+        // There is no big reason to fuss too much.
         WARN("unlink(\"%s\") failed", tmpFilename);
 
     return pModule;
@@ -320,7 +357,10 @@ PyObject *LoadTmpCopy(const char *path) {
 // we do with regular C DSO plugins.
 //
 int pyInit(const char *moduleName, struct ModuleList **moduleList_in,
-        const char *dsoDir_in/* where this DSO is*/) {
+        const char *dsoDir_in/* where this DSO is*/,
+        struct QsController *c) {
+
+    DASSERT(_qsMainThread == pthread_self(), "Not main thread");
 
     moduleList = moduleList_in;
 
@@ -330,6 +370,13 @@ int pyInit(const char *moduleName, struct ModuleList **moduleList_in,
 
     dsoDir = strdup(dsoDir_in);
     ASSERT(dsoDir, "strdup() failed");
+
+    DASSERT(currentController == 0);
+
+    // This is how we let the pyQsController and the python module
+    // know what the current controller C object is.
+    // We only have the main thread now, so this global is cool.
+    currentController = c;
 
     pModule = GetPyModule(modPath);
 
@@ -347,6 +394,8 @@ int pyInit(const char *moduleName, struct ModuleList **moduleList_in,
             // of the python file.
             LoadTmpCopy(modPath);
     }
+
+    currentController = 0;
 
     if(pModule == 0) {
         ERROR("Unable to load python module \"%s\"", moduleName);
@@ -390,8 +439,21 @@ void help(FILE *file) {
         Py_DECREF(pFunc);
 }
 
+// PyCapsule
+//
+// This subtype of PyObject represents an opaque value, useful for C
+// extension modules who need to pass an opaque value (as a void* pointer)
+// through Python code to other C code. It is often used to make a C
+// function pointer defined in one module available to other modules, so
+// the regular import mechanism can be used to access C APIs defined in
+// dynamically loaded modules.
+//
+// Passing Opaque Pointers 
+// https://www.geeksforgeeks.org/python-opaque-pointers-in-c-extension-modules/
+
 
 // https://stackoverflow.com/questions/21031856/python-embedding-passing-list-from-c-to-python-function
+//
 // Generic controller interface construct() function.
 //
 int construct(int argc, const char **argv) {

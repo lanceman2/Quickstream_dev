@@ -93,7 +93,6 @@ static
 struct ModuleList *moduleList = 0;
 
 
-
 // This gets called once pre quickstream process.
 int initialize(void) {
 
@@ -116,7 +115,8 @@ int initialize(void) {
 // that is pythonController.so.  pythonController.so will wrap the
 // python script file in path.
 //
-void *loadControllerScript(const char *pyPath, struct QsApp *app) {
+void *loadControllerScript(const char *pyPath, struct QsApp *app,
+        struct QsController *c) {
 
     DASSERT(pyPath);
     DASSERT(pyPath[0]);
@@ -143,8 +143,8 @@ void *loadControllerScript(const char *pyPath, struct QsApp *app) {
     // Call pyInit(pyPath, dict) so it may get the python script loaded
     // and ready.
     dlerror(); // clear error
-    int (*pyInit)(const char *, struct ModuleList **, const char *) =
-        dlsym(dlhandle, "pyInit");
+    int (*pyInit)(const char *, struct ModuleList **, const char *,
+            struct QsController *) = dlsym(dlhandle, "pyInit");
     char *err = dlerror();
     if(err) {
         ERROR("dlsym(,\"pyInit\") failed: %s", err);
@@ -163,7 +163,7 @@ void *loadControllerScript(const char *pyPath, struct QsApp *app) {
     *s = '\0';
     // dsoPath now is just the directory.
 
-    if(pyInit(pyPath, &moduleList, dsoPath))
+    if(pyInit(pyPath, &moduleList, dsoPath, c))
         goto fail;
 
     free(dsoPath);

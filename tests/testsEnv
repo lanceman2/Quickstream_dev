@@ -13,18 +13,6 @@ QS_RUN="../bin/quickstream"
 return
 
 
-#
-# Note: it would appear that libpthreads will not pass valgrind tests.  We
-# need to look at the test results and determine if there is there is
-# anything that can be done to quickstream code due to valgrind tests.
-# Looks like the memory from pthreads that run do not necessarily get
-# freed as soon as the pthreads return.  This lazy pthread cleanup could
-# be due to an optimization that helps the programs run faster overall,
-# but have the side effect of making the valgrind tests fail some times.
-#
-
-
-
 if which valgrind ; then
   QS_RUN="valgrind\
  --tool=memcheck\
