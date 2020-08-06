@@ -88,6 +88,7 @@ CallPyFunc(PyObject *pFunc, PyObject *args, PyObject **pFuncHdl) {
 
     currentController = 0;
 
+
     if(result) {
         int ret = (int) PyLong_AsLong(result);
 
@@ -128,7 +129,8 @@ CallPyFunc(PyObject *pFunc, PyObject *args, PyObject **pFuncHdl) {
     return 0;
 }
 
-
+// CallPSt() stands for Call Pre or Post, Start or Stop function.
+// That is in the python script we are running.
 static inline
 int CallPSt(PyObject *pFunc, PyObject **pFuncHdl,
         struct QsStream *stream, struct QsFilter *filter,
@@ -136,11 +138,8 @@ int CallPSt(PyObject *pFunc, PyObject **pFuncHdl,
     
     if(!pFunc) return 1; // remove callback
 
-    char str[18];
-    snprintf(str, 18, "stream-%" PRIu32, stream->id);
- 
-    PyObject *s = PyCapsule_New(stream, str, 0);
-    PyObject *f = PyCapsule_New(filter, filter->name, 0);
+    PyObject *s = PyCapsule_New(stream, 0, 0);
+    PyObject *f = PyCapsule_New(filter, 0, 0);
 
     //ERROR(" &&&&&&&&&&&&&&& filter=%p", filter);
 
@@ -508,17 +507,22 @@ int destroy(void) {
     FreePyFunc(pPostStopFunc);
 
     int ret = 0;
-    PyObject *pDestroyFunc = GetPyFunc("destroy");
-
-    if(pDestroyFunc) {
-
-        ret = CallPyFunc(pDestroyFunc, 0, &pDestroyFunc);
-
-        FreePyFunc(pDestroyFunc);
-    }
 
     if(pModule) {
+
         DASSERT(*moduleList);
+        PyObject *pDestroyFunc = GetPyFunc("destroy");
+
+        if(pDestroyFunc) {
+
+ERROR("HERE");
+
+            ret = CallPyFunc(pDestroyFunc, 0, &pDestroyFunc);
+ERROR();
+            FreePyFunc(pDestroyFunc);
+        }
+
+ERROR();
         // Remove python module from the list (stack).
         struct ModuleList *prev = 0;
         struct ModuleList *l;
@@ -538,6 +542,7 @@ int destroy(void) {
         pModule = 0;
     }
 
+ERROR();
     if(dsoDir) {
         free(dsoDir);
         dsoDir = 0;

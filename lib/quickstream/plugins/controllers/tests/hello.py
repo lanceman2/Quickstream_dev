@@ -15,8 +15,6 @@ userData = {
     "year": 2008
     }
 
-print(controller.getParameter(2,3, "hi", userData))
-
 
 def dspew():
     global count
@@ -30,6 +28,10 @@ def dspew():
 def getParameterCallback(value, stream, fName, pName, data):
     dspew()
     print(stream, fName, pName, value, data)
+    print("\n\n", value, "\n\n")
+    # Looks like this must have a return int value or this function will not
+    # get called.  If the number of arguments are not consistent with the
+    # controller.getParameter() call, this function will not get called.
     return 0
 
 
@@ -53,8 +55,9 @@ def preStart(stream, Filter, numIn, numOut):
 
 def postStart(stream, Filter, numIn, numOut):
     for p in parameters:
-        print("===========parameter ", p, "userData=", userData)
-        #controller.getParameter(Filter, p, getParameterCallback)
+        print("===========================================================================================================parameter ", p, "userData=", userData)
+        controller.getParameter(stream, Filter, p, getParameterCallback,
+                userData)
     dspew()
     print(pyQsController)
     print(pyQsController.getVersion, pyQsController.getVersion())

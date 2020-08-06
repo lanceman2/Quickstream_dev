@@ -70,6 +70,10 @@
 //
 // https://stackoverflow.com/questions/29301824/what-is-the-pyclass-new-equivalent-in-python-3#30626414
 
+// Python Decorators "@"
+// https://www.programiz.com/python-programming/decorator
+
+
 /*
  * The python code that this file creates is not added to python scripts
  * without the script calling "import pyQsController".
@@ -113,13 +117,12 @@ static inline void PrintObj(PyObject *obj) {
 }
 
 
-#if 0
+#if 1
 // Python module method.
 static PyObject *getVersion(PyObject *self, PyObject *args) {
 
     PrintObj(args);
     PrintObj(self);
-
 
     WARN();
     return Py_BuildValue("s", QS_VERSION);
@@ -171,14 +174,197 @@ static PyGetSetDef Controller_getsetters[] = {
 };
 
 
+struct GetCallback {
+
+    PyObject *pyFunction;
+    // A python tuple of arguments that is passed to the callback
+    // on each call.
+    PyObject *userArgs;
+
+};
+
+
+static void getCallback_cleanup(struct GetCallback *userData) {
+
+    ERROR();
+
+    DASSERT(userData);
+    if(userData->userArgs) {
+        Py_DECREF(userData->userArgs);
+        userData->userArgs = 0;
+    }
+    if(userData->pyFunction) {
+        Py_DECREF(userData->pyFunction);
+        userData->pyFunction = 0;
+    }
+
+    free(userData);
+}
+
+
+static int getCallback(
+            const void *value,
+            void *streamOrApp,
+            const char *filterName, const char *pName, 
+            enum QsParameterType type, void *userData) {
+
+    struct GetCallback *cb = userData;
+    PyObject *val;
+
+    switch(type) {
+
+        case QsDouble:
+            // Pack a double into the python args
+            val = PyFloat_FromDouble(*((double *) value));
+            break;
+
+        case QsUint64:
+            // Pack a uint64_t into the python args
+            val = PyLong_FromUnsignedLong(*((uint64_t *) value));
+            break;
+
+        default:
+            ASSERT(0, "Unknown type. Write more code here.");
+    }
+
+    DASSERT(val);
+
+    // The first argument to the python function is this
+    // value we just got.
+    ASSERT(PyTuple_SetItem(cb->userArgs, 0, val) == 0);
+
+    ERROR("\n\n-----------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+    PyObject *result = PyObject_CallObject(cb->pyFunction, cb->userArgs);
+
+PrintObj(0);
+PrintObj(result);
+PrintObj(cb->pyFunction);
+PrintObj(cb->userArgs);
+
+
+    if(result) {
+        int ret = (int) PyLong_AsLong(result);
+        Py_DECREF(result);
+
+    ERROR("ret=%d", ret);
+
+        return ret;
+    }
+
+    ERROR("\n-----------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+
+    return 0;
+}
+
+
 static PyObject *
 Controller_getParameter(struct Controller *self, PyObject *args) {
 
     PrintObj((PyObject *) self);
     PrintObj(args);
 
-    Py_INCREF(Py_None);
+    Py_ssize_t len = PyTuple_Size(args);
+    ASSERT(len >= 4);
 
+    PyObject *userArgs = PyTuple_New(len);
+    ASSERT(userArgs);
+
+    PyObject *o = PyTuple_GetItem(args, 0);
+    ASSERT(o);
+    // Add streamOrApp to user args in 2nd (1) position.
+    //
+    // In order for PyTuple_SetItem() to "steal" this object we need to
+    // own a reference to it now by calling Py_INCREF(o).
+    Py_INCREF(o);
+    ASSERT(PyTuple_SetItem(userArgs, 1, o) == 0);
+
+    void *streamOrApp = PyCapsule_GetPointer(o, 0);
+    ASSERT(streamOrApp);
+    const char *filterName; // or controller name
+    o = PyTuple_GetItem(args, 1);
+    ASSERT(o);
+
+    if(((struct QsStream *)streamOrApp)->type == _QS_STREAM_TYPE) {
+
+        // Filters are managed by streams.
+        struct QsFilter *f = PyCapsule_GetPointer(o, 0);
+        ASSERT(f);
+        filterName = f->name;
+
+     } else if(((struct QsStream *)streamOrApp)->type ==
+             _QS_APP_TYPE) {
+
+        // Controllers are managed by apps.
+        struct QsController *c = PyCapsule_GetPointer(o, 0);
+        ASSERT(c);
+        filterName = c->name;
+     } else {
+         ASSERT(0, "object not stream or app");
+     }
+
+    // Add filterName to user args in 3rd (2) position.
+    PyObject *str = PyUnicode_DecodeUTF8(filterName,
+            strlen(filterName), 0);
+    DASSERT(str);
+    // We now own a reference to str, and will pass that responsibility
+    // to the userArgs object.
+    //
+    // userArgs receives ownership of the reference to str, so we assume
+    // that calling Py_DECREF(userArgs) with effectively call
+    // Py_DECREF(str).
+    ASSERT(PyTuple_SetItem(userArgs, 2, str) == 0);
+
+    // Get the parameter name argument.
+    o = PyTuple_GetItem(args, 2);
+    ASSERT(o);
+    PrintObj(o);
+    const char *pName = PyUnicode_AsUTF8(o);
+    // TODO: figure out who manages the memory to pName.  Is is just a
+    // pointer to magic memory?
+    ASSERT(pName);
+    // Add parameter Name to user args in 4th (3) position.
+    // We need to own if first:
+    Py_INCREF(o);
+    ASSERT(PyTuple_SetItem(userArgs, 3, o) == 0);
+
+    o = PyTuple_GetItem(args, 3);
+    ASSERT(o);
+
+    struct GetCallback *userData = malloc(sizeof(*userData));
+    ASSERT(userData, "malloc(%zu) failed", sizeof(*userData));
+    // the rest of the python arguments that will be passed back to the
+    // getCallback function.
+
+    userData->pyFunction = PyTuple_GetItem(args, 3);
+    ASSERT(userData->pyFunction);
+    Py_INCREF(userData->pyFunction);
+    PrintObj(userData->pyFunction);
+    userData->userArgs = userArgs;
+
+    if(len > 4) {
+        // We add the rest of the items in args to the arguments that will
+        // be passed to the python users callback.  This will let the user
+        // pass anything to their callbacks.
+        //
+        for(Py_ssize_t i=4; i<len; ++i) {
+            o = PyTuple_GetItem(args, i);
+            DASSERT(o);
+            Py_INCREF(o); // own it
+            // pass ownership to the userArgs.
+            ASSERT(PyTuple_SetItem(userArgs, i, o) == 0);
+            PrintObj(userArgs);
+        }
+    }
+
+    qsParameterGet(streamOrApp, filterName, pName, Any, getCallback,
+            (void (*)(void *)) getCallback_cleanup, userData, 0);
+ ERROR(" ===========================================================================================================");
+
+    PrintObj(userArgs);
+
+    Py_INCREF(Py_None);
     return Py_None;
 }
 
@@ -207,11 +393,19 @@ static PyTypeObject ControllerType = {
     .tp_getset = Controller_getsetters,
 };
 
+
+static PyMethodDef moduleMethods[] = {
+    {"getVersion",  getVersion, METH_VARARGS,
+     "Get the quickstream module version as a string."},
+    { 0, 0, 0, 0 } /* null terminate */
+};
+
 static PyModuleDef moduleDef = {
     PyModuleDef_HEAD_INIT,
     .m_name = "pyQsController",
     .m_doc = "Example module that creates an extension type.",
     .m_size = -1,
+    .m_methods = moduleMethods
 };
 
 
