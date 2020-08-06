@@ -434,6 +434,9 @@ int qsAppDisplayFlowImage(struct QsApp *app, enum QsAppPrintLevel l,
             }
             close(fd[0]);
         }
+        // To see the dot file in the terminal:
+        //execlp("cat", "cat", (const char *) 0);
+
         execlp("display", "display", (const char *) 0);
         WARN("execlp(\"%s\", \"%s\", 0) failed", "display", "display");
         exit(1);
