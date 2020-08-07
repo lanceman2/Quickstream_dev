@@ -293,6 +293,9 @@ struct QsFilter;
 
 struct QsController {
 
+    // TODO: make a base struct for QsController and QsFilter to put here.
+    // Both controller and filter are a factory for parameters.
+
     // The order to mark and then parameters must be the same in the
     // struct QsFilter 
 
@@ -312,6 +315,7 @@ struct QsController {
 
     void *dlhandle; // from dlopen()
 
+    // The app that has this controller in it's list.
     struct QsApp *app;
 
     // malloc() allocated unique name for this controller in this app.
@@ -1058,7 +1062,10 @@ char *GetPluginPath(const char *prefix, const char *category,
 
 
 // To get the controller C object when we are calling one of the
-// controller module standard controller functions.
+// controller module standard controller functions: construct(),
+// destroy(), preStart(), postStart(), preStop(), and postStop().
+//
+// TODO: What about help()?
 //
 static inline struct QsController *GetController(void) {
 

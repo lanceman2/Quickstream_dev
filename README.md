@@ -6,14 +6,11 @@ data quickly flows between modules in a directed graph
 ## Development Status
 
 Current development is on Debian 9 and Ubuntu 20.04 systems.  It's in a
-pre-alpha state.  Install the [required core prerequisite packages](#required-core-prerequisite-packages), and then run
-```console
-make
-```
-in the top source directory.   Then run
-```console
-make test
-```
+pre-alpha state.
+
+Currently there is no tutorial, so this software package is pretty useless
+for anything but for the research and development of this package.
+
 
 ## About quickstream
 
@@ -32,33 +29,18 @@ https://lanceman2.github.io/quickstream.doc/html/index.html
 
 ## Quick start
 
-
-```shell
-sudo apt install\
- build-essential\
- libudev-dev\
- libfftw3-dev\
- graphviz\
- imagemagick\
- doxygen\
- librtlsdr-dev\
- libasound2-dev\
- python3-dev\
- libssl-dev
-```
-
-Go to the top quickstream source directory:
-
-```shell
-cd quickstream
-```
-
-```shell
+Install the [required core prerequisite packages](#required-core-prerequisite-packages),
+and then run
+```console
 make
+```
+in the top source directory.   Then run
+```console
+make test
 ```
 
 You do not have to install this package to use all of it's functionality.
-Details on building and installing below.
+See more details on building and installing below.
 
 
 ## Required, core, prerequisite packages
@@ -77,14 +59,17 @@ will are not required to build the core of quickstream:
 
 
 ```shell
-libudev-dev
-libfftw3-dev
-graphviz
-imagemagick
-doxygen
-librtlsdr-dev
-libasound2-dev
-python3-dev
+apt install
+ libudev-dev\
+ libfftw3-dev\
+ graphviz\
+ imagemagick\
+ doxygen\
+ librtlsdr-dev\
+ libasound2-dev\
+ python3-dev\
+ libssl-dev\
+ libuhd-dev
 ```
 
 If you do want to generate documentation you will need the three packages:
@@ -102,8 +87,8 @@ life.
 
 ## Building and Installing with GNU Autotools
 
-quickstream can be built and installed using a GNU Autotools software
-build system.
+quickstream can (or will) be built and installed using a GNU Autotools
+software build system.
 
 If you got the source from a repository run
 
@@ -113,9 +98,8 @@ If you got the source from a repository run
 
 to add the GNU autotools build files to the source.
 
-  Or if you got this
-source code from a software tarball release change directory to the
-top source directory and do not run bootstrap.
+Or if you got this source code from a software tarball release change
+directory to the top source directory and do not run bootstrap.
 
 Then from the top source directory run
 
@@ -206,7 +190,7 @@ We use "makefile" as the make file for GNU autotools generated make files,
 which overrides "Makefile", at least for GNU make.
 
 
-### quickbuild quick and easy
+### quickbuild - quick and easy
 
 Run:
 
@@ -287,8 +271,8 @@ pipes don't care what kind of data flows through them.  The types of data
 that flows is up to you.  The typing of data flowing between particular
 filters is delegated to a higher protocol layer above quickstream.
 quickstream provides generic management for the connecting and running of
-filter streams.  quickstream does not consider channels between filters to
-be typed.
+filter streams.  quickstream does not consider ports and channels between
+filters to be typed.
 
 
 ## Restricting filters modules leads to user control and runtime optimization
