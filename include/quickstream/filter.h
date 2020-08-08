@@ -51,7 +51,7 @@
 
 
 
-/** \file
+/** \page filters filter modules
  *
  * \brief filter module writers application programming interface (API)
  * for C.
@@ -88,7 +88,6 @@
 /** \class CFilterAPI filter.h "quickstream/filter.h"
  */
 
-
 /** print filter module help and command line argument options
  *
  * This function provides a brief description of what the filter does, and
@@ -101,6 +100,8 @@
  *
  * \param file output FILE stream that may be called with the standard C
  * libraries fprintf() function.
+ *
+ * \memberof CFilterAPI
  */
 void help(FILE *file);
 
@@ -140,6 +141,8 @@ void help(FILE *file);
  * down stream filters this the current filter is feeding.  A return value
  * that is negative is considered an "error like" case and will cause a
  * warning to be printed to stderr.  A positive return will not do that.
+ *
+ * \memberof CFilterAPI
  */
 int input(void *inBuffers[], const size_t inLens[],
         const bool isFlushing[],
@@ -157,6 +160,8 @@ int input(void *inBuffers[], const size_t inLens[],
  * should not write to this memory.
  *
  * \return 0 on success, and non-zero on failure.
+ *
+ * \memberof CFilterAPI
  */
 int construct(int argc, const char **argv);
 
@@ -167,6 +172,8 @@ int construct(int argc, const char **argv);
  * is unloaded.
  *
  * \return 0 on success, and non-zero on failure.
+ *
+ * \memberof CFilterAPI
  */
 int destroy(void);
 
@@ -198,6 +205,8 @@ int destroy(void);
  * current flow cycle.
  *
  * \return 0 on success, or non-zero on failure.
+ *
+ * \memberof CFilterAPI
  */
 int start(uint32_t numInPorts, uint32_t numOutPorts);
 
@@ -217,6 +226,8 @@ int start(uint32_t numInPorts, uint32_t numOutPorts);
  * corresponding start() and input() was called.
  *
  * \return 0 on success, or non-zero on failure.
+ *
+ * \memberof CFilterAPI
  */
 int stop(uint32_t numInPorts, uint32_t numOutPorts);
 
@@ -263,6 +274,8 @@ extern "C" {
  *
  * \return a pointer to the first writable byte in the buffer.  The filter
  * may write at most \e maxLen bytes to this returned pointer.
+ *
+ * \memberof CFilterAPI
  */
 extern
 void *qsGetOutputBuffer(uint32_t outputPortNum,
@@ -281,6 +294,8 @@ void *qsGetOutputBuffer(uint32_t outputPortNum,
  * \param outputPortNum the output port number.
  *
  * \param len length in bytes to advance the output buffer.
+ *
+ * \memberof CFilterAPI
  */
 extern
 void qsOutput(uint32_t outputPortNum, size_t len);
@@ -307,6 +322,8 @@ void qsOutput(uint32_t outputPortNum, size_t len);
  * can be less than or equal to the corresponding length in bytes that was
  * passed to the input() call.  len greater than the input length will be
  * clipped to the length that was passed to input().
+ *
+ * \memberof CFilterAPI
  */
 extern
 void qsAdvanceInput(uint32_t inputPortNum, size_t len);
@@ -329,6 +346,8 @@ void qsAdvanceInput(uint32_t inputPortNum, size_t len);
  * input buffer pointer that you wish to set a simple threshold for.
  *
  * \param len the length in bytes of this simple threshold.
+ *
+ * \memberof CFilterAPI
  */
 extern
 void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
@@ -348,6 +367,8 @@ void qsSetInputThreshold(uint32_t inputPortNum, size_t len);
  *
  * The default len value is QS_DEFAULTMAXREADPROMISE.  If this default
  * value is not large enough than you must call this.
+ *
+ * \memberof CFilterAPI
  */
 extern
 void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
@@ -370,6 +391,8 @@ void qsSetInputReadPromise(uint32_t inputPortNum, size_t len);
  * \param maxWriteLen this filter promises to write at most maxWriteLen
  * bytes to this output port.  If the filter writes more than that memory
  * may be corrupted.
+ *
+ * \memberof CFilterAPI
  */
 extern
 void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
@@ -397,6 +420,8 @@ void qsCreateOutputBuffer(uint32_t outputPortNum, size_t maxWriteLen);
  * \return 0 on success.  If the buffer that corresponds with the output port
  * is already passed through to this or another input to any filter this
  * with fail and return non-zero.
+ *
+ * \memberof CFilterAPI
  */
 extern
 int qsCreatePassThroughBuffer(uint32_t inputPortNum, uint32_t outputPortNum,
@@ -441,6 +466,8 @@ uint32_t qsFilterStreamId(const struct QsFilter *filter);
  * construct().  The filters name will never change after it's loaded.
  *
  * \return a string that you should only read.
+ *
+ * \memberof CFilterAPI
  */
 extern
 const char* qsGetFilterName(void);

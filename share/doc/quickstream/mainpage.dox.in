@@ -1,6 +1,14 @@
 /*! \mainpage quickstream
 data quickly flows between modules in a directed graph
 
+This manual is divided in the following sections:
+
+- \ref filters
+- \ref parameters
+- \ref controllers
+- \ref app
+
+
 \section intro What is quickstream?
 
 quickstream is a run library with application programming interfaces

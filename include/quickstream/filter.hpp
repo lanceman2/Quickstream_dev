@@ -30,37 +30,37 @@ class QsFilter {
 
     public:
 
-        // We don't need a constructor.
+        // We don't need a constructor for this base class.
         //QsFilter(void) { };
 
         /**
-         * \details \copydetails CFilterAPI::input()
+         * \details \copydoc CFilterAPI::input()
          */
         virtual int input(void *inBuffers[], const size_t inLens[],
             const bool isFlushing[], uint32_t numInPorts,
             uint32_t numOutPorts) = 0;
 
         /**
-         * \details \copydetails CFilterAPI::help()
+         * \details \copydoc CFilterAPI::help()
          */
         virtual void help(FILE *file) { };
 
         /**
-         * \details \copydetails CFilterAPI::start()
+         * \details \copydoc CFilterAPI::start()
          */
         virtual int start(uint32_t numInPorts, uint32_t numOutPorts) {
             return 0;
         };
 
         /**
-         * \details \copydetails CFilterAPI::stop()
+         * \details \copydoc CFilterAPI::stop()
          */
         virtual int stop(uint32_t numInPorts, uint32_t numOutPorts) {
             return 0;
         };
 
         /**
-         * \details \copydetails CFilterAPI::destroy()
+         * \details \copydoc CFilterAPI::destroy()
          */
         virtual ~QsFilter(void) { };
 };

@@ -16,16 +16,20 @@
 // Parameter values are must be copied in the callbacks.
 
 
-/** \defgroup parameters Filter Module Parameters
+
+/** \page parameters filter and controller parameters
  *
  * quickstream manages two kinds of data:
  *
  *   1. stream data that is quickly flowing between filters in the stream.
  *      The size of stream data is relatively large.  The rate at which
  *      data flows is relatively large compared to
- *   2. control parameter data that is changing relatively slowly.  The
- *      size of the data in the parameter must be small, so that it may be
- *      copied to be passed to other modules and functions to be used.
+ *   2. control parameter data that is changing relatively infrequently,
+ *   compared to stream byte rates in the stream data.
+ *   The size of the data in the parameter must be small, so that it may
+ *   be copied to be passed to other modules and functions to be used,
+ *   without using a lot of computer system resources like memory and cpu
+ *   usage.
  *
  * We generally avoid directly copying stream data, and we usually copy
  * parameters.  If a parameter changes at the rate of stream data than it

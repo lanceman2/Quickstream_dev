@@ -5,7 +5,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-/** \file
+
+/** \page app quickstream application objects
  *
  * The libquickstream application programming interface (API)
  *
@@ -177,7 +178,10 @@ int qsControllerUnload(struct QsController *controller);
  * The environment variable QS_MODULE_PATH may also be set to aid in
  * finding filter module plugins with the directory /controllers/ appended
  * to the paths given.
-
+ *
+ * \param app the quickstream app that was returned from a call to
+ * qsAppCreate().
+ *
  * \param filename that refers to the plugin module to load.
  *
  * After the module is loaded and help() is called, the module is

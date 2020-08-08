@@ -50,12 +50,13 @@ HTM_FILES := quickstreamIntro.htm quickstreamOptions.htm
 QS_DOC_GEN := $(topdir)/lib/quickstream/misc/quickstreamHelp
 
 DOX_INFILES =\
+ mainpage.dox\
  $(topdir)/include/quickstream/app.h\
  $(topdir)/include/quickstream/filter.h\
  $(topdir)/include/quickstream/parameter.h\
+ $(topdir)/include/quickstream/controller.h\
  $(topdir)/include/quickstream/filter.hpp\
- $(topdir)/bin/quickstream.c\
- mainpage.dox
+ $(topdir)/bin/quickstream.c
 
 
 

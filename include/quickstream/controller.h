@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 
-/** \file
+/** \page controllers controller modules
  *
  * \brief quickstream controller module writers application programming
  * interface (API) for C.
@@ -17,7 +17,7 @@
  * Controllers are modules of code that are loaded via dynamic shared
  * objects (DSOs).  These module are the part of quickstream that monitors
  * and controls the quickstream flow.  They are not filters in the flow
- * graph.  They access the filter Parameters and the quickstream \ref App
+ * graph.  They access the filter Parameters and the quickstream \ref app
  * API (application programming interface) to monitor and control the
  * stream flow.  The advantage of this Controller abstraction layer is
  * that filters need not know about the Controllers, and the Controllers
@@ -28,7 +28,7 @@
  * filters provide the knobs and the controllers turn and observe the
  * knobs.
  *
- * \todo A controller may also create and own parameters.
+ * A controller may also create and own parameters.
  *
  * Because quickstream is breaking the rules and making interfaces that
  * are simplistic, users of the quckstream controllers API must take care

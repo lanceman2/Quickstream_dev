@@ -1,4 +1,4 @@
-SUBDIRS := tests librtlsdr
+SUBDIRS := tests librtlsdr uhd
 
 INSTALL_DIR = $(PREFIX)/lib/quickstream/plugins/filters
 

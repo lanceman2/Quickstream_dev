@@ -52,6 +52,8 @@ void help(FILE *f) {
 "\n"
 "  Adjusting --maxWrite can change CPU usage considerably.\n"
 "\n"
+"  Reference: https://www.rtl-sdr.com/about-rtl-sdr/\n"
+"\n"
 "\n"
 "\n"
 "                     OPTIONS\n"
