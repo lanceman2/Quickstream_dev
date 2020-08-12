@@ -2,7 +2,140 @@ This file is just used for quickstream design discussion in a free format,
 given that quickstream is not in an alpha (usable) state yet.  Who cares.
 
 
+# Current Thoughts
+
+ Keep the scheduler code modular so that we may use different schedulers.
+
+ In the process of developing Python integration we have found that the
+ basic structure of the code is lacking core elements.   Looks like
+ the controllers need to run in threads with the filter (filter-blocks).
+ Should we adopt GNUradio terminology?
+
+  GNUradio notes:
+
+ Typing the stream data sucks.
+
+ Q: Is the block input/output typing making stupid things like stream tags
+ in order to add more information to each frame?  One could just add a bit
+ to the sample frame size and get one bit of information added to each
+ sample, but because the types limit that frame size we are pushed to
+ adding stream tags to some frames.   In this respect stream ports types
+ force their to be a new feature, stream tags, which adds complexity.  We
+ need to minimize features, which is to minimize complexity.  Stream tags
+ do not need to exist if we do not restrict stream port types.
+
+
+ quickstream needed features:
+
+   We must minimize this list:
+
+ - Triggers and events -> scheduler that is modular
+    events trigger worker jobs to queue.
+    Is there a seperate job queue for filters and job queue for
+    controllers?
+
+   filter-block and controller-blocks that have blocking calls will
+   work, but may block the flow, when there are fewer worker threads.
+
+
+ - super modules for combinations of filters and controllers.
+ - filter-blocks
+ - controller-blocks
+ - stream data and buffering
+ - parameter setting and getting
+     * fixed vs. changing
+       - whither a parameter is fixed or changing is determined at
+         start time.
+       - if a filter or controller does not allow a parameter to change
+         may be determined at start-time.
+
+ - fixed vs. run-time (flow-time) changing parameters.
+    * this would remove need for contruct(int argc, const char **args) 
+        which just set parameters that were being initialized
+
+
+ - We need interfaces to create and quickstream program's structure,
+   other than just a text editor:
+   We need hooks/interfaces into all the structures of quickstream
+   * display (read only): of quickstream program's structure
+     - We can currently see the dot graph of the filter streams.
+   * edit and display (r/w): edits and displays quickstream program's structure
+     - This is like the GNUradio-companion
+   * edit (w): creates a quickstream program with no (or minimal) display
+
+
+
+Extending quickstream to multiple processes.
+
+   * make a source and sink filter that reads an inter-process shared
+     memory ring buffer.
+   * make a controller that uses a inter-process shared memory paramter
+     queue thingy.
+
+   Putting these filters and controllers in the stream graphs then expends
+   the quickstream program to mutipule processes.  How do you start it?
+
+
+
+
+ - make source filters that have inputs?  "Self-triggered filters" ?
+
+   example:  If an input is not happining, but the filter needs to make
+     an output that is not causes by any of its' inputs.
+
+   2 possible Solutions:
+
+       The winner solution needs to minimize system resourses at
+       flow-time and minimize the number of quickstream concepts.
+
+       1. A dummy source filter feeds it.  The dummy filter would have a
+          zero size ring buffer as an output.
+       2. Mark the filter as a "source-like" filter.
+
+
+
+ Q: Should the quickstream graph connections be changeable at flow time?
+
+    Or is it inherit to the stream flow module that the graphs not change
+    at flow-time?  Maybe we can have the flow-state not be a stream wide
+    construct, and so than we could edit the modules that are not running
+    (flowing) while other non-neighbor modules are running.
+    I expect idea this has a fatal flaw in it.
+
+
+ - Need to add an optional flush() function to the filters
+   (filter-blocks), and remove the isFlushing bool arg from the input().
+
+
+
+ We have a directed graph of filter blocks with e
+
+
+ Q: Does GUNradio have the idea of running controller code?
+
+    A: Best guess is no, not explicitly.  But one could have the
+    controller be in main thread.  GNUradio does not provide a module
+    construct that is a controller, you need to build that yourself.
+
+ Q: should the filters (blocks) run with the same worker thread job queue
+    thingy as controller run with?
+
+
+ Fundamental redesign.  It's turning into a JavaScript Engine.  It needs
+ to be event driven, and async coding.  Triggers cause events.  If there
+ is a blocking call than that Controller or Filter (block) will eat a
+ worker thread.  That's okay, but could make running with 0 or 1 worker
+ thread very slow.
+ 
+
+ Scoping template code sucks.  Scoping template C++ code is pretty much
+ impossible.  Scoping wrapper code sucks.  Simple libc C code is easy to
+ follow.  Grepping for pthread_create() is easy, but wrappers can make
+ that not possible.  Keep code fucking simple.  Do not use boost.
+
+
 # Next
+
 
 - Python integration
 
