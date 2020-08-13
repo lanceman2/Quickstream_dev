@@ -24,6 +24,11 @@ given that quickstream is not in an alpha (usable) state yet.  Who cares.
  need to minimize features, which is to minimize complexity.  Stream tags
  do not need to exist if we do not restrict stream port types.
 
+ 
+ Make sure that all modules point to their source: relative file and URL.
+ Maybe install source as a reference.
+
+
 
  quickstream needed features:
 
