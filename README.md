@@ -20,10 +20,12 @@ We are adopting **some** of the [GNU radio](https://gnuradio.org/) terminology.
 
 
 quickstream is a flowgraph framework, a digital signal-processing system
-that operates within running processes.  It's internals do not span across
-multiple computers, though it's applications may.  quickstream avoids
-system calls when switching between processing modules and hence uses
-shared memory to pass stream data between modules.
+that operates within running processes;  in this case processes being work
+callback functions, not an OS (operating system) process.  It's internals
+do not span across multiple computers, though it's applications may.
+quickstream avoids system calls when switching between processing modules
+and hence uses shared memory to pass stream data between work modules in
+the same OS process.
 
 quickstream technically does not implement a [Kahn process
 network](https://en.wikipedia.org/wiki/Kahn_process_networkshttps://en.wikipedia.org/wiki/Kahn_process_networks)
@@ -33,8 +35,12 @@ non-deterministic operating systems.
 
 Unlike [GNU radio](https://gnuradio.org/) quickstream does not use a
 synchronous data flow model, that is, in quickstream the stream data is
-not restricted to keep constant ratios of input to output between blocks.
-The stream data flow constraints just less than those imposed by GNUradio.
+not restricted to keep constant ratios of input to output between blocks,
+as it is in GNU radio.  The stream data flow constraints just less than
+those imposed by GNUradio.  [Synchronous data
+flow](https://en.wikipedia.org/wiki/Synchronous_Data_Flow) is not the only
+method that can be used to allow static scheduling and buffering.
+
 The flow scheduler code is not like GNU radio's scheduler.  The run model
 lets the user use any number of threads from thread pools which may have 1
 to N threads.  All quickstream programs can run with one thread or any
