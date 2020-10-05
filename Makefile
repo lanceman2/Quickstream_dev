@@ -16,10 +16,15 @@ SUBDIRS :=\
  lib/quickstream/plugins/run\
  share/bash-completion/completions
 
-HAVE_DOXYGEN := $(shell if which doxygen > /dev/null; then echo yes; fi)
+HAVE_DOXYGEN := $(shell if which doxygen > /dev/null\
+ && which dot > /dev/null; then echo yes; fi)
 
 ifeq ($(HAVE_DOXYGEN),yes)
   SUBDIRS += share/doc/quickstream
+else
+  $(info  ----->     Not building documentation:\
+ doxygen && dot from graphviz where not both found\
+ in your PATH)
 endif
 
 

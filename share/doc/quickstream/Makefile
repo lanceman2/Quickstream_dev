@@ -197,6 +197,9 @@ clean:
 	rm -rf html/search
 
 
+download:
+	@echo "Nothing to $@"
+
 cleaner: clean
 distclean: cleaner
 

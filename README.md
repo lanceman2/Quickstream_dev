@@ -5,19 +5,60 @@ data quickly flows between modules in a directed graph
 
 ## Development Status
 
+This is currently vapor-ware.
+
 Current development is on Debian 9 and Ubuntu 20.04 systems.  It's in a
 pre-alpha state.
 
 Currently there is no tutorial, so this software package is pretty useless
 for anything but for the research and development of this package.
 
+We are adopting **some** of the [GNU radio](https://gnuradio.org/) terminology.
+
 
 ## About quickstream
 
-quickstream is a run library, a filter library, some filter modules, and
-some utility programs.  quickstream is written in C and the libraries can
-link with C and C++ code.  quickstream is for building flow stream graphs
-that process data in filter module stages.
+
+quickstream is a flowgraph framework, a digital signal-processing system
+that operates within running processes.  It's internals do not span across
+multiple computers, though it's applications may.  quickstream avoids
+system calls when switching between processing modules and hence uses
+shared memory to pass stream data between modules.
+
+Unlike [GNU radio](https://gnuradio.org/) quickstream does not use a
+synchronous data flow model, that is the stream data is not restricted to
+keep constant ratios of input to output between blocks. The stream data
+flow constraints just less than those imposed by GNUradio.  The flow
+scheduler code is not like GNU radio's scheduler.  The run model lets the
+user use any number of threads from thread pools which may have 1 to N
+threads.  All quickstream programs can run with one thread or any number
+of threads.  Thread affinity may be set, if needed, for special blocks.
+quickstream is expected to use much less computer system resources than
+GNU radio in preforming the similar tasks. 
+
+quickstream is C code with C++ wrappers.  It consists of the quickstream
+runtime library and block module plugins.  The quickstream runtime library
+and the block module plugins are all created as DSOs (dynamic shared
+objects).  quickstream runtime library includes a super block module
+creation tool that makes it possible to create and use block module
+plugins that are made of many block module plugins.
+
+quickstream comes with two application builder programs:
+
+  - *quickstream* which lets to build flow stream programs using the
+            command-line.
+
+  - *quickstreamBuilder* a GUI (graphical user interface) program that
+            lets you build and run flow stream programs.  It may resemble
+            the GNU Radio Companion to some extent.
+
+quickstream APIs (application programming interfaces) are separated into the
+the two classes of quickstream users:
+
+  - *quickstream/app.h* for users to compile quickstream programs
+
+  - *quickstream/block.h* for users to compile quickstream module blocks
+
 
 The quickstream starting point is this web page at
 https://github.com/lanceman2/quickstream.git, should it move we wish to
@@ -261,6 +302,7 @@ requires fast repetitive data transfer between filter modules.
 
 The objective is that quickstream flow graph should process data faster
 than any other streaming API (application programming interface).
+Only benchmarks can show this to be true.
 
 
 ## No connection types
@@ -340,6 +382,12 @@ flowing/running.
 
 ## Terminology
 
+To a limited extend we follow de facto standard terms from [GNU
+radio](https://www.gnuradio.org/).  We avoided using GNU radio terminology
+which we found to be confusing.  The scope of use for quickstream is
+broader than GNU radio and so some GNU radio terminology was deemed not
+generic enough.
+
 ### Stream
 
 The directed graph that data flows in.   Nodes in the graph are called filters.
@@ -411,34 +459,52 @@ depending on your use, or it may not go through the flow state at all,
 and go from pause to exit; which is a useful case for debugging.
 
 
-### Filter
+### Block
 
-A module reads input and writes outputs in the stream.  The number of
-input channels and the number of output channels may be from zero to any
-integer.  Filters do not know if they are running as a single thread by
-themselves or they are sharing their thread execution with other
-filters.  From the quickstream user, the filters just provide executable
-object code in the form of C/C++ (maybe RUST) functions.  The filters just
-read input and write output.  At the quickstream level the filters don't
-know what filters they are reading and writing to.
+A block is the fundamental building block of quickstream which as a
+compiled code that has a limited number of "quickstream standard" callback
+functions in it.  The smallest number of standard callback functions is
+zero.  In quickstream all blocks are treated same.  There is no top block.
 
 
 ### Controller
 
-Or filter controller: That which changes the behavior of a filter
-module.
+or controller-block.  A block module that does not have stream data input
+or stream data output is called a controller-block or controller for
+short.  The controller's work function, if it exists, will only be
+triggered by the state of OS (operating system) file descriptors or from
+other callbacks in this block which queue a work call.
+
+
+### Filter
+
+or filter-block.  A block module that reads input and/or writes outputs in
+the stream is called a filter-block of filter for short.  The number of
+input channels and the number of output channels to the filter may be any
+integer.  Filters do not know if they are running as a single thread by
+themselves or they are sharing their thread execution with other filters.
+From the quickstream user, the filters just provide executable object code
+in the form of C/C++ functions.  The filters work function optionally
+reads input and writes output.  At the quickstream module writer level the
+filters don't know what filters they are reading and writing to.  In
+addition to reading and writing input and output, filters can also preform
+all the same functions as controller-blocks, though one may find that
+separating such functionality into separate controller-blocks less
+convoluted.
 
 
 ### Parameter
 
-A single value or small data structure that can be shared between Filters
-and Controllers.
+A single value or small data structure that can be shared between blocks
+via "get" or "set".
 
 
 ### Monitor
 
-Or filter monitor: That which monitors a filter, without changing how it
-processes inputs and writes outputs.
+Or monitor-block: That which monitors a other blocks, without changing how
+any of them process inputs, write outputs, or set other blocks parameters.
+A monitor may create and own a parameter that is derived by parameters
+owned by other blocks, or general internal state of quickstream.
 
 
 ### Channel
@@ -681,4 +747,6 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
 - Run all tests without compiler flag -g.
 - Make doxygen run without any warnings.
 - Proof all docs including this file.
+- Make the base build build in less than 1 minute (last check is about 10
+  seconds).
 
