@@ -25,16 +25,22 @@ multiple computers, though it's applications may.  quickstream avoids
 system calls when switching between processing modules and hence uses
 shared memory to pass stream data between modules.
 
+quickstream technically does not implement a [Kahn process
+network](https://en.wikipedia.org/wiki/Kahn_process_networkshttps://en.wikipedia.org/wiki/Kahn_process_networks)
+(and nether does GNU radio) since its behavior is not deterministic
+because of asynchronous parameter changes, in addition to running on
+non-deterministic operating systems.
+
 Unlike [GNU radio](https://gnuradio.org/) quickstream does not use a
-synchronous data flow model, that is the stream data is not restricted to
-keep constant ratios of input to output between blocks. The stream data
-flow constraints just less than those imposed by GNUradio.  The flow
-scheduler code is not like GNU radio's scheduler.  The run model lets the
-user use any number of threads from thread pools which may have 1 to N
-threads.  All quickstream programs can run with one thread or any number
-of threads.  Thread affinity may be set, if needed, for special blocks.
-quickstream is expected to use much less computer system resources than
-GNU radio in preforming the similar tasks. 
+synchronous data flow model, that is, in quickstream the stream data is
+not restricted to keep constant ratios of input to output between blocks.
+The stream data flow constraints just less than those imposed by GNUradio.
+The flow scheduler code is not like GNU radio's scheduler.  The run model
+lets the user use any number of threads from thread pools which may have 1
+to N threads.  All quickstream programs can run with one thread or any
+number of threads.  Thread affinity may be set, if needed, for special
+blocks.  quickstream is expected to use much less computer system
+resources than GNU radio in preforming the similar tasks. 
 
 quickstream is C code with C++ wrappers.  It consists of the quickstream
 runtime library and block module plugins.  The quickstream runtime library
@@ -633,6 +639,19 @@ https://raw.githubusercontent.com/lanceman2/quickstream.doc/master/jobFlow.png)
 
 
 ## Developer notes
+
+#### Triggering
+
+  1. For flow graphs with a single file descriptor use blocking w/r
+     without epoll_wait().
+  2. At flow-time, if there is no non-fd driven task in the queue then the
+     last thread will go to epoll_wait().
+  3. For dumb users that do not use qsSetFDPoll() (or whatever it's
+     called) then they will be adding blocking calls to their running flow
+     graphs work() functions, it will still work, but performance may
+     suffer.
+
+#### other
 
 - quickstream code is written in fairly simple C with very few dependences.
   Currently runtime libraries linked are -lpthread -ldl and -lrt.
