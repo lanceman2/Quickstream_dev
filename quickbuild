@@ -96,7 +96,9 @@ EOF
 
 
 # get the quickbuild.make file from the web
-wget $url -O quickbuild.make.org 
+# --no-check-certificate will make this succeed even if certificates are
+# not cool, but we have a sha512sum so that it's fine.
+wget --no-check-certificate $url -O quickbuild.make.org 
 
 if [ -n "$sha512sum" ] ; then
     set +x
