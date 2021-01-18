@@ -59,7 +59,7 @@ if [ ! -e "$stripcmt" ] && [ -z "$1" ] ; then
     # by Jonathan Leffler
 
     url="https://github.com/jleffler/scc-snapshots/tarball/$scc_tag"
-    wget $url -O ${scc_package}.tgz
+    wget --no-check-certificate $url -O ${scc_package}.tgz
 
     if [ -n "$sha512sum" ] ; then
         echo "$sha512sum  ${scc_package}.tgz" |\

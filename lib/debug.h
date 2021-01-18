@@ -44,7 +44,7 @@
  * It's really not much code but is a powerful development
  * tool like assert.  See 'man assert'.
  *
- * CRTSFilter builders do not have to include this file in their
+ * Filter module builders do not have to include this file in their
  * plugin modules.  It's pretty handy for developing/debugging.
  */
 #include <stdbool.h>
